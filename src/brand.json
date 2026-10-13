@@ -1,0 +1,18 @@
+{
+  "name": "LinkPeek",
+  "shortName": "LinkPeek",
+  "tagline": "Understand the link. Check the risk. Control the experience.",
+  "description": "See what a link says before you open it: a one-sentence summary, a headline check and honest notes on what could be read.",
+  "colors": {
+    "accent": "#3b5bdb",
+    "accentDark": "#91a7ff",
+    "pass": "#2b8a3e",
+    "passDark": "#69db7c",
+    "fail": "#c92a2a",
+    "failDark": "#ff8787",
+    "neutral": "#6b7280",
+    "neutralDark": "#a1a1aa",
+    "warn": "#b35c00",
+    "warnDark": "#ffc078"
+  }
+}

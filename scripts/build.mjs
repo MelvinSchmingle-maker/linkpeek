@@ -1,0 +1,81 @@
+/**
+ * Builds the unpacked extension into dist/ (or dist-e2e/ with --e2e).
+ *
+ * Why three Vite builds instead of one: Chrome runs each part of an extension
+ * differently. The popup and options pages are normal web pages, the service
+ * worker is an ES module, and the content script must be a single classic
+ * script (Chrome does not load content scripts as modules).
+ *
+ *   node scripts/build.mjs          production build into dist/
+ *   node scripts/build.mjs --e2e    test build into dist-e2e/ (see manifest.mjs)
+ *   node scripts/build.mjs --watch  rebuild on change
+ */
+import { build } from 'vite';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { buildManifest } from './manifest.mjs';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const e2e = process.argv.includes('--e2e');
+const watch = process.argv.includes('--watch') ? {} : null;
+const outDir = resolve(root, e2e ? 'dist-e2e' : 'dist');
+
+const shared = {
+  configFile: false,
+  logLevel: 'warn',
+  define: { __E2E__: JSON.stringify(e2e) },
+};
+
+// 1. Popup and options pages. Also copies public/ (icons).
+await build({
+  ...shared,
+  root: resolve(root, 'src'),
+  base: './',
+  publicDir: resolve(root, 'public'),
+  build: {
+    outDir,
+    emptyOutDir: true,
+    watch,
+    rollupOptions: {
+      input: {
+        popup: resolve(root, 'src/popup/index.html'),
+        options: resolve(root, 'src/options/index.html'),
+      },
+    },
+  },
+});
+
+// 2. Service worker (ES module).
+await build({
+  ...shared,
+  publicDir: false,
+  build: {
+    outDir,
+    emptyOutDir: false,
+    watch,
+    lib: { entry: resolve(root, 'src/background/index.ts'), formats: ['es'], fileName: () => 'background.js' },
+  },
+});
+
+// 3. Content script (one classic script, no imports at runtime).
+await build({
+  ...shared,
+  publicDir: false,
+  build: {
+    outDir,
+    emptyOutDir: false,
+    watch,
+    lib: {
+      entry: resolve(root, 'src/content/index.ts'),
+      formats: ['iife'],
+      name: 'LinkPeekContent',
+      fileName: () => 'content.js',
+    },
+  },
+});
+
+mkdirSync(outDir, { recursive: true });
+writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(buildManifest({ e2e }), null, 2));
+
+console.log(`Built ${e2e ? 'test' : 'production'} extension into ${outDir}`);
