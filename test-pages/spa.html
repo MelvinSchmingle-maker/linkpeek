@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Single-page app (LinkPeek test page)</title>
+    <style>body { font: 16px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 640px; padding: 16px; }</style>
+  </head>
+  <body>
+    <p>LinkPeek test page. This page swaps its content without reloading, like many modern sites. Nothing here is real.</p>
+    <div role="toolbar">
+      <button type="button" data-route="front">Front page</button>
+      <button type="button" data-route="world">World</button>
+      <button type="button" id="rerender">Re-render same content</button>
+      <button type="button" id="change-href">Change first link's address</button>
+    </div>
+    <main id="app"></main>
+    <script>
+      const routes = {
+        front: [
+          ['/2026/10/13/town-centre-parking-charges-to-change', 'Town centre parking charges to change next month'],
+          ['/2026/10/13/new-head-teacher-appointed-at-hill-school', 'New head teacher appointed at Hill School'],
+          ['/2026/10/12/bus-company-adds-late-night-services', 'Bus company adds late-night services on weekends'],
+        ],
+        world: [
+          ['/2026/10/13/storm-delays-ferries-across-the-channel', 'Storm delays ferries across the Channel'],
+          ['/2026/10/12/trade-talks-resume-after-summer-break', 'Trade talks resume after summer break'],
+        ],
+      };
+      let current = 'front';
+      function render() {
+        const app = document.getElementById('app');
+        app.replaceChildren();
+        for (const [href, title] of routes[current]) {
+          const h3 = document.createElement('h3');
+          const a = document.createElement('a');
+          a.href = href;
+          a.textContent = title;
+          a.dataset.expect = 'icon';
+          h3.append(a);
+          app.append(h3);
+        }
+      }
+      for (const b of document.querySelectorAll('[data-route]')) {
+        b.addEventListener('click', () => {
+          current = b.dataset.route;
+          history.pushState({}, '', `?route=${current}`);
+          render();
+        });
+      }
+      document.getElementById('rerender').addEventListener('click', render);
+      document.getElementById('change-href').addEventListener('click', () => {
+        const a = document.querySelector('#app a');
+        a.href = '/2026/10/14/updated-story-address-after-correction';
+        a.textContent = 'Updated story address after a correction';
+      });
+      render();
+    </script>
+  </body>
+</html>

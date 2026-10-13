@@ -4,11 +4,17 @@ export interface Settings {
   mode: Mode;
   /** Show fixture results on links marked data-linkpeek-demo (our test pages only). */
   showDemoResults: boolean;
+  /**
+   * Hostnames where the user switched LinkPeek off, even though it has
+   * permission there (for example after allowing all sites).
+   */
+  disabledSites: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   mode: 'smart',
   showDemoResults: true,
+  disabledSites: [],
 };
 
 const KEY = 'settings';

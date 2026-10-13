@@ -17,7 +17,8 @@
     --lp-surface: #24272c;
   }
 }
-body { margin: 0; background: var(--lp-bg); color: var(--lp-fg); }
+/* Set on body too: Chrome gives extension pages a 75% body font size by default. */
+body { margin: 0; background: var(--lp-bg); color: var(--lp-fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 h1 { font-size: 15px; margin: 0; display: flex; align-items: center; gap: 8px; }
 h1 img { width: 20px; height: 20px; }
 h2 { font-size: 13px; margin: 0 0 6px; color: var(--lp-muted); font-weight: 600; }
@@ -40,3 +41,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 label.toggle { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
 label.toggle input { margin-top: 3px; }
 a { color: var(--lp-accent); }
+fieldset.modes { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+fieldset.modes legend { font-size: 13px; font-weight: 600; color: var(--lp-muted); margin-bottom: 6px; padding: 0; }
+label.mode { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; line-height: 1.35; }
+label.mode input { margin-top: 2px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.site-name { font-weight: 600; word-break: break-all; }
+ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+kbd { font: 12px ui-monospace, monospace; padding: 1px 5px; border: 1px solid var(--lp-border); border-radius: 4px; background: var(--lp-surface); }
+@media (prefers-color-scheme: dark) {
+  /* The dark-mode accent is light, so the label needs dark text for contrast. */
+  button.primary { color: #10131a; }
+}
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }

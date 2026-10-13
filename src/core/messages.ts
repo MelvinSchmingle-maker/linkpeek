@@ -20,6 +20,7 @@ export const MSG = {
   summaryFailed: "Couldn't write a summary for this article. You can still open it.",
   unsupported: "LinkPeek can't preview this type of link yet.",
   unavailable: 'No reliable summary is available for this link.',
+  notReady: "This test version of LinkPeek can't read articles yet. It only shows where previews will appear.",
   feedbackQuestion: 'Was this useful?',
   feedbackUp: 'Yes, useful',
   feedbackDown: 'No, not useful',

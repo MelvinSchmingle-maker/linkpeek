@@ -33,7 +33,16 @@ export function buildManifest({ e2e = false } = {}) {
     },
     options_ui: { page: 'options/index.html', open_in_tab: true },
     background: { service_worker: 'background.js', type: 'module' },
-    permissions: ['storage', 'activeTab', 'scripting'],
+    permissions: ['storage', 'activeTab', 'scripting', 'contextMenus'],
+    // Nothing at install. Each site is asked for when you turn LinkPeek on
+    // there (or all sites, if you choose that in settings).
+    optional_host_permissions: ['https://*/*', 'http://*/*'],
+    commands: {
+      'peek-link': {
+        suggested_key: { default: 'Alt+Shift+P' },
+        description: 'Peek at the focused link',
+      },
+    },
     minimum_chrome_version: '116',
   };
 

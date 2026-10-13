@@ -8,23 +8,29 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <header>
+    <header class="row">
       <h1><img src="/icons/icon-32.png" alt="" /><span data-brand-name>LinkPeek</span></h1>
-      <p class="muted" data-installed>Installed. Version <span data-version></span>.</p>
+      <span class="muted" data-installed>Installed. v<span data-version></span></span>
     </header>
     <main id="popup-main">
-      <section>
-        <h2>This page</h2>
-        <p class="muted">Adds LinkPeek to the tab you're on, until you leave the page.</p>
-        <button type="button" class="primary" id="run-here">Run on this page</button>
-        <p class="muted status-line" id="run-status" role="status"></p>
+      <section id="mode-section"></section>
+      <section id="site-section" aria-labelledby="site-heading">
+        <h2 id="site-heading">This site</h2>
+        <div class="row">
+          <span>
+            <span class="site-name" id="site-name"></span><br />
+            <span class="muted" id="site-state"></span>
+          </span>
+          <button type="button" class="secondary" id="site-toggle" hidden></button>
+        </div>
       </section>
       <section>
-        <h2>Demo</h2>
-        <label class="toggle">
-          <input type="checkbox" id="demo-toggle" />
-          <span>Show demo results on test pages<br /><span class="muted">Made-up examples on LinkPeek's local test pages only. Always tagged "Demo data".</span></span>
-        </label>
+        <button type="button" class="primary" id="scan">Scan this page</button>
+        <p class="muted status-line" id="scan-status" role="status"></p>
+      </section>
+      <section class="row">
+        <a href="#" id="open-options">Settings</a>
+        <span class="muted">Shortcut: <kbd id="shortcut">Alt+Shift+P</kbd></span>
       </section>
     </main>
     <script type="module" src="./popup.ts"></script>

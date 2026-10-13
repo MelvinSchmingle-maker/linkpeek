@@ -1,2 +1,4 @@
-body { width: 320px; }
+body { width: 340px; }
+header h1 { font-size: 15px; }
 .status-line { margin: 8px 0 0; min-height: 1em; }
+#scan { width: 100%; }

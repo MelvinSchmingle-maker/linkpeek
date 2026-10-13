@@ -43,3 +43,24 @@ Clicking the toolbar icon gives LinkPeek temporary access to that one tab (`acti
 
 ## D14. Warnings change the open link's wording (Part 02)
 When a link warning shows, "Open article" becomes "Open link anyway". Downloads and other unsupported links say "Open link", because they aren't articles.
+
+## D15. Link classifier: rules, tuned for precision (Part 03)
+A scored rule set (`src/core/detect/classify.ts`), not machine learning. Rules are explainable, fast, and need no data or server. Hard exclusions (navigation, menus, share and ad links, login and account pages, social profiles, files, homepages) then a score from headline-like text, headings, and article-like addresses (dates, long slugs, `/news/`, PDFs). Tuned for precision: an icon on a menu link is more annoying than a missing one, and any link can still be peeked with right-click. Labelled set: 59 examples in the tests, must stay at 95%+ precision.
+
+## D16. In-text links need strong evidence (Part 03)
+Article pages have many links inside paragraphs. These only get an icon with a strong article signal (date, long slug or PDF in the address). Otherwise a long article would be covered in icons.
+
+## D17. Sites are switched on one at a time (Part 03)
+Smart mode runs by itself only on sites you turn on (Chrome asks each time), or on all sites if you choose that in Settings. Chrome's granted-permission list is the single source of truth. One registered content script follows it. This avoids the "read and change all your data on all websites" warning at install, which puts people off and slows Chrome Web Store review.
+
+## D18. Modes, in plain terms (Part 03)
+Smart: icons appear by themselves on sites you've turned on. Scan: icons only after "Scan this page". Manual: no icons; right-click a link or use Alt+Shift+P on a focused link. "Scan this page" works in every mode because it's always the user asking. Scan mode will show tick/cross marks once headline checks exist (Part 07). For now it shows the same icons as Smart, on request.
+
+## D19. Scanning in small time-boxed batches (Part 03)
+Links are judged in batches of at most 8 ms of reading and 40 new icons, in idle time, with reads and writes separated. Measured on a 1,200-link page: all 200 headline icons in about 0.4 s, slowest batch about 12 ms, no long tasks. Link text is read with `textContent`, which avoids forcing layout.
+
+## D20. Real links say "can't read articles yet" (Part 03)
+Until Part 04, clicking the icon on a real (non-demo) link opens a card that says plainly it can't read articles yet. Nothing pretends to work.
+
+## D21. Known risk: sites that rebuild their own HTML (Part 03)
+LinkPeek inserts its icon right after a link. Sites built with React and similar tools may occasionally remove it when they redraw. The scanner notices and puts it back. A site could in theory complain about the extra element during start-up. Tested on our single-page-app page; to be checked on real sites in Part 10.

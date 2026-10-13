@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Infinite feed (LinkPeek test page)</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 640px; padding: 16px; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin: 12px 0; }
+      .card h3 { margin: 0 0 4px; font-size: 18px; }
+    </style>
+  </head>
+  <body>
+    <p>LinkPeek test page. A feed that loads more items as you scroll or press the button. Nothing here is real.</p>
+    <main id="feed" role="feed"></main>
+    <button id="more" type="button">Load more</button>
+    <script>
+      const topics = ['bus routes', 'school term dates', 'river clean-up', 'library hours', 'market stalls', 'cycle lanes', 'recycling rules', 'park opening', 'road repairs', 'swimming pool prices'];
+      let n = 0;
+      function addItems(count) {
+        const feed = document.getElementById('feed');
+        for (let i = 0; i < count; i++, n++) {
+          const topic = topics[n % topics.length];
+          const card = document.createElement('article');
+          card.className = 'card';
+          const h3 = document.createElement('h3');
+          const a = document.createElement('a');
+          a.href = `/feed/2026/10/item-${n}-update-on-${topic.replace(/ /g, '-')}`;
+          a.textContent = `Item ${n}: council update on ${topic} this week`;
+          a.dataset.expect = 'icon';
+          h3.append(a);
+          const meta = document.createElement('p');
+          const share = document.createElement('a');
+          share.href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(a.href)}`;
+          share.textContent = 'Share';
+          const comments = document.createElement('a');
+          comments.href = `${a.href}#comments`;
+          comments.textContent = `${n * 3} comments`;
+          meta.append(share, ' · ', comments);
+          card.append(h3, meta);
+          feed.append(card);
+        }
+      }
+      addItems(10);
+      document.getElementById('more').addEventListener('click', () => addItems(10));
+      addEventListener('scroll', () => {
+        if (innerHeight + scrollY > document.body.scrollHeight - 200 && n < 200) addItems(10);
+      });
+    </script>
+  </body>
+</html>

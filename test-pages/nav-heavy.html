@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Nav-heavy page (LinkPeek test page)</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+      header, footer, nav { padding: 8px 16px; background: #f2f2f2; }
+      nav a, footer a { margin-right: 12px; }
+      main { padding: 16px; max-width: 800px; }
+    </style>
+  </head>
+  <body>
+    <p>LinkPeek test page. Lots of links that should NOT get an icon, and two that should. Nothing here is real.</p>
+    <a href="#main">Skip to main content</a>
+    <header>
+      <a href="/">The Example Times</a>
+      <a href="/login">Log in</a>
+      <a href="/subscribe">Subscribe</a>
+      <nav aria-label="Sections">
+        <a href="/news">News</a><a href="/world">World</a><a href="/business">Business</a><a href="/sport">Sport</a>
+        <a href="/culture">Culture</a><a href="/science/latest-science-and-environment-news">Science and environment, all the latest</a>
+        <a href="/2026/10/a-long-headline-promoted-inside-the-navigation-menu">A long headline promoted inside the navigation menu</a>
+      </nav>
+      <div role="menu">
+        <a role="menuitem" href="/sections/weather-and-travel-updates">Weather and travel updates for your area</a>
+      </div>
+    </header>
+    <main id="main">
+      <ol aria-label="Breadcrumb">
+        <li><a href="/news">News</a></li>
+        <li><a href="/news/uk/politics-and-government-section">Politics and government section</a></li>
+      </ol>
+
+      <h2><a data-expect="icon" href="/2026/10/12/ministers-agree-new-rules-for-rental-deposits">Ministers agree new rules for rental deposits</a></h2>
+      <p>By <a href="/authors/sam-jones">Sam Jones</a> in <a href="/tag/housing">Housing</a></p>
+      <p>
+        <a href="https://twitter.com/intent/tweet?url=x">Share on X</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=x">Share on Facebook</a>
+        <a href="mailto:?subject=story">Email this story</a>
+        <a href="#comments">Jump to comments</a>
+        <a href="/2026/10/12/ministers-agree-new-rules-for-rental-deposits#comments">128 comments</a>
+      </p>
+      <p><a href="/2026/10/12/ministers-agree-new-rules-for-rental-deposits">Read more</a></p>
+
+      <h3><a data-expect="icon" href="/2026/10/11/regional-hospital-waiting-lists-fall-for-third-month">Regional hospital waiting lists fall for third month</a></h3>
+      <p><a href="/topics/health">More on health</a> · <a href="/page/2">Next</a> · <a href="javascript:void(0)">Show more</a></p>
+
+      <p>Follow us: <a href="https://x.com/exampletimes">X</a> <a href="https://www.instagram.com/exampletimes/">Instagram</a> <a href="https://www.youtube.com/@exampletimes">YouTube</a></p>
+      <p><a rel="sponsored" href="https://shop.example.com/deals/autumn-sale-on-sofas-and-beds">Autumn sale on sofas and beds, up to half price</a></p>
+      <p><a href="https://paid.outbrain.com/network/redir?p=abc">You will not believe these celebrity homes</a></p>
+      <p><a href="/feeds/latest.rss">Subscribe to our latest headlines feed</a> <a href="/account/settings">Manage your account and saved articles</a></p>
+    </main>
+    <footer>
+      <a href="/about">About us</a><a href="/contact">Contact</a><a href="/privacy">Privacy policy</a><a href="/terms">Terms</a>
+      <a href="/cookies">Cookie settings</a><a href="/careers">Careers</a><a href="/advertise">Advertise</a>
+      <a href="/2026/10/a-headline-sitting-in-the-footer-promo-area">A headline sitting in the footer promo area</a>
+    </footer>
+  </body>
+</html>

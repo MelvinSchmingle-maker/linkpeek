@@ -122,3 +122,13 @@ describe('link warnings', () => {
     expect(view('full').openLabel).toBe(MSG.openArticle);
   });
 });
+
+describe('not-ready state', () => {
+  it('says plainly that article reading is not built yet, with no verdict or feedback', () => {
+    const v = toCardView({ kind: 'not-ready' });
+    expect(v.message).toBe(MSG.notReady);
+    expect(v.status).toBeUndefined();
+    expect(v.showFeedback).toBe(false);
+    expect(v.isDemo).toBe(false);
+  });
+});

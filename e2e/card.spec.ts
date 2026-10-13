@@ -24,10 +24,18 @@ async function open(page: Page) {
   await expect(iconFor(page, 'full')).toBeVisible();
 }
 
-test('puts an icon on each demo link and nowhere else', async ({ page }) => {
+test('puts an icon on each demo link and the one real headline, nowhere else', async ({ page }) => {
   await open(page);
-  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(DEMO_KEYS.length);
+  // 10 demo links + 1 ordinary headline found by real detection.
+  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(DEMO_KEYS.length + 1);
   await expect(page.locator('nav [data-linkpeek="icon"], footer [data-linkpeek="icon"]')).toHaveCount(0);
+});
+
+test('a real (non-demo) link says plainly that reading articles is not built yet', async ({ page }) => {
+  await open(page);
+  await page.locator('a[href="/articles/ordinary.html"] + [data-linkpeek="icon"]').getByRole('button').click();
+  await expect(card(page)).toContainText("can't read articles yet");
+  await expect(card(page)).not.toContainText('Demo data');
 });
 
 test('clicking the icon opens the card under the link; clicking again closes it', async ({ page }) => {
@@ -140,14 +148,15 @@ test('feedback is saved on the device and acknowledged', async ({ page, context 
   expect(JSON.stringify(stored)).not.toContain('/articles/');
 });
 
-test('turning demo results off in the popup removes the icons', async ({ page, context, extensionId }) => {
+test('turning demo results off in settings removes the demo icons', async ({ page, context, extensionId }) => {
   await open(page);
-  const popup = await context.newPage();
-  await popup.goto(`chrome-extension://${extensionId}/popup/index.html`);
-  await popup.getByLabel(/Show demo results/).uncheck();
-  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(0);
-  await popup.getByLabel(/Show demo results/).check();
-  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(DEMO_KEYS.length);
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extensionId}/options/index.html`);
+  await options.getByLabel(/Show demo results/).uncheck();
+  await expect(page.locator('[data-linkpeek-demo] + [data-linkpeek="icon"]')).toHaveCount(0);
+  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(1);
+  await options.getByLabel(/Show demo results/).check();
+  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(DEMO_KEYS.length + 1);
 });
 
 // Browser zoom changes the CSS viewport size, so a small viewport ≈ zoomed

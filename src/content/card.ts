@@ -35,7 +35,10 @@ function makeShadowHost(kind: 'icon' | 'card'): { host: HTMLElement; root: Shado
 }
 
 /** Puts the small LinkPeek button right after a link. */
-export function attachIcon(link: HTMLAnchorElement, onActivate: (button: HTMLButtonElement) => void): HTMLElement {
+export function attachIcon(
+  link: HTMLAnchorElement,
+  onActivate: (button: HTMLButtonElement) => void,
+): { host: HTMLElement; button: HTMLButtonElement } {
   const { host, root } = makeShadowHost('icon');
   // `all: unset` drops page styles but keeps inherited font size, so the
   // icon scales with the headline and with page zoom.
@@ -54,7 +57,7 @@ export function attachIcon(link: HTMLAnchorElement, onActivate: (button: HTMLBut
   });
   root.append(button);
   link.after(host);
-  return host;
+  return { host, button };
 }
 
 export interface CardHandlers {
@@ -177,6 +180,7 @@ export class CardController {
   private button?: HTMLButtonElement;
   private frame = 0;
   private feedbackHandler?: (value: FeedbackValue) => Promise<void>;
+  private onClosed?: () => void;
 
   get openFor(): HTMLAnchorElement | undefined {
     return this.anchor;
@@ -187,8 +191,10 @@ export class CardController {
     button: HTMLButtonElement,
     input: CardInput,
     onFeedback: (value: FeedbackValue) => Promise<void>,
+    onClosed?: () => void,
   ): void {
     this.close({ restoreFocus: false });
+    this.onClosed = onClosed;
     const { host, root } = makeShadowHost('card');
     host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; top: 0; left: 0;';
     this.host = host;
@@ -224,8 +230,11 @@ export class CardController {
     cancelAnimationFrame(this.frame);
     this.host.remove();
     this.button?.setAttribute('aria-expanded', 'false');
-    if (restoreFocus) this.button?.focus();
-    this.host = this.root = this.anchor = this.button = undefined;
+    const { button, anchor, onClosed } = this;
+    this.host = this.root = this.anchor = this.button = this.onClosed = undefined;
+    onClosed?.();
+    // Back to the icon, or to the link if the icon was temporary.
+    if (restoreFocus) (button?.isConnected ? button : anchor)?.focus();
   }
 
   private show(input: CardInput): void {

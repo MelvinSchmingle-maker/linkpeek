@@ -13,6 +13,8 @@ import type { HeadlineVerdict, LinkResult } from '../core/types';
 
 export type CardInput =
   | { kind: 'loading'; isDemo: boolean }
+  /** Article reading isn't built yet (Part 04). Says so plainly. */
+  | { kind: 'not-ready' }
   | { kind: 'result'; result: LinkResult };
 
 export interface CardView {
@@ -40,6 +42,10 @@ export interface CardView {
 export function toCardView(input: CardInput): CardView {
   if (input.kind === 'loading') {
     return { isDemo: input.isDemo, loading: true, message: MSG.loading, showFeedback: false, openLabel: MSG.openArticle };
+  }
+
+  if (input.kind === 'not-ready') {
+    return { isDemo: false, loading: false, message: MSG.notReady, showFeedback: false, openLabel: MSG.openArticle };
   }
 
   const r = input.result;
