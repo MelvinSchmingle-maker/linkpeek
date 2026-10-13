@@ -1,1 +1,2 @@
 body { width: 320px; }
+.status-line { margin: 8px 0 0; min-height: 1em; }

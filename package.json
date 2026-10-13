@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "npm run build:e2e && playwright test",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "screenshots": "npm run build:e2e && SCREENSHOTS=1 playwright test screenshots"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,0 +1,298 @@
+/*
+ * Styles inside LinkPeek's Shadow DOM. The page's CSS can't reach in here,
+ * and nothing here leaks out to the page.
+ */
+:host {
+  --lp-bg: #ffffff;
+  --lp-fg: #1f2328;
+  --lp-muted: #59636e;
+  --lp-border: #d0d7de;
+  --lp-tag-bg: #eef1f4;
+  --lp-shadow: 0 4px 16px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :host {
+    --lp-bg: #1f2227;
+    --lp-fg: #e6e8eb;
+    --lp-muted: #a0a7b0;
+    --lp-border: #3d434b;
+    --lp-tag-bg: #2c3138;
+    --lp-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ---------- Inline icon ---------- */
+
+.icon {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Follows the link's text size, within sensible bounds. */
+  width: clamp(16px, 0.9em, 22px);
+  height: clamp(16px, 0.9em, 22px);
+  border-radius: 50%;
+  color: var(--lp-neutral);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 120ms, color 120ms, background-color 120ms;
+}
+.icon:hover,
+.icon[aria-expanded='true'] {
+  opacity: 1;
+  color: var(--lp-accent);
+  background: color-mix(in srgb, var(--lp-accent) 12%, transparent);
+}
+.icon:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 1px;
+}
+.icon svg {
+  width: 80%;
+  height: 80%;
+}
+
+/* ---------- Card ---------- */
+
+.card {
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 16px));
+  padding: 10px 12px 10px;
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  border: 1px solid var(--lp-border);
+  border-radius: 10px;
+  box-shadow: var(--lp-shadow);
+  font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.card:focus {
+  outline: none;
+}
+.card:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 22px;
+}
+.spacer {
+  flex: 1;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.status.pass {
+  color: var(--lp-pass);
+}
+.status.fail {
+  color: var(--lp-fail);
+}
+.status.unknown {
+  color: var(--lp-neutral);
+}
+
+.tag {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--lp-tag-bg);
+  color: var(--lp-muted);
+  white-space: nowrap;
+}
+.tag.demo {
+  background: transparent;
+  border: 1px dashed var(--lp-accent);
+  color: var(--lp-accent);
+  font-weight: 600;
+  padding: 2px 5px;
+}
+
+.close {
+  all: unset;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lp-muted);
+  cursor: pointer;
+}
+.close:hover {
+  background: var(--lp-tag-bg);
+  color: var(--lp-fg);
+}
+.close:focus-visible {
+  outline: 2px solid var(--lp-accent);
+}
+.close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.warning {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lp-warn);
+  background: color-mix(in srgb, var(--lp-warn) 12%, transparent);
+}
+.warning-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.warning-text strong {
+  font-weight: 600;
+}
+.warning-detail {
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--lp-fg);
+}
+.warning svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 1px;
+}
+
+.body {
+  margin-top: 6px;
+}
+.summary {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--lp-fg);
+}
+.message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--lp-muted);
+}
+.preview {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--lp-fg);
+}
+.reason {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--lp-muted);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--lp-border);
+  border-top-color: var(--lp-accent);
+  animation: lp-spin 0.8s linear infinite;
+}
+@keyframes lp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+.open {
+  color: var(--lp-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.open:hover {
+  text-decoration: underline;
+}
+.open:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--lp-muted);
+}
+.feedback .question {
+  margin-right: 4px;
+}
+.thumb {
+  all: unset;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lp-muted);
+  cursor: pointer;
+}
+.thumb:hover {
+  background: var(--lp-tag-bg);
+  color: var(--lp-fg);
+}
+.thumb:focus-visible {
+  outline: 2px solid var(--lp-accent);
+}
+.thumb svg {
+  width: 15px;
+  height: 15px;
+}
+.thanks {
+  color: var(--lp-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

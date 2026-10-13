@@ -11,7 +11,7 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | Part | Status |
 |---|---|
 | 01 Project setup | Done |
-| 02 Inline button and card (demo data) | See `docs/progress.md` |
+| 02 Inline button and card (demo data) | Done |
 | 03 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
@@ -39,7 +39,9 @@ After changing code, run `npm run build` again and click the reload arrow on Lin
 node scripts/serve-test-pages.mjs
 ```
 
-Then open http://127.0.0.1:4173 in Chrome. The test pages contain no real news.
+Then open http://127.0.0.1:4173/news-front.html in Chrome, click the LinkPeek toolbar icon and press **Run on this page**. Small eye icons appear next to the demo headlines. Click one to see the card. The test pages contain no real news, and every result there is tagged "Demo data".
+
+To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 
 ## Commands
 

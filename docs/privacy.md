@@ -9,6 +9,7 @@
 | What | Where | Why |
 |---|---|---|
 | Settings (mode, demo toggle) | `chrome.storage.local` | Remember your choices |
+| Feedback votes (thumbs up/down) | `chrome.storage.local` | Find out which summaries help. Keeps the website's hostname (e.g. `news.example.com`), never the full address or any article text. One vote per result, at most 500 kept. |
 
 ## Rules for every future change
 

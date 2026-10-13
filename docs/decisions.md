@@ -28,3 +28,18 @@ The linter (typescript-eslint) supports TypeScript below 6.1 as of Oct 2026. Upg
 
 ## D9. Placeholder icon (Part 01)
 A simple eye on a blue square, rendered by `scripts/make-icons.mjs`. Replace before publishing. LinkPeek uses blue (`#3b5bdb`) so it reads as a tool, not a warning, and so red and green stay free for the tick and cross.
+
+## D10. The card floats over the page (Part 02)
+The card uses `position: fixed` just under the link, so opening it never pushes the article around. It follows the link on scroll and resize, and flips above the link when there's no room below. Known limit: a page that applies CSS `zoom` to its own body (rare) could misplace it. Normal browser zoom (Ctrl +/-) is tested and works.
+
+## D11. Shadow DOM is closed in the real build, open in the test build (Part 02)
+Closed means page scripts can't reach into LinkPeek's card to read what you previewed. Playwright can only test inside open shadow roots, so the test build (`dist-e2e/`) uses open. This is the only behaviour difference between the two builds besides the test-server permission.
+
+## D12. Basic feedback stored on the device now (Part 02)
+The brief says no button may pretend to work. Instead of fake thumbs, the thumbs save a real vote to `chrome.storage.local`: hostname only, no full URL, no article text, one vote per result, capped at 500 entries. Part 09 adds reasons, export and delete-all. Nothing is sent anywhere.
+
+## D13. "Run on this page" in the popup (Part 02)
+Clicking the toolbar icon gives LinkPeek temporary access to that one tab (`activeTab`). The popup's "Run on this page" button uses it to add LinkPeek to the page. It's the start of Manual mode and needs no site permission.
+
+## D14. Warnings change the open link's wording (Part 02)
+When a link warning shows, "Open article" becomes "Open link anyway". Downloads and other unsupported links say "Open link", because they aren't articles.

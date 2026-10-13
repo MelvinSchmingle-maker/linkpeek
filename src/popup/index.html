@@ -12,7 +12,21 @@
       <h1><img src="/icons/icon-32.png" alt="" /><span data-brand-name>LinkPeek</span></h1>
       <p class="muted" data-installed>Installed. Version <span data-version></span>.</p>
     </header>
-    <main id="popup-main"></main>
+    <main id="popup-main">
+      <section>
+        <h2>This page</h2>
+        <p class="muted">Adds LinkPeek to the tab you're on, until you leave the page.</p>
+        <button type="button" class="primary" id="run-here">Run on this page</button>
+        <p class="muted status-line" id="run-status" role="status"></p>
+      </section>
+      <section>
+        <h2>Demo</h2>
+        <label class="toggle">
+          <input type="checkbox" id="demo-toggle" />
+          <span>Show demo results on test pages<br /><span class="muted">Made-up examples on LinkPeek's local test pages only. Always tagged "Demo data".</span></span>
+        </label>
+      </section>
+    </main>
     <script type="module" src="./popup.ts"></script>
   </body>
 </html>
