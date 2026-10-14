@@ -6,19 +6,18 @@ import {
   EVIDENCE_TAG,
   FAILURE_MESSAGE,
   MSG,
+  opensOn,
+  permissionNeeded,
   RISK_WARNING,
   VERDICT_LABEL,
 } from '../core/messages';
+import { siteOf } from '../core/retrieve/url';
 import type { HeadlineVerdict, LinkResult } from '../core/types';
 
-export type CardInput =
-  | { kind: 'loading'; isDemo: boolean }
-  /** Article reading isn't built yet (Part 04). Says so plainly. */
-  | { kind: 'not-ready' }
-  | { kind: 'result'; result: LinkResult };
+export type CardInput = { kind: 'loading'; isDemo: boolean } | { kind: 'result'; result: LinkResult };
 
 export interface CardView {
-  /** Tick / cross / neutral mark. Absent while loading or when nothing could be read. */
+  /** Tick / cross / neutral mark. Absent while loading, when nothing could be read, or when no check ran. */
   status?: { verdict: HeadlineVerdict; label: string };
   evidenceTag?: string;
   isDemo: boolean;
@@ -30,22 +29,25 @@ export interface CardView {
   openLabel: string;
   /** The one-sentence summary, when we really have one. */
   summary?: string;
+  /** What the article text begins with, while there's no summary. Always introduced by extractLabel. */
+  extract?: string;
+  extractLabel?: string;
   /** An explanatory line (preview notice, failure reason, etc). */
   message?: string;
   /** Preview text for partial results, shown under the message. */
   preview?: string;
   /** One-line reason for a headline verdict. */
   reason?: string;
+  /** A small factual note, e.g. the link opens on another site. */
+  note?: string;
+  /** A button the card offers (e.g. "Allow access…"), handled by the card's owner. */
+  action?: string;
   showFeedback: boolean;
 }
 
 export function toCardView(input: CardInput): CardView {
   if (input.kind === 'loading') {
     return { isDemo: input.isDemo, loading: true, message: MSG.loading, showFeedback: false, openLabel: MSG.openArticle };
-  }
-
-  if (input.kind === 'not-ready') {
-    return { isDemo: false, loading: false, message: MSG.notReady, showFeedback: false, openLabel: MSG.openArticle };
   }
 
   const r = input.result;
@@ -61,6 +63,13 @@ export function toCardView(input: CardInput): CardView {
     view.warningDetail = r.linkRisk.reason;
     view.openLabel = MSG.openAnyway;
   }
+  if (r.finalUrl && siteOf(r.finalUrl) && siteOf(r.finalUrl) !== siteOf(r.url)) view.note = opensOn(siteOf(r.finalUrl));
+
+  if (r.needsPermissionFor) {
+    view.message = permissionNeeded(r.needsPermissionFor);
+    view.action = MSG.allow;
+    return view;
+  }
 
   if (r.unsupported) {
     view.message = MSG.unsupported;
@@ -70,6 +79,9 @@ export function toCardView(input: CardInput): CardView {
 
   if (r.failure) {
     view.message = FAILURE_MESSAGE[r.failure];
+    // Some failures still leave something honest to show: a subscription
+    // page's own public description, for example.
+    if (r.preview) view.preview = r.preview;
     // A verdict on the headline's wording can still help when the article
     // failed. A bare "no verdict" would only add clutter, so skip it.
     if (r.headlineCheck.verdict !== 'unknown') addVerdict(view, r);
@@ -81,14 +93,22 @@ export function toCardView(input: CardInput): CardView {
       if (r.summary) {
         view.summary = r.summary.text;
         view.showFeedback = true;
+      } else if (r.extract?.firstSentence) {
+        view.extractLabel = MSG.extractLabel;
+        view.extract = r.extract.firstSentence;
       } else {
         view.message = MSG.summaryFailed;
       }
       break;
     case 'partial':
-      view.message = MSG.partialIntro;
-      view.preview = r.preview;
-      view.showFeedback = Boolean(r.preview);
+      if (r.extract?.truncated && r.extract.firstSentence) {
+        view.extractLabel = MSG.pdfPartial;
+        view.extract = r.extract.firstSentence;
+      } else {
+        view.message = MSG.partialIntro;
+        view.preview = r.preview;
+        view.showFeedback = Boolean(r.preview) && r.isDemo;
+      }
       break;
     case 'headline-only':
       view.message = MSG.headlineOnly;
@@ -103,7 +123,8 @@ export function toCardView(input: CardInput): CardView {
 }
 
 function addVerdict(view: CardView, r: LinkResult): void {
-  const { verdict, reason } = r.headlineCheck;
+  const { verdict, reason, notChecked } = r.headlineCheck;
+  if (notChecked) return;
   view.status = { verdict, label: VERDICT_LABEL[verdict] };
   view.reason = reason ?? (verdict === 'unknown' ? MSG.insufficient : undefined);
 }

@@ -1,0 +1,73 @@
+# Part 04 live check
+
+Made by `node scripts/build.mjs --live && node scripts/live-check.mjs`, which
+runs LinkPeek's real reading code on real pages and rewrites the table below.
+
+This is a snapshot, not a test. Websites change, and the run came from a cloud
+machine (a data-centre address, through a proxy), which some sites treat with
+more suspicion than a home connection.
+
+<!-- live-check:start -->
+Run on 2026-10-14. **7 of 10** pages came back `full`.
+
+| Page | Expected | Evidence | Reason | Read by | Words | Shown on the card | Time |
+|---|---|---|---|---|---|---|---|
+| [BBC News article](https://www.bbc.co.uk/news/articles/c3qjn45pepx1o) | full | full |  | readability | 766 | Russell Brand was described as "ruthless" and a "sexual predator" by the prosecution at the start of his trial for rape and sexual assault o | 0.7s |
+| [Guardian feature](https://www.theguardian.com/lifeandstyle/2026/oct/14/a-moment-that-changed-me-i-learned-to-read-at-42) | full | full |  | readability | 874 | In 2021, at 42 years old, I had the reading age of a four-year-old. | 0.6s |
+| [GOV.UK press release](https://www.gov.uk/government/news/new-action-to-crackdown-on-bogus-self-employment-loopholes) | full | full |  | readability | 411 | Over 900,000 people could benefit from new plans which include measures to crack down on bogus self-employment. | 0.2s |
+| [Wikipedia article](https://en.wikipedia.org/wiki/Dachshund) | full | full |  | readability | 6610 | The Dachshund, also known as the Dackel or Teckel, is a German breed of short-legged, long-bodied dog of hound type. | 0.7s |
+| [GitHub blog post](https://github.blog/ai-and-ml/generative-ai/how-ai-code-generation-works/) | full | full |  | readability | 2540 | Generative AI coding tools are changing software production for enterprises. | 1.5s |
+| [arXiv paper (PDF)](https://arxiv.org/pdf/1706.03762) | full or first pages | full |  | pdf | 6472 | Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in | 1.6s |
+| [Hacker News thread](https://news.ycombinator.com/item?id=50087328) | discussion, not an article | full |  | readability | 3134 | It's not good for adults either.If implemented as the title implies, data about minors would still be collected (though they'd get generic a | 1.0s |
+| [YouTube video](https://www.youtube.com/watch?v=dQw4w9WgXcQ) | preview (needs Part 06) | unavailable | bot-challenge |  |  |  | 1.0s |
+| [Reddit (old)](https://old.reddit.com/r/UKPersonalFinance/) | login wall | unavailable | login-wall |  |  |  | 0.7s |
+| [The Times (paywall)](https://www.thetimes.com/business/companies-markets/article/arrests-fca-nca-insider-trading-nbff2hm2x) | paywall, description only | partial | paywall |  |  | Nikhil Rathi, the head of the City regulator, said the investigation came amid a rise in financial crime that was getting increasingly sophi | 1.1s |
+
+"Shown on the card" is the first sentence of the article for a `full`
+result, or the page's own description for a preview. Text in this table comes
+from the websites, not from LinkPeek.
+
+Redirects: YouTube video ended on https://www.google.com/sorry/index; Reddit (old) ended on https://old.reddit.com/login/.
+<!-- live-check:end -->
+
+## What the runs taught us
+
+The first run, earlier the same day, also got 7 of 10, but three of those seven
+showed the wrong opening sentence:
+
+- BBC News splits a story into several identical text blocks with videos
+  between them. Readability kept only the biggest block, so the card opened
+  part-way in, on a barrister's quote. LinkPeek now looks for earlier
+  paragraphs laid out exactly like the one Readability started from, inside
+  the same `<article>`, and starts from the first of them
+  (`findLead` in `src/core/extract/html.ts`).
+- Wikipedia's infobox table came first, so the "sentence" was table cells run
+  together ("DachshundOriginGermanyTraits..."). Paragraphs inside tables,
+  figures, captions, asides and hidden labels no longer count, and footnote
+  markers like "[note 1]" are dropped.
+- GOV.UK's "Press release" label was glued to the front of the first sentence.
+  The opening is now taken paragraph by paragraph, and a paragraph under six
+  words is skipped.
+
+Each one has a small fictional copy in `test-pages/articles/` (`split-blocks`,
+`infobox`, `labelled`), and a fourth (`standfirst`) checks that a Guardian
+style standfirst isn't mistaken for the opening.
+
+Reddit sends this machine to a login page, which then answers 403. The first
+run reported "the site refused the request". Being sent to a login page now
+counts as a login wall whatever status the login page answers with.
+
+YouTube answered normally on the first run (description shown, page needs
+JavaScript). By the second run Google was sending this machine to its
+"unusual traffic" robot check, after a handful of requests from the same
+address. LinkPeek reported that correctly and did not try again. A person on a
+home connection is unlikely to see this.
+
+Still wrong, and left for later parts:
+
+- The Hacker News thread comes back `full` because the comments are long
+  text, so the card shows the first comment. The card's label was changed
+  from "The article begins" to "The text begins", which is at least true.
+  Discussion pages get their own handling in Part 13 (social adapters).
+- The arXiv PDF really does open with a licence note from Google, so that is
+  what the card shows. A summary (Parts 05 and 06) will need to look past it.

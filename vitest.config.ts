@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  define: { __E2E__: 'false' },
+  define: { __E2E__: 'false', __LIVE__: 'false' },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'happy-dom',

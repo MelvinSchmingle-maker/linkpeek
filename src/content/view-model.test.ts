@@ -123,12 +123,56 @@ describe('link warnings', () => {
   });
 });
 
-describe('not-ready state', () => {
-  it('says plainly that article reading is not built yet, with no verdict or feedback', () => {
-    const v = toCardView({ kind: 'not-ready' });
-    expect(v.message).toBe(MSG.notReady);
-    expect(v.status).toBeUndefined();
+describe('real results (Part 04)', () => {
+  const real = (patch: Partial<LinkResult>): LinkResult => ({
+    id: 'r-1',
+    url: 'https://news.example.com/a',
+    headline: 'A headline',
+    evidence: 'full',
+    headlineCheck: { verdict: 'unknown', notChecked: true },
+    linkRisk: { level: 'not-checked' },
+    isDemo: false,
+    ...patch,
+  });
+
+  it('a full article without a summary shows its first sentence, clearly labelled, never as a summary', () => {
+    const v = toCardView({ kind: 'result', result: real({ extract: { firstSentence: 'The council met on Tuesday.', wordCount: 400, method: 'readability' } }) });
+    expect(v.summary).toBeUndefined();
+    expect(v.extract).toBe('The council met on Tuesday.');
+    expect(v.extractLabel).toBe(MSG.extractLabel);
     expect(v.showFeedback).toBe(false);
-    expect(v.isDemo).toBe(false);
+  });
+
+  it('no verdict mark when the headline check has not run', () => {
+    const v = toCardView({ kind: 'result', result: real({ extract: { firstSentence: 'x y z.', wordCount: 400, method: 'readability' } }) });
+    expect(v.status).toBeUndefined();
+    expect(v.reason).toBeUndefined();
+  });
+
+  it('asks for permission with a button, and nothing else', () => {
+    const v = toCardView({ kind: 'result', result: real({ evidence: 'unavailable', failure: 'permission-denied', needsPermissionFor: 'other.example' }) });
+    expect(v.message).toBe('LinkPeek needs your permission to read pages on other.example.');
+    expect(v.action).toBe(MSG.allow);
+    expect(v.extract).toBeUndefined();
+  });
+
+  it('a subscription page shows the reason and its public description', () => {
+    const v = toCardView({ kind: 'result', result: real({ evidence: 'partial', failure: 'paywall', preview: 'A teaser.' }) });
+    expect(v.message).toBe(FAILURE_MESSAGE.paywall);
+    expect(v.preview).toBe('A teaser.');
+    expect(v.evidenceTag).toBe('Preview only');
+  });
+
+  it('notes when a link opens on another site, but not for the same site', () => {
+    const other = toCardView({ kind: 'result', result: real({ finalUrl: 'https://elsewhere.example/x', extract: { firstSentence: 'a b c.', wordCount: 300, method: 'readability' } }) });
+    expect(other.note).toBe('Opens on elsewhere.example.');
+    const same = toCardView({ kind: 'result', result: real({ finalUrl: 'https://www.news.example.com/a-moved', extract: { firstSentence: 'a b c.', wordCount: 300, method: 'readability' } }) });
+    expect(same.note).toBeUndefined();
+  });
+
+  it('a long PDF read only in part says so', () => {
+    const v = toCardView({ kind: 'result', result: real({ evidence: 'partial', preview: 'p', extract: { firstSentence: 'The report finds X.', wordCount: 5000, method: 'pdf', truncated: true } }) });
+    expect(v.extractLabel).toBe(MSG.pdfPartial);
+    expect(v.extract).toBe('The report finds X.');
   });
 });

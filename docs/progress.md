@@ -99,3 +99,28 @@
 - The "Turn on pending" note that lets the service worker undo "turn off" when the popup closes during Chrome's prompt. It needs the real prompt.
 - The "?" badge itself (code path runs; tests can't see the toolbar).
 - The two remaining partial items are design limits, not fixed: icons are still inserted next to links (overlay not built, see the React note above), and the real grant/restart path isn't tested.
+
+## Part 04. Fetching and reading articles (14 Oct 2026)
+
+**Built:**
+- Real reading for real links. The card shows what LinkPeek read: "The text begins (LinkPeek writes summaries in a later version):" and the opening sentence, or a preview that says it isn't the full article, or a plain reason it couldn't read the page. No summaries and no tick or cross yet; the card shows no verdict mark rather than a made-up one.
+- Fetching (D24): same-site links fetched from the page, other sites after the user allows them in a small LinkPeek window, links to the current page read from the page. No cookies, no referrer, 8 s timeout, size limits, one retry only for dropped connections and timeouts.
+- Reading (D25): an offscreen document with Mozilla Readability for HTML and pdf.js for the first 15 pages of a PDF.
+- Failure checks (D26) for robot checks (Cloudflare, DataDome, PerimeterX, Imperva, Google's "unusual traffic"), login walls, subscription walls (D27), JavaScript-only pages, HTTP errors, slow and huge pages, images and other files.
+- A memory-only result cache (D28).
+- Test pages: `test-pages/retrieval.html` with 24 cases and fictional articles in `test-pages/articles/`, including three PDFs. New test server routes for error codes, redirects, slow and huge responses, and request counting.
+- Live check: `scripts/live-check.mjs` with a `dist-live/` build. Results in `docs/compat/part-04-live.md`.
+
+**Tested (actual results):**
+- typecheck, lint, production build: pass. The production build has no test hooks.
+- Unit tests: 189/189 pass. They cover article reading on four layouts, the opening sentence on the four layouts the live check tripped over, previews, every failure reason, paywalled pages never leaking body text, PDFs (full, partial, scanned), the fetcher against a real local server (timeouts, one retry, size limits, character sets, no cookies, redirects), the cache, and the card's wording for each result.
+- Browser tests: 104/104 pass in Chromium 141 (3 screenshot-only tests skipped). Every case on the retrieval page read for real; a paywalled page never shows its paid text; slow sites time out after exactly one retry; 403, 429 and robot checks are asked exactly once; the same article twice is fetched once; a 429 isn't remembered; a same-site link is fetched by the page without permission; a link to another site asks first and fetches nothing; once access is granted the open card tries again by itself; Manual mode peeks read real links; and a service worker stopped in the middle of reading still gives an answer (the server saw the second request, which proves the restart happened).
+- Live check on 10 real pages (14 Oct 2026, from a cloud machine): **7 of 10 came back full** (BBC News, the Guardian, GOV.UK, Wikipedia, the GitHub blog, an arXiv PDF and a Hacker News thread). The Times was correctly treated as a paywall, with only its public description shown. Reddit sent this machine to a login page. YouTube sent it to Google's robot check by the second run. The first run found three wrong opening sentences (BBC, Wikipedia, GOV.UK); all three are fixed and have test pages now. Details: `docs/compat/part-04-live.md`.
+
+**Not verified:**
+- Chrome's real permission prompt in the "Allow access…" window. Tests can't click it; they stand in for a grant and check that the card tries again.
+- Results from a home connection. The live check ran from a data-centre address, which some sites treat worse.
+- Discussion pages. A Hacker News thread counts as `full` and the card shows the first comment. Part 13.
+- Whether 150 words is the right line between full and partial. It's a guess (D26).
+- Sites whose security policy blocks the in-page fetch for same-site links. The code reports it as "couldn't reach the site"; no live example found yet.
+

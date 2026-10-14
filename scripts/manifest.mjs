@@ -17,8 +17,8 @@ const ICONS = {
   128: 'icons/icon-128.png',
 };
 
-/** @param {{ e2e?: boolean, onDemand?: boolean }} opts */
-export function buildManifest({ e2e = false, onDemand = false } = {}) {
+/** @param {{ e2e?: boolean, onDemand?: boolean, live?: boolean }} opts */
+export function buildManifest({ e2e = false, onDemand = false, live = false } = {}) {
   const manifest = {
     manifest_version: 3,
     name: brand.name,
@@ -33,7 +33,7 @@ export function buildManifest({ e2e = false, onDemand = false } = {}) {
     },
     options_ui: { page: 'options/index.html', open_in_tab: true },
     background: { service_worker: 'background.js', type: 'module' },
-    permissions: ['storage', 'activeTab', 'scripting', 'contextMenus'],
+    permissions: ['storage', 'activeTab', 'scripting', 'contextMenus', 'offscreen'],
     // Nothing at install. Each site is asked for when you turn LinkPeek on
     // there (or all sites, if you choose that in settings).
     optional_host_permissions: ['https://*/*', 'http://*/*'],
@@ -57,6 +57,11 @@ export function buildManifest({ e2e = false, onDemand = false } = {}) {
     //    a right-click peek or "Scan this page" on any other site.
     manifest.name = `${brand.name} (test build${onDemand ? ', on demand' : ''})`;
     manifest.host_permissions = ['http://127.0.0.1/*', 'http://demo.test/*'];
+    // The live check (scripts/live-check.mjs) reads real websites: all sites.
+    if (live) {
+      manifest.name = `${brand.name} (live check build)`;
+      manifest.host_permissions = ['https://*/*', 'http://*/*'];
+    }
     if (!onDemand) {
       manifest.content_scripts = [
         { matches: ['http://127.0.0.1/*', 'http://demo.test/*'], js: ['content.js'], run_at: 'document_idle' },

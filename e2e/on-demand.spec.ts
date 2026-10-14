@@ -115,7 +115,8 @@ test('demo markup is ignored on a site that is not LinkPeek’s test server', as
   // The page marks this link as a "passed" demo result. On a real site that must mean nothing.
   const res = await injectAndSend(context, { type: 'peek', url: `${OTHER_SITE}/articles/cycle-lanes.html` });
   expect(res).toEqual({ ok: true });
-  await expect(card(page)).toContainText("can't read articles yet");
+  // A real reading of the real page instead.
+  await expect(card(page)).toContainText('Millbrook council has approved two kilometres');
   await expect(card(page)).not.toContainText('Headline check passed');
   await expect(card(page)).not.toContainText('Demo data');
 });
@@ -183,6 +184,7 @@ test('frames: the shortcut peeks at a focused link inside a frame; other frames 
   await frameLink.focus();
   // Sent to the whole tab, like the shortcut. Only the frame with the focused link answers.
   expect(await sendToFrame(context, { type: 'peek-focused' })).toEqual({ ok: true });
-  await expect(frameCard(page)).toContainText("can't read articles yet");
+  // That link has no page on the test server, so the card says so: a real answer from inside the frame.
+  await expect(frameCard(page)).toContainText("The site said the page isn't available.");
   await expect(card(page)).toHaveCount(0);
 });

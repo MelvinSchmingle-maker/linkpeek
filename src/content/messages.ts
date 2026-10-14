@@ -1,3 +1,4 @@
+import type { RetrieveRequest } from '../background/retrieve';
 /** Messages the popup and service worker send to the content script. */
 export type ContentMessage =
   | { type: 'ping' }
@@ -10,7 +11,9 @@ export type ContentMessage =
   /** The site was turned on or off: check again whether to run by itself. */
   | { type: 'refresh' }
   /** A card is about to open in another frame of this tab: close ours. */
-  | { type: 'close-card' };
+  | { type: 'close-card' }
+  /** Access to a site was just granted: try the open card's link again. */
+  | { type: 'retry' };
 
 export interface ContentResponse {
   ok: boolean;
@@ -18,14 +21,26 @@ export interface ContentResponse {
   found?: number;
 }
 
-const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh', 'close-card']);
+const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh', 'close-card', 'retry']);
 
 export function isContentMessage(msg: unknown): msg is ContentMessage {
   return typeof msg === 'object' && msg !== null && TYPES.has((msg as { type?: unknown }).type as string);
 }
 
-/** Messages the content script sends to the service worker. */
-export type WorkerMessage = { type: 'site-status' };
+/** Messages the content script and LinkPeek's pages send to the service worker. */
+export type WorkerMessage =
+  | { type: 'site-status' }
+  | RetrieveRequest
+  /** Open LinkPeek's small window that asks for access to a link's site. */
+  | { type: 'open-permission'; url: string }
+  /** Sent by that window once access is granted. */
+  | { type: 'permission-granted'; tabId: number };
+
+const WORKER_TYPES = new Set(['site-status', 'retrieve', 'open-permission', 'permission-granted']);
+
+export function isWorkerMessage(msg: unknown): msg is WorkerMessage {
+  return typeof msg === 'object' && msg !== null && WORKER_TYPES.has((msg as { type?: unknown }).type as string);
+}
 
 export interface SiteStatus {
   /** LinkPeek has access to this site, so Smart mode may run here by itself. */

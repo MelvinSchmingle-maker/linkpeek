@@ -6,7 +6,9 @@
  */
 import { hostFromPattern, originPattern, syncSiteScripts } from '../core/sites';
 import { DEFAULT_SETTINGS, getSettings, updateSettings } from '../core/storage/settings';
-import type { ContentMessage, ContentResponse, SiteStatus } from '../content/messages';
+import { isWorkerMessage, type ContentMessage, type ContentResponse, type SiteStatus } from '../content/messages';
+import type { LinkResult } from '../core/types';
+import { retrieve, type RetrieveResponse } from './retrieve';
 
 const MENU_ID = 'linkpeek-peek';
 const PEEK_COMMAND = 'peek-link';
@@ -30,14 +32,39 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 
 chrome.runtime.onStartup.addListener(() => void syncSiteScripts());
 
-// The content script asks whether it may run by itself on this site.
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse: (r: SiteStatus) => void) => {
-  if (msg?.type !== 'site-status') return false;
-  siteAllowed(sender.url ?? sender.tab?.url).then(
-    (allowed) => sendResponse({ allowed }),
-    () => sendResponse({ allowed: false }),
-  );
-  return true;
+// Messages from LinkPeek's own content script and pages. Web pages can't
+// message the extension (no externally_connectable), and every handler checks
+// where a message came from anyway.
+chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse: (r: unknown) => void) => {
+  if (!isWorkerMessage(msg) || sender.id !== chrome.runtime.id) return false;
+  const fromContentScript = sender.tab?.id !== undefined && !sender.url?.startsWith(chrome.runtime.getURL(''));
+  switch (msg.type) {
+    case 'site-status':
+      // The content script asks whether it may run by itself on this site.
+      siteAllowed(sender.url ?? sender.tab?.url).then(
+        (allowed) => sendResponse({ allowed } satisfies SiteStatus),
+        () => sendResponse({ allowed: false } satisfies SiteStatus),
+      );
+      return true;
+    case 'retrieve':
+      if (!fromContentScript) return false;
+      retrieve(msg, sender.url ?? sender.tab?.url).then(sendResponse, () =>
+        sendResponse({
+          kind: 'result',
+          result: errorResult(msg.url, msg.headline),
+        } satisfies RetrieveResponse),
+      );
+      return true;
+    case 'open-permission':
+      if (!fromContentScript || !sender.tab?.id) return false;
+      void openPermissionWindow(msg.url, sender.tab.id);
+      return false;
+    case 'permission-granted':
+      // From LinkPeek's own permission window: try the open card again.
+      if (!sender.url?.startsWith(chrome.runtime.getURL('permission/'))) return false;
+      void chrome.tabs.sendMessage(msg.tabId, { type: 'retry' } satisfies ContentMessage).catch(() => undefined);
+      return false;
+  }
 });
 
 async function siteAllowed(pageUrl: string | undefined): Promise<boolean> {
@@ -159,4 +186,40 @@ async function showProblem(tabId: number): Promise<void> {
   } catch {
     // Tab closed meanwhile.
   }
+}
+
+/**
+ * Ask the user for access to a link's site, in a small LinkPeek window.
+ * (Chrome only shows its permission prompt from an extension page after a
+ * click there; a click in the web page doesn't count.)
+ */
+async function openPermissionWindow(url: string, tabId: number): Promise<void> {
+  const params = new URLSearchParams({ url, tab: String(tabId) });
+  await chrome.windows.create({
+    url: chrome.runtime.getURL(`permission/index.html?${params}`),
+    type: 'popup',
+    width: 460,
+    height: 380,
+    focused: true,
+  });
+}
+
+function errorResult(url: string, headline: string): LinkResult {
+  return {
+    id: 'error',
+    url,
+    headline,
+    evidence: 'unavailable',
+    failure: 'extraction-failed',
+    headlineCheck: { verdict: 'unknown' },
+    linkRisk: { level: 'not-checked' },
+    isDemo: false,
+  };
+}
+
+// Test builds only: lets scripts/live-check.mjs run the real reading pipeline
+// on a list of addresses. Not present in the real build.
+if (__E2E__) {
+  (globalThis as unknown as { __linkpeekRetrieve: unknown }).__linkpeekRetrieve = (url: string) =>
+    retrieve({ type: 'retrieve', url, headline: '' }, undefined);
 }

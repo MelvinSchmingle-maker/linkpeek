@@ -67,6 +67,7 @@ Smart: icons appear by themselves on sites you've turned on. Scan: icons only af
 Links are judged in batches of at most 8 ms of reading and 40 new icons, in idle time, with reads and writes separated. Measured on a 1,200-link page: all 200 headline icons in about 0.4 s, slowest batch about 12 ms, no long tasks. Link text is read with `textContent`, which avoids forcing layout.
 
 ## D20. Real links say "can't read articles yet" (Part 03)
+(Replaced in Part 04 by real reading, D24 onward.)
 Until Part 04, clicking the icon on a real (non-demo) link opens a card that says plainly it can't read articles yet. Nothing pretends to work.
 
 ## D21. Known risk: sites that rebuild their own HTML (Part 03)
@@ -98,3 +99,35 @@ A second multi-agent round re-tested every finding against the fixed code (27 of
 - **"Turn off" marks survive "all websites" being unticked.** The service worker only clears a site's "off" mark when the user has just pressed "Turn on" for that site (a short-lived note in storage), not whenever access is granted.
 - **Popup** listens for changes at the top level, so it updates while open and doesn't pile up listeners.
 - **Still not done:** drawing icons in an overlay instead of inserting them next to links. Until then, a site that "hydrates" its server-rendered HTML more than about 0.3 s after load (with no DOM changes before) can still be disturbed by our icons. See `docs/progress.md`.
+
+## D24. Who fetches the article (Part 04)
+An extension can only fetch a page from a site it has access to, and after install LinkPeek has none. So:
+- **A link on the same site as the page** is fetched by LinkPeek's script inside the page, which may fetch from its own site. No extra permission.
+- **A link to another site** needs access to that site. The card says so and offers "Allow access…", which opens a small LinkPeek window with "Allow this site", "Allow all websites" and "Not now". Chrome then shows its own prompt. The window says that allowing a site also turns LinkPeek on there, because Chrome's granted list is the single source of truth for both (D17). Once granted, the open card tries again by itself.
+- **Sites LinkPeek already has access to** are fetched by the service worker.
+- **A link to the page you're on** is read from the page itself, not fetched again.
+
+No LinkPeek server. A server could fetch any site without asking, but it would see every link people preview and would cost money per request. Revisit if the permission step turns out to stop most people (Part 10 should measure it).
+
+Every fetch leaves out cookies and logins (`credentials: 'omit'`), sends no referrer, skips the HTTP cache, waits at most 8 seconds per try and reads at most 3 MB of HTML or 10 MB of PDF. It retries once, and only after a dropped connection or a timeout. A refusal (403), a rate limit (429) or a robot check is never retried. Asking again is how a scraper behaves.
+
+Known limit: a page's own Content Security Policy can stop the in-page fetch for same-site links. That shows as "couldn't reach the site", and allowing the site fixes it.
+
+## D25. Reading pages in an offscreen document (Part 04)
+Service workers have no DOM, and Readability needs one. A hidden offscreen document (`chrome.offscreen`, reasons `DOM_PARSER` and `WORKERS`) parses fetched HTML with `DOMParser`, which never runs the page's scripts or loads its images, and runs Mozilla Readability on a copy. PDFs go to pdf.js in the same document, first 15 pages only, with font loading and XFA forms switched off (the extension's own security policy blocks `eval` anyway). The document closes after 2 minutes without work. Page text is data: it's put on the card with `textContent`, never as markup, and never treated as instructions.
+
+## D26. What counts as reading the article (Part 04)
+- **Full:** Readability found 150 words or more. The card shows the opening sentence, labelled as such, because summaries come in Parts 05 and 06.
+- **Partial:** less than that, a PDF read only in part, or a page with only a description. The card shows a preview and says it isn't the full article.
+- **Unavailable:** with a reason. Problems are checked before content, in this order: robot checks, being sent to a login page, HTTP errors, login forms, subscription walls, pages that only build themselves with JavaScript. So an error page or a login page is never summarised as if it were the article.
+
+150 words is a guess, chosen so that short news items and link pages don't pass as full articles. Part 10's live testing should check it.
+
+## D27. Paywalls (Part 04)
+When the publisher's own structured data says the page isn't free (`isAccessibleForFree: false`, on the page or on a part of it), LinkPeek shows only the publisher's public description, even when the full text is in the HTML (it often is, for search engines). It never shows body text from such a page, and never tries to get round a paywall, login or robot check.
+
+## D28. Remembering results (Part 04)
+Results are kept for 24 hours, at most 60, in `chrome.storage.session`, which Chrome keeps in memory only and clears when the browser closes. Passing problems (timeouts, dropped connections, rate limits, missing permission) aren't kept, so the next try asks again. The cache key leaves out `#fragments` and tracking parameters (`utm_*`, `fbclid`, `gclid` and similar). Two requests for the same article at once share one fetch.
+
+## D29. The opening sentence, after the live check (Part 04)
+The live check (`docs/compat/part-04-live.md`) found that Readability's text alone gave the wrong opening on three of seven readable sites. The opening is now the first paragraph of six words or more that isn't in a table, figure, caption, aside or hidden label, with footnote markers removed. If Readability started part-way through an `<article>` that's split into identical blocks (BBC News), LinkPeek starts from the first block instead. Only paragraphs laid out exactly like Readability's first one count, so a standfirst isn't mistaken for the opening. The card's label says "The text begins", not "The article begins", because a link can lead to a discussion or a reference page.

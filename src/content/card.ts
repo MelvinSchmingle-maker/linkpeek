@@ -124,6 +124,16 @@ export function attachIcon(
 export interface CardHandlers {
   onClose: () => void;
   onFeedback: (value: FeedbackValue) => void;
+  onAction?: () => void;
+}
+
+/** What the card's owner wants to hear about. */
+export interface CardCallbacks {
+  onFeedback: (value: FeedbackValue) => Promise<void>;
+  /** The card closed (for any reason). */
+  onClosed?: () => void;
+  /** The card's button (e.g. "Allow access…") was pressed. */
+  onAction?: () => void;
 }
 
 /** Builds the card's DOM from a view. Pure DOM building, no positioning. */
@@ -178,9 +188,21 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     body.append(loading);
   } else {
     if (view.summary) body.append(el('p', 'summary', view.summary));
+    if (view.extract) {
+      body.append(el('p', 'extract-label', view.extractLabel ?? ''), el('p', 'extract', view.extract));
+    }
     if (view.message) body.append(el('p', 'message', view.message));
     if (view.preview) body.append(el('p', 'preview', view.preview));
     if (view.reason) body.append(el('p', 'reason', view.reason));
+    if (view.note) body.append(el('p', 'note', view.note));
+    if (view.action && handlers.onAction) {
+      const action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'action';
+      action.textContent = view.action;
+      action.addEventListener('click', handlers.onAction);
+      body.append(action);
+    }
   }
   card.append(body);
 
@@ -243,8 +265,7 @@ export class CardController {
   private anchor?: HTMLAnchorElement;
   private button?: HTMLButtonElement;
   private frame = 0;
-  private feedbackHandler?: (value: FeedbackValue) => Promise<void>;
-  private onClosed?: () => void;
+  private callbacks?: CardCallbacks;
 
   get openFor(): HTMLAnchorElement | undefined {
     return this.anchor;
@@ -259,16 +280,15 @@ export class CardController {
     anchor: HTMLAnchorElement,
     button: HTMLButtonElement,
     input: CardInput,
-    onFeedback: (value: FeedbackValue) => Promise<void>,
-    onClosed?: () => void,
+    callbacks: CardCallbacks,
   ): void {
     this.close({ restoreFocus: false });
     // A link that has left the page, or isn't drawn, has nowhere to anchor a card.
     if (!anchor.isConnected || anchor.getClientRects().length === 0) {
-      onClosed?.();
+      callbacks.onClosed?.();
       return;
     }
-    this.onClosed = onClosed;
+    this.callbacks = callbacks;
     const { host, root } = makeShadowHost('card');
     setImportant(host, {
       all: 'initial',
@@ -286,7 +306,6 @@ export class CardController {
     this.root = root;
     this.anchor = anchor;
     this.button = button;
-    this.feedbackHandler = onFeedback;
     button.setAttribute('aria-expanded', 'true');
     document.documentElement.append(host);
     this.show(input);
@@ -317,9 +336,9 @@ export class CardController {
     cancelAnimationFrame(this.frame);
     this.host.remove();
     this.button?.setAttribute('aria-expanded', 'false');
-    const { button, anchor, onClosed } = this;
-    this.host = this.root = this.anchor = this.button = this.onClosed = undefined;
-    onClosed?.();
+    const { button, anchor, callbacks } = this;
+    this.host = this.root = this.anchor = this.button = this.callbacks = undefined;
+    callbacks?.onClosed?.();
     // Back to the icon, or to the link if the icon was temporary.
     if (restoreFocus) (button?.isConnected ? button : anchor)?.focus();
   }
@@ -330,6 +349,7 @@ export class CardController {
     const card = renderCard(toCardView(input), this.anchor.href, {
       onClose: () => this.close({ restoreFocus: true }),
       onFeedback: (value) => void this.giveFeedback(value),
+      onAction: () => this.callbacks?.onAction?.(),
     });
     this.root.append(card);
     this.position();
@@ -337,10 +357,11 @@ export class CardController {
 
   private async giveFeedback(value: FeedbackValue): Promise<void> {
     const footerFeedback = this.root?.querySelector('.feedback');
-    if (!footerFeedback || !this.feedbackHandler) return;
+    const onFeedback = this.callbacks?.onFeedback;
+    if (!footerFeedback || !onFeedback) return;
     let message: string = MSG.feedbackThanks;
     try {
-      await this.feedbackHandler(value);
+      await onFeedback(value);
     } catch {
       message = MSG.feedbackFailed;
     }

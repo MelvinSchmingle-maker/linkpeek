@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LinkPeek needs access</title>
+    <link rel="stylesheet" href="../ui/page.css" />
+    <style>
+      body { padding: 16px 18px; }
+      h1 { font-size: 16px; margin-bottom: 10px; }
+      .host { font-weight: 600; word-break: break-all; }
+      .buttons { display: grid; gap: 8px; margin-top: 14px; }
+      .buttons button { width: 100%; padding: 8px 12px; }
+      #status { min-height: 1.2em; margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <h1><img src="/icons/icon-32.png" alt="" /><span>Let <span data-brand-name>LinkPeek</span> read this site?</span></h1>
+    <p>To read this link, LinkPeek needs access to <span class="host" id="host"></span>. Chrome will ask you to confirm.</p>
+    <p class="muted">
+      LinkPeek reads the page without your cookies or login, and sends nothing anywhere else. Allowing a site also turns
+      LinkPeek on there, so its icons can appear when you visit it. You can take access back at any time in LinkPeek's
+      settings.
+    </p>
+    <div class="buttons">
+      <button type="button" class="primary" id="allow-site">Allow this site</button>
+      <button type="button" class="secondary" id="allow-all">Allow all websites</button>
+      <button type="button" class="secondary" id="cancel">Not now</button>
+    </div>
+    <p class="muted" id="status" role="status"></p>
+    <script type="module" src="./permission.ts"></script>
+  </body>
+</html>

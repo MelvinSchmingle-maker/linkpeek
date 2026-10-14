@@ -58,6 +58,8 @@ export interface Summary {
 
 export interface HeadlineCheck {
   verdict: HeadlineVerdict;
+  /** The check hasn't run at all (it arrives in Part 07). The card then shows no verdict mark. */
+  notChecked?: boolean;
   /** One short sentence explaining the verdict. */
   reason?: string;
   /** A plain rewrite. Only ever present when evidence is "full". */
@@ -72,6 +74,24 @@ export interface LinkRisk {
 export interface SourceInfo {
   publisher?: string;
   published?: string;
+  modified?: string;
+}
+
+/** How the text was obtained. */
+export type ExtractMethod = 'readability' | 'pdf' | 'current-page';
+
+/**
+ * What LinkPeek actually read from the destination, before any summary
+ * exists. Shown as "the article's first sentence", never as a summary.
+ */
+export interface ArticleExtract {
+  firstSentence: string;
+  /** Words of article text found (after removing menus, ads and the like). */
+  wordCount: number;
+  method: ExtractMethod;
+  title?: string;
+  /** Only part of the document was read (e.g. the first pages of a long PDF). */
+  truncated?: boolean;
 }
 
 export interface LinkResult {
@@ -89,6 +109,12 @@ export interface LinkResult {
   failure?: FailureReason;
   /** The destination is a format we cannot handle yet. */
   unsupported?: boolean;
+  /** What was read, while there's no summary yet. */
+  extract?: ArticleExtract;
+  /** Where the link ended up after redirects, when that differs from url. */
+  finalUrl?: string;
+  /** LinkPeek needs the user's permission to read pages on this host before it can try. */
+  needsPermissionFor?: string;
   /** True when this came from fixtures, not a real assessment. Always shown in the UI. */
   isDemo: boolean;
 }

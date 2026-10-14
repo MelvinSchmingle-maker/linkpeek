@@ -13,7 +13,8 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 01 Project setup | Done |
 | 02 Inline button and card (demo data) | Done |
 | 03 Link detection and modes | Done |
-| 04 onward | Not started |
+| 04 Fetching and reading articles | Done. Cards show what was read and the opening sentence; no summaries yet |
+| 05 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
 
@@ -42,6 +43,8 @@ node scripts/serve-test-pages.mjs
 
 Then open http://127.0.0.1:4173/news-front.html in Chrome, click the LinkPeek toolbar icon and press **Scan this page** (or **Turn on** to have it run there by itself). Small eye icons appear next to the demo headlines. Click one to see the card. The test pages contain no real news, and every result there is tagged "Demo data".
 
+http://127.0.0.1:4173/retrieval.html has one link for each thing that can happen when LinkPeek reads a real page: a full article, a short item, a login wall, a paywall, a robot check, error codes, a slow site, a huge page, PDFs and more. These are read for real, not demo data.
+
 To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 
 ## Commands
@@ -55,6 +58,7 @@ To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 | `npm test` | Unit tests (fast, no browser, no internet) |
 | `npm run test:e2e` | Builds two test versions (`dist-e2e/` loads by itself on the test pages; `dist-e2e-on-demand/` only when asked, like any other site) and runs them in a real Chromium |
 | `npm run check` | typecheck + lint + unit tests + build, in one go |
+| `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once.
 

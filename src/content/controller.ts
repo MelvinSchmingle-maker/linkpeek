@@ -17,6 +17,9 @@ import { classifyLink } from '../core/detect/classify';
 import { readLinkFeatures } from '../core/detect/features';
 import { hostnameOf, recordFeedback, type FeedbackValue } from '../core/feedback/store';
 import type { Settings } from '../core/storage/settings';
+import type { RetrieveRequest, RetrieveResponse } from '../background/retrieve';
+import { fetchLimited, type FetchOutcome } from '../core/retrieve/fetcher';
+import { samePage } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
 import { attachIcon, CardController, HOST_ATTR, isOurHost, isWebUrl } from './card';
 import { demoResult, isDemoKey } from './fixtures';
@@ -35,7 +38,8 @@ const ALIVE_CHECK_MS = 5000;
 /** Links within this element count as one story when they share an address. */
 const STORY_BLOCK = 'article, [role="article"], li';
 
-type Result = LinkResult | 'loading' | 'not-ready';
+/** A demo or ready-made result, 'loading' for the stays-loading demo, or 'fetch' for a real link. */
+type Result = LinkResult | 'loading' | 'fetch';
 
 export class PageController {
   private cards = new CardController();
@@ -50,6 +54,10 @@ export class PageController {
   private aliveTimer?: ReturnType<typeof setInterval>;
   /** Links that have an icon, by address, so a story gets one icon, not one per duplicate link. */
   private iconLinksByHref = new Map<string, Set<HTMLAnchorElement>>();
+  /** The result the open card shows (for feedback). */
+  private shown?: LinkResult;
+  /** Bumped per load, so a slow answer for an older request can't overwrite a newer one. */
+  private loadSeq = 0;
 
   constructor(
     private readonly doc: Document,
@@ -114,6 +122,12 @@ export class PageController {
       case 'close-card':
         this.cards.close({ restoreFocus: false });
         return { ok: true };
+      case 'retry': {
+        // Access to a site was just granted in LinkPeek's permission window.
+        const link = this.cards.openFor;
+        if (link) void this.load(link);
+        return { ok: true };
+      }
       case 'scan':
         await this.scanner.scanOnce();
         return { ok: true, found: this.scanner.iconCount };
@@ -221,14 +235,83 @@ export class PageController {
       return;
     }
     const result = this.resultFor(link);
-    const onFeedback = (value: FeedbackValue) => this.feedback(result, value);
+    const callbacks = {
+      onFeedback: (value: FeedbackValue) => this.feedback(this.shown, value),
+      onClosed,
+      onAction: () => this.askForAccess(link),
+    };
     if (result === 'loading') {
-      this.cards.open(link, button, { kind: 'loading', isDemo: true }, onFeedback, onClosed);
-    } else if (result === 'not-ready') {
-      this.cards.open(link, button, { kind: 'not-ready' }, onFeedback, onClosed);
+      this.cards.open(link, button, { kind: 'loading', isDemo: true }, callbacks);
+    } else if (result === 'fetch') {
+      this.shown = undefined;
+      this.cards.open(link, button, { kind: 'loading', isDemo: false }, callbacks);
+      void this.load(link);
     } else {
-      this.cards.open(link, button, { kind: 'result', result }, onFeedback, onClosed);
+      this.shown = result;
+      this.cards.open(link, button, { kind: 'result', result }, callbacks);
     }
+  }
+
+  /**
+   * Read a real link and show the result in its card, if that card is still
+   * open. The service worker does the work; same-site links are fetched by
+   * this page, which needs no extra permission.
+   */
+  private async load(link: HTMLAnchorElement): Promise<void> {
+    const seq = ++this.loadSeq;
+    const headline = (link.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const show = (result: LinkResult) => {
+      if (seq !== this.loadSeq || this.cards.openFor !== link) return;
+      this.shown = result;
+      this.cards.update({ kind: 'result', result });
+    };
+    if (this.cards.openFor === link) this.cards.update({ kind: 'loading', isDemo: false });
+
+    const req: RetrieveRequest = { type: 'retrieve', url: link.href, headline };
+    // The link points at this very page: read it as it is.
+    if (samePage(link.href, this.doc.location.href)) req.fromPage = this.currentPage(link.href);
+
+    let res = await this.askWorker(req);
+    if (res?.kind === 'fetch-from-page') {
+      res = await this.askWorker({ ...req, fromPage: await fetchLimited(link.href, { via: 'page' }) });
+    }
+    show(res?.kind === 'result' ? res.result : unreachable(link.href, headline));
+  }
+
+  /** Message the service worker, trying once more if it was restarted mid-request. */
+  private async askWorker(req: RetrieveRequest): Promise<RetrieveResponse | undefined> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = (await chrome.runtime.sendMessage(req satisfies WorkerMessage)) as RetrieveResponse | undefined;
+        if (res) return res;
+      } catch {
+        // The service worker went away (Chrome restarts it at will). Try again once.
+      }
+    }
+    return undefined;
+  }
+
+  /** This page as LinkPeek sees it now, for links that point at the page itself. */
+  private currentPage(url: string): FetchOutcome {
+    return {
+      ok: true,
+      raw: {
+        requestedUrl: url,
+        finalUrl: url,
+        redirected: false,
+        status: 200,
+        contentType: 'text/html',
+        // Read-only copy of the page's markup, parsed later without running anything.
+        // eslint-disable-next-line no-restricted-properties
+        text: this.doc.documentElement.outerHTML,
+        via: 'current-page',
+      },
+    };
+  }
+
+  /** The card's "Allow access…" button: LinkPeek opens its own small window to ask. */
+  private askForAccess(link: HTMLAnchorElement): void {
+    void chrome.runtime.sendMessage({ type: 'open-permission', url: link.href } satisfies WorkerMessage).catch(() => undefined);
   }
 
   /** Manual peek: open the card, adding a temporary icon if the link has none. */
@@ -256,7 +339,7 @@ export class PageController {
     this.tempIcons.clear();
   }
 
-  /** Demo links answer from fixtures. Real reading arrives in Part 04. */
+  /** Demo links answer from fixtures; real links are read (see load). */
   private resultFor(link: HTMLAnchorElement): Result {
     const demoKey = this.demoKeyFor(link);
     if (demoKey !== null && isDemoKey(demoKey)) return demoResult(demoKey, link);
@@ -268,16 +351,16 @@ export class PageController {
         headline: (link.textContent ?? '').trim(),
         evidence: 'unavailable',
         unsupported: true,
-        headlineCheck: { verdict: 'unknown' },
+        headlineCheck: { verdict: 'unknown', notChecked: true },
         linkRisk: { level: 'not-checked' },
         isDemo: false,
       };
     }
-    return 'not-ready';
+    return 'fetch';
   }
 
-  private async feedback(result: Result, value: FeedbackValue): Promise<void> {
-    if (typeof result === 'string') return;
+  private async feedback(result: LinkResult | undefined, value: FeedbackValue): Promise<void> {
+    if (!result) return;
     await recordFeedback({
       resultId: result.id,
       signal: 'summary-usefulness',
@@ -369,4 +452,18 @@ export function waitForQuietPage(doc: Document, quietMs = QUIET_MS, maxMs = QUIE
     if (doc.readyState === 'complete') startQuietTimer();
     else win?.addEventListener('load', startQuietTimer, { once: true });
   });
+}
+
+/** Shown when the service worker couldn't be reached at all. */
+function unreachable(url: string, headline: string): LinkResult {
+  return {
+    id: 'unreachable',
+    url,
+    headline,
+    evidence: 'unavailable',
+    failure: 'extraction-failed',
+    headlineCheck: { verdict: 'unknown', notChecked: true },
+    linkRisk: { level: 'not-checked' },
+    isDemo: false,
+  };
 }

@@ -31,10 +31,11 @@ test('puts an icon on each demo link and the one real headline, nowhere else', a
   await expect(page.locator('nav [data-linkpeek="icon"], footer [data-linkpeek="icon"]')).toHaveCount(0);
 });
 
-test('a real (non-demo) link says plainly that reading articles is not built yet', async ({ page }) => {
+test('a real (non-demo) link is actually read: its first sentence, never tagged as demo', async ({ page }) => {
   await open(page);
   await page.locator('a[href="/articles/ordinary.html"] + [data-linkpeek="icon"]').getByRole('button').click();
-  await expect(card(page)).toContainText("can't read articles yet");
+  await expect(card(page)).toContainText("The text begins (LinkPeek writes summaries in a later version):");
+  await expect(card(page)).toContainText("A review of Millbrook's library service");
   await expect(card(page)).not.toContainText('Demo data');
 });
 
@@ -121,7 +122,7 @@ const expected: Record<(typeof DEMO_KEYS)[number], RegExp> = {
   'summary-failed': /Couldn't write a summary for this article/,
   'link-warning': /Goes somewhere different from what it shows[\s\S]*millbrook-gov-refunds\.example[\s\S]*Open link anyway/,
   unsupported: /can't preview this type of link yet/,
-  loading: /Summarising article\.\.\./,
+  loading: /Reading the article\.\.\./,
 };
 
 for (const key of DEMO_KEYS) {
@@ -157,7 +158,7 @@ test('turning demo results off in settings removes the demo icons', async ({ pag
   // (the .zip download doesn't), and their cards are real, not demo.
   await expect(page.locator('a[data-linkpeek-demo="unsupported"] + [data-linkpeek="icon"]')).toHaveCount(0);
   await iconFor(page, 'full').click();
-  await expect(card(page)).toContainText("can't read articles yet");
+  await expect(card(page)).toContainText('Millbrook council has approved two kilometres');
   await expect(card(page)).not.toContainText('Demo data');
   await page.keyboard.press('Escape');
   await options.getByLabel(/Show demo results/).check();

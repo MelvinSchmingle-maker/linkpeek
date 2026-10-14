@@ -9,24 +9,26 @@
  *   node scripts/build.mjs          production build into dist/
  *   node scripts/build.mjs --e2e    test build into dist-e2e/ (see manifest.mjs)
  *   node scripts/build.mjs --e2e-on-demand   test build into dist-e2e-on-demand/
+ *   node scripts/build.mjs --live   build for scripts/live-check.mjs into dist-live/
  *   node scripts/build.mjs --watch  rebuild on change
  */
 import { build } from 'vite';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { buildManifest } from './manifest.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const onDemand = process.argv.includes('--e2e-on-demand');
-const e2e = onDemand || process.argv.includes('--e2e');
+const live = process.argv.includes('--live');
+const e2e = onDemand || live || process.argv.includes('--e2e');
 const watch = process.argv.includes('--watch') ? {} : null;
-const outDir = resolve(root, onDemand ? 'dist-e2e-on-demand' : e2e ? 'dist-e2e' : 'dist');
+const outDir = resolve(root, live ? 'dist-live' : onDemand ? 'dist-e2e-on-demand' : e2e ? 'dist-e2e' : 'dist');
 
 const shared = {
   configFile: false,
   logLevel: 'warn',
-  define: { __E2E__: JSON.stringify(e2e) },
+  define: { __E2E__: JSON.stringify(e2e), __LIVE__: JSON.stringify(live) },
 };
 
 // 1. Popup and options pages. Also copies public/ (icons).
@@ -43,6 +45,8 @@ await build({
       input: {
         popup: resolve(root, 'src/popup/index.html'),
         options: resolve(root, 'src/options/index.html'),
+        offscreen: resolve(root, 'src/offscreen/index.html'),
+        permission: resolve(root, 'src/permission/index.html'),
       },
     },
   },
@@ -78,6 +82,13 @@ await build({
 });
 
 mkdirSync(outDir, { recursive: true });
-writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(buildManifest({ e2e, onDemand }), null, 2));
+writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(buildManifest({ e2e, onDemand, live }), null, 2));
+
+// pdf.js reads PDFs in a worker; it has to be a separate file in the extension.
+mkdirSync(resolve(outDir, 'offscreen'), { recursive: true });
+copyFileSync(
+  resolve(root, 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs'),
+  resolve(outDir, 'offscreen/pdf.worker.min.mjs'),
+);
 
 console.log(`Built ${e2e ? 'test' : 'production'} extension into ${outDir}`);

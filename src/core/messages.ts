@@ -8,7 +8,7 @@ export const MSG = {
   iconLabel: 'Preview this link with LinkPeek',
   cardLabel: 'LinkPeek preview',
   close: 'Close preview',
-  loading: 'Summarising article...',
+  loading: 'Reading the article...',
   openArticle: 'Open article',
   openLink: 'Open link',
   openAnyway: 'Open link anyway',
@@ -20,7 +20,10 @@ export const MSG = {
   summaryFailed: "Couldn't write a summary for this article. You can still open it.",
   unsupported: "LinkPeek can't preview this type of link yet.",
   unavailable: 'No reliable summary is available for this link.',
-  notReady: "This test version of LinkPeek can't read articles yet. It only shows where previews will appear.",
+  // "Text", not "article": a link may lead to a discussion or a reference page (Part 04 live check).
+  extractLabel: 'The text begins (LinkPeek writes summaries in a later version):',
+  pdfPartial: 'Only the first pages of this PDF were read. It begins:',
+  allow: 'Allow access…',
   feedbackQuestion: 'Was this useful?',
   feedbackUp: 'Yes, useful',
   feedbackDown: 'No, not useful',
@@ -28,6 +31,16 @@ export const MSG = {
   feedbackFailed: "Couldn't save your feedback.",
   noKnownWarningNote: "This isn't a guarantee of safety.",
 } as const;
+
+/** Shown when LinkPeek may not fetch pages from the link's site yet. */
+export function permissionNeeded(host: string): string {
+  return `LinkPeek needs your permission to read pages on ${host}.`;
+}
+
+/** A small factual note when a link ends up on another site. Not a warning. */
+export function opensOn(host: string): string {
+  return `Opens on ${host}.`;
+}
 
 export const VERDICT_LABEL: Record<HeadlineVerdict, string> = {
   pass: 'Headline check passed',
