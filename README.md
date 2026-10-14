@@ -53,7 +53,7 @@ To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 | `npm run typecheck` | Check TypeScript types |
 | `npm run lint` | Check code style and banned patterns |
 | `npm test` | Unit tests (fast, no browser, no internet) |
-| `npm run test:e2e` | Builds a test version into `dist-e2e/` and runs it in a real Chromium |
+| `npm run test:e2e` | Builds two test versions (`dist-e2e/` loads by itself on the test pages; `dist-e2e-on-demand/` only when asked, like any other site) and runs them in a real Chromium |
 | `npm run check` | typecheck + lint + unit tests + build, in one go |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once.

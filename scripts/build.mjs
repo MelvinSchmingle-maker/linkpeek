@@ -8,6 +8,7 @@
  *
  *   node scripts/build.mjs          production build into dist/
  *   node scripts/build.mjs --e2e    test build into dist-e2e/ (see manifest.mjs)
+ *   node scripts/build.mjs --e2e-on-demand   test build into dist-e2e-on-demand/
  *   node scripts/build.mjs --watch  rebuild on change
  */
 import { build } from 'vite';
@@ -17,9 +18,10 @@ import { resolve } from 'node:path';
 import { buildManifest } from './manifest.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const e2e = process.argv.includes('--e2e');
+const onDemand = process.argv.includes('--e2e-on-demand');
+const e2e = onDemand || process.argv.includes('--e2e');
 const watch = process.argv.includes('--watch') ? {} : null;
-const outDir = resolve(root, e2e ? 'dist-e2e' : 'dist');
+const outDir = resolve(root, onDemand ? 'dist-e2e-on-demand' : e2e ? 'dist-e2e' : 'dist');
 
 const shared = {
   configFile: false,
@@ -76,6 +78,6 @@ await build({
 });
 
 mkdirSync(outDir, { recursive: true });
-writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(buildManifest({ e2e }), null, 2));
+writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(buildManifest({ e2e, onDemand }), null, 2));
 
 console.log(`Built ${e2e ? 'test' : 'production'} extension into ${outDir}`);

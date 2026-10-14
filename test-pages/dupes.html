@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Repeated links (LinkPeek test page)</title>
+  <style>
+    body{font:16px/1.5 system-ui,sans-serif;max-width:700px;margin:16px auto;padding:0 16px}
+    .spacer{height:2600px;border-left:2px dashed #ccc;margin:16px 0}
+    .slide.hidden{display:none}
+  </style></head>
+  <body>
+    <p>LinkPeek test page. The same story is linked twice, far apart, and a carousel hides its slides. Nothing here is real.</p>
+    <main>
+      <h3><a id="top-link" href="/2026/10/13/town-hall-roof-repairs-finally-approved">Town hall roof repairs finally approved</a></h3>
+      <div class="slide" id="slide"><h3><a id="slide-link" href="/2026/10/13/carousel-story-about-the-autumn-fair">Carousel story about the autumn fair</a></h3></div>
+      <button type="button" id="hide-slide">Next slide (hides the first one)</button>
+      <div class="spacer"></div>
+      <h3><a id="bottom-link" href="/2026/10/13/town-hall-roof-repairs-finally-approved">Town hall roof repairs finally approved (again, in Most read)</a></h3>
+      <p><label>Site search <input id="site-search" /></label></p>
+      <svg width="200" height="40" role="img" aria-label="Map">
+        <a href="/2026/10/13/flood-map-for-the-river-valley-updated"><text x="4" y="24">Flood map for the river valley updated</text></a>
+      </svg>
+    </main>
+    <script>
+      document.getElementById('hide-slide').addEventListener('click', () => document.getElementById('slide').classList.add('hidden'));
+      window.pageEscapes = 0;
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.pageEscapes++; });
+    </script>
+  </body>
+</html>

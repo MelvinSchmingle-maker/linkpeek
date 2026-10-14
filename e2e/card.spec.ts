@@ -153,8 +153,13 @@ test('turning demo results off in settings removes the demo icons', async ({ pag
   const options = await context.newPage();
   await options.goto(`chrome-extension://${extensionId}/options/index.html`);
   await options.getByLabel(/Show demo results/).uncheck();
-  await expect(page.locator('[data-linkpeek-demo] + [data-linkpeek="icon"]')).toHaveCount(0);
-  await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(1);
+  // Demo links are now judged like any other link: headlines keep an icon
+  // (the .zip download doesn't), and their cards are real, not demo.
+  await expect(page.locator('a[data-linkpeek-demo="unsupported"] + [data-linkpeek="icon"]')).toHaveCount(0);
+  await iconFor(page, 'full').click();
+  await expect(card(page)).toContainText("can't read articles yet");
+  await expect(card(page)).not.toContainText('Demo data');
+  await page.keyboard.press('Escape');
   await options.getByLabel(/Show demo results/).check();
   await expect(page.locator('[data-linkpeek="icon"]')).toHaveCount(DEMO_KEYS.length + 1);
 });

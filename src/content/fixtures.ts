@@ -3,7 +3,9 @@
  * Every result here has isDemo: true, and the card always shows a
  * "Demo data" tag for them. None of this is a real assessment of anything.
  *
- * A link opts in with data-linkpeek-demo="<key>". Only our test pages do that.
+ * A link opts in with data-linkpeek-demo="<key>". The attribute is only
+ * honoured on 127.0.0.1 and localhost (our local test server), never on real
+ * websites, so a page can't dress its own links in LinkPeek verdicts.
  */
 import type { LinkResult } from '../core/types';
 
@@ -88,7 +90,8 @@ export const DEMO_FIXTURES = {
 export type DemoKey = keyof typeof DEMO_FIXTURES | 'loading';
 
 export function isDemoKey(key: string): key is DemoKey {
-  return key === 'loading' || key in DEMO_FIXTURES;
+  // Own keys only: "constructor" or "__proto__" must not count as fixtures.
+  return key === 'loading' || Object.prototype.hasOwnProperty.call(DEMO_FIXTURES, key);
 }
 
 /** Returns the demo result for a link, or 'loading' for the stays-loading demo. */

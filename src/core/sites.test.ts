@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hostFromPattern, hostOf, originPattern, sitePattern } from './sites';
+import { hostFromPattern, hostOf, originPattern, sitePatterns } from './sites';
 
 describe('site helpers', () => {
   it('builds an access pattern for web pages only', () => {
@@ -10,10 +10,21 @@ describe('site helpers', () => {
     expect(originPattern(undefined)).toBeUndefined();
   });
 
+  it('treats the Chrome Web Store as a page LinkPeek cannot run on', () => {
+    expect(originPattern('https://chromewebstore.google.com/detail/x/abc')).toBeUndefined();
+    expect(originPattern('https://chrome.google.com/webstore/detail/x')).toBeUndefined();
+    expect(originPattern('https://chrome.google.com/other')).toBe('https://chrome.google.com/*');
+  });
+
+  it('asks for one pattern per scheme, never the "*://" form Chrome refuses', () => {
+    expect(sitePatterns('news.example.com')).toEqual(['https://news.example.com/*', 'http://news.example.com/*']);
+    for (const p of sitePatterns('x.example')) expect(p.startsWith('*')).toBe(false);
+  });
+
   it('reads hostnames back out of patterns', () => {
     expect(hostFromPattern('https://news.example.com/*')).toBe('news.example.com');
     expect(hostFromPattern('*://news.example.com/*')).toBe('news.example.com');
-    expect(hostFromPattern(sitePattern('a.example'))).toBe('a.example');
+    for (const p of sitePatterns('a.example')) expect(hostFromPattern(p)).toBe('a.example');
   });
 
   it('hostOf handles junk', () => {

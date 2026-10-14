@@ -19,8 +19,34 @@ const EDGE = 8;
 
 export const HOST_ATTR = 'data-linkpeek';
 
+/**
+ * Host elements use tag names no real page markup has (valid custom-element
+ * names, never defined). DOM-patching frameworks (morphdom, idiomorph, Turbo,
+ * LiveView) match nodes by tag, so they can't mistake our icon for one of
+ * their own <span>s and reuse it for page content.
+ */
+const HOST_TAG = { icon: 'linkpeek-icon', card: 'linkpeek-card' } as const;
+
+/** True only for an element LinkPeek created and still owns. */
+export function isOurHost(el: Element): boolean {
+  return el.localName.startsWith('linkpeek-') && el.hasAttribute(HOST_ATTR);
+}
+
+/**
+ * Inline styles marked !important beat any page stylesheet, even the page's
+ * own !important rules, so a page can't hide or move our UI.
+ */
+function setImportant(el: HTMLElement, styles: Record<string, string>): void {
+  for (const [prop, value] of Object.entries(styles)) el.style.setProperty(prop, value, 'important');
+}
+
+/** Only web links get an "Open" link in the card (never javascript:, data: and the like). */
+export function isWebUrl(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
 function makeShadowHost(kind: 'icon' | 'card'): { host: HTMLElement; root: ShadowRoot } {
-  const host = document.createElement(kind === 'icon' ? 'span' : 'div');
+  const host = document.createElement(HOST_TAG[kind]);
   host.setAttribute(HOST_ATTR, kind);
   const root = host.attachShadow({ mode: SHADOW_MODE });
   const style = document.createElement('style');
@@ -42,8 +68,15 @@ export function attachIcon(
   const { host, root } = makeShadowHost('icon');
   // `all: unset` drops page styles but keeps inherited font size, so the
   // icon scales with the headline and with page zoom.
-  host.style.cssText =
-    'all: unset; display: inline-block; vertical-align: middle; margin-left: 0.3em; line-height: 0;';
+  setImportant(host, {
+    all: 'unset',
+    display: 'inline-block',
+    'vertical-align': 'middle',
+    'margin-left': '0.3em',
+    'line-height': '0',
+    visibility: 'visible',
+    opacity: '1',
+  });
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'icon';
@@ -124,14 +157,17 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
   card.append(body);
 
   // Footer: open link and feedback.
-  if (!view.loading) {
+  if (!view.loading && (isWebUrl(href) || view.showFeedback)) {
     const footer = el('div', 'footer');
-    const open = document.createElement('a');
-    open.className = 'open';
-    open.href = href;
-    open.rel = 'noopener noreferrer';
-    open.textContent = view.openLabel;
-    footer.append(open, el('span', 'spacer'));
+    if (isWebUrl(href)) {
+      const open = document.createElement('a');
+      open.className = 'open';
+      open.href = href;
+      open.rel = 'noopener noreferrer';
+      open.textContent = view.openLabel;
+      footer.append(open);
+    }
+    footer.append(el('span', 'spacer'));
     if (view.showFeedback) footer.append(feedbackControls(handlers.onFeedback));
     card.append(footer);
   }
@@ -186,6 +222,11 @@ export class CardController {
     return this.anchor;
   }
 
+  /** Focus the open card (used when the user asks to peek at the same link again). */
+  focus(): void {
+    this.root?.querySelector<HTMLElement>('.card')?.focus({ preventScroll: true });
+  }
+
   open(
     anchor: HTMLAnchorElement,
     button: HTMLButtonElement,
@@ -194,9 +235,23 @@ export class CardController {
     onClosed?: () => void,
   ): void {
     this.close({ restoreFocus: false });
+    // A link that has left the page, or isn't drawn, has nowhere to anchor a card.
+    if (!anchor.isConnected || anchor.getClientRects().length === 0) {
+      onClosed?.();
+      return;
+    }
     this.onClosed = onClosed;
     const { host, root } = makeShadowHost('card');
-    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; top: 0; left: 0;';
+    setImportant(host, {
+      all: 'initial',
+      position: 'fixed',
+      'z-index': '2147483647',
+      top: '0px',
+      left: '0px',
+      display: 'block',
+      visibility: 'visible',
+      opacity: '1',
+    });
     this.host = host;
     this.root = root;
     this.anchor = anchor;
@@ -205,10 +260,11 @@ export class CardController {
     button.setAttribute('aria-expanded', 'true');
     document.documentElement.append(host);
     this.show(input);
-    this.root.querySelector<HTMLElement>('.card')?.focus({ preventScroll: true });
+    this.focus();
 
     document.addEventListener('keydown', this.onKeyDown, true);
     document.addEventListener('pointerdown', this.onPointerDown, true);
+    document.addEventListener('focusin', this.onFocusIn, true);
     window.addEventListener('scroll', this.schedulePosition, { capture: true, passive: true });
     window.addEventListener('resize', this.schedulePosition, { passive: true });
   }
@@ -218,13 +274,14 @@ export class CardController {
     if (!this.root) return;
     const hadFocus = this.root.activeElement !== null;
     this.show(input);
-    if (hadFocus) this.root.querySelector<HTMLElement>('.card')?.focus({ preventScroll: true });
+    if (hadFocus) this.focus();
   }
 
   close({ restoreFocus }: { restoreFocus: boolean }): void {
     if (!this.host) return;
     document.removeEventListener('keydown', this.onKeyDown, true);
     document.removeEventListener('pointerdown', this.onPointerDown, true);
+    document.removeEventListener('focusin', this.onFocusIn, true);
     window.removeEventListener('scroll', this.schedulePosition, { capture: true });
     window.removeEventListener('resize', this.schedulePosition);
     cancelAnimationFrame(this.frame);
@@ -260,12 +317,14 @@ export class CardController {
     const thanks = el('span', 'thanks', message);
     thanks.setAttribute('role', 'status');
     footerFeedback.replaceWith(thanks);
-    this.root?.querySelector<HTMLElement>('.card')?.focus({ preventScroll: true });
+    this.focus();
   }
 
   private position = (): void => {
     if (!this.host || !this.anchor) return;
-    if (!this.anchor.isConnected) {
+    // The link left the page or stopped being drawn (e.g. a carousel slide
+    // was hidden): close rather than float, attached to nothing.
+    if (!this.anchor.isConnected || this.anchor.getClientRects().length === 0) {
       this.close({ restoreFocus: false });
       return;
     }
@@ -280,8 +339,7 @@ export class CardController {
     // Not enough room below: put it above the link if that fits better.
     if (top + height > vh - EDGE && rect.top - GAP - height >= EDGE) top = rect.top - GAP - height;
     const left = Math.max(EDGE, Math.min(rect.left, vw - width - EDGE));
-    this.host.style.top = `${Math.round(top)}px`;
-    this.host.style.left = `${Math.round(left)}px`;
+    setImportant(this.host, { top: `${Math.round(top)}px`, left: `${Math.round(left)}px` });
   };
 
   private schedulePosition = (): void => {
@@ -289,20 +347,30 @@ export class CardController {
     this.frame = requestAnimationFrame(this.position);
   };
 
-  private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      this.close({ restoreFocus: true });
-    }
-  };
-
-  private onPointerDown = (e: PointerEvent): void => {
+  /** Is this event happening inside LinkPeek's card or the open card's icon? */
+  private fromOurUi(e: Event): boolean {
     const path = e.composedPath();
     const iconHost = this.button?.getRootNode() instanceof ShadowRoot
       ? (this.button.getRootNode() as ShadowRoot).host
       : undefined;
-    if (this.host && !path.includes(this.host) && !(iconHost && path.includes(iconHost))) {
-      this.close({ restoreFocus: false });
-    }
+    return Boolean((this.host && path.includes(this.host)) || (iconHost && path.includes(iconHost)));
+  }
+
+  // Escape belongs to whatever has focus. Only close when that's our card or
+  // icon, and leave the page's own Escape handling alone otherwise.
+  private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'Escape' || !this.fromOurUi(e)) return;
+    e.stopPropagation();
+    this.close({ restoreFocus: true });
+  };
+
+  private onPointerDown = (e: PointerEvent): void => {
+    if (!this.fromOurUi(e)) this.close({ restoreFocus: false });
+  };
+
+  // Focus moved to something on the page (Tab out of the card, or the page
+  // focused its own dialog): the card is no longer what the user is using.
+  private onFocusIn = (e: FocusEvent): void => {
+    if (!this.fromOurUi(e)) this.close({ restoreFocus: false });
   };
 }

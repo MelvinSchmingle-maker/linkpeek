@@ -2,20 +2,27 @@
  * Finds links worth an icon, on load and as pages change (infinite feeds,
  * single-page apps), without slowing the page down.
  *
- * - Each link is judged once. If its href changes, or a framework re-render
- *   removes our icon, it is judged again.
+ * - Each link is judged once. It is judged again if its href or text
+ *   changes, or if its icon is no longer right next to it (a framework
+ *   re-render removed it, or the list was re-ordered).
+ * - Icons whose link has gone are swept away, so a re-keyed list never
+ *   leaves a dead icon behind.
  * - Work is done in small time-boxed batches so a page with thousands of
  *   links stays responsive.
  * - Reads (classifying) and writes (inserting icons) are done in separate
  *   passes, so the browser doesn't have to re-layout between links.
  */
-import { HOST_ATTR } from './card';
+import { isOurHost } from './card';
 
 export interface ScannerOptions {
   /** Should this link get an icon? */
   accept: (link: HTMLAnchorElement) => boolean;
   /** Put the icon on the link. Returns the icon host element. */
   attach: (link: HTMLAnchorElement) => HTMLElement;
+  /** False once this copy of LinkPeek is dead (extension updated or removed). */
+  alive?: () => boolean;
+  /** Called when alive() turns false, so the owner can clean up. */
+  onDead?: () => void;
   /** Called after each batch (used for timing in tests). */
   onBatch?: (stats: { processed: number; added: number; ms: number }) => void;
 }
@@ -26,7 +33,21 @@ const MAX_ICONS_PER_BATCH = 40;
 
 interface Seen {
   href: string;
+  text: string;
   icon?: HTMLElement;
+}
+
+// Called through the prototype so a page can't break them by "clobbering"
+// properties (e.g. a <form> with an input named "querySelectorAll").
+// (Document named properties even override built-in methods.)
+const elementQsa = Element.prototype.querySelectorAll;
+const documentQsa = Document.prototype.querySelectorAll;
+const closest = Element.prototype.closest;
+
+/** Real HTML links only. SVG <a> elements match 'a[href]' too, but their href is an object. */
+export function htmlLinksIn(root: Document | Element): HTMLAnchorElement[] {
+  const found = root instanceof Document ? documentQsa.call(root, 'a[href]') : elementQsa.call(root, 'a[href]');
+  return [...found].filter((a): a is HTMLAnchorElement => a instanceof HTMLAnchorElement);
 }
 
 export class LinkScanner {
@@ -34,7 +55,8 @@ export class LinkScanner {
   private pending = new Set<HTMLAnchorElement>();
   private observer?: MutationObserver;
   private scheduled = false;
-  private icons = new Set<HTMLElement>();
+  /** Icon host -> the link it belongs to. */
+  private icons = new Map<HTMLElement, HTMLAnchorElement>();
   private idleResolvers: (() => void)[] = [];
 
   constructor(
@@ -50,6 +72,7 @@ export class LinkScanner {
     this.observer.observe(this.doc.documentElement, {
       childList: true,
       subtree: true,
+      characterData: true,
       attributes: true,
       attributeFilter: ['href'],
     });
@@ -66,14 +89,16 @@ export class LinkScanner {
     this.observer?.disconnect();
     this.observer = undefined;
     this.pending.clear();
-    for (const icon of this.icons) icon.remove();
+    // Only remove elements that are still ours. A page framework may have
+    // reused the node for its own content (it would have lost our marker).
+    for (const icon of this.icons.keys()) if (isOurHost(icon)) icon.remove();
     this.icons.clear();
     this.seen = new WeakMap();
   }
 
   /** Icons currently on the page. */
   get iconCount(): number {
-    for (const icon of this.icons) if (!icon.isConnected) this.icons.delete(icon);
+    this.sweep();
     return this.icons.size;
   }
 
@@ -84,34 +109,53 @@ export class LinkScanner {
   }
 
   private queueAll(): void {
-    for (const a of this.doc.querySelectorAll<HTMLAnchorElement>('a[href]')) this.pending.add(a);
+    for (const a of htmlLinksIn(this.doc)) this.pending.add(a);
     this.schedule();
   }
 
   private onMutations(records: MutationRecord[]): void {
+    if (this.opts.alive && !this.opts.alive()) {
+      this.opts.onDead?.();
+      return;
+    }
+    let removed = false;
     for (const r of records) {
-      if (r.type === 'attributes' && r.target instanceof HTMLAnchorElement) {
-        this.pending.add(r.target);
+      const target = r.target;
+      if (r.type === 'attributes') {
+        if (target instanceof HTMLAnchorElement) this.pending.add(target);
         continue;
       }
+      // Text added or changed inside a link: judge that link again.
+      const parent = target instanceof Element ? target : target.parentElement;
+      const owner = parent ? closest.call(parent, 'a[href]') : null;
+      if (owner instanceof HTMLAnchorElement) this.pending.add(owner);
+      if (r.type === 'characterData') continue;
+
       for (const node of r.addedNodes) {
-        if (!(node instanceof Element) || node.hasAttribute(HOST_ATTR)) continue;
+        if (!(node instanceof Element) || isOurHost(node)) continue;
         if (node instanceof HTMLAnchorElement) this.pending.add(node);
-        for (const a of node.querySelectorAll<HTMLAnchorElement>('a[href]')) this.pending.add(a);
+        for (const a of htmlLinksIn(node)) this.pending.add(a);
       }
-      for (const node of r.removedNodes) {
-        // A framework re-render removed one of our icons: re-check its link.
-        if (node instanceof HTMLElement && node.getAttribute(HOST_ATTR) === 'icon' && this.icons.has(node)) {
-          this.icons.delete(node);
-          const link = r.previousSibling;
-          if (link instanceof HTMLAnchorElement && link.isConnected) {
-            this.seen.delete(link);
-            this.pending.add(link);
-          }
-        }
+      if (r.removedNodes.length) removed = true;
+    }
+    if (removed) this.sweep();
+    this.schedule();
+  }
+
+  /**
+   * Remove icons that are orphaned or no longer next to their link, and
+   * queue those links to be judged again.
+   */
+  private sweep(): void {
+    for (const [icon, link] of this.icons) {
+      if (icon.isConnected && link.isConnected && link.nextSibling === icon) continue;
+      if (isOurHost(icon)) icon.remove();
+      this.icons.delete(icon);
+      if (link.isConnected) {
+        this.seen.delete(link);
+        this.pending.add(link);
       }
     }
-    this.schedule();
   }
 
   private schedule(): void {
@@ -135,14 +179,16 @@ export class LinkScanner {
       this.pending.delete(link);
       processed++;
       if (!link.isConnected) continue;
+      const text = link.textContent ?? '';
       const prev = this.seen.get(link);
-      if (prev && prev.href === link.href && (!prev.icon || prev.icon.isConnected)) continue;
+      const iconInPlace = prev?.icon ? prev.icon.isConnected && link.nextSibling === prev.icon : true;
+      if (prev && prev.href === link.href && prev.text === text && iconInPlace) continue;
       if (prev?.icon) {
-        prev.icon.remove();
+        if (isOurHost(prev.icon)) prev.icon.remove();
         this.icons.delete(prev.icon);
       }
       const ok = this.opts.accept(link);
-      this.seen.set(link, { href: link.href });
+      this.seen.set(link, { href: link.href, text });
       if (ok) accepted.push(link);
       // Inserting icons costs time too, so cap both reading and writing.
       if (performance.now() - t0 > BATCH_BUDGET_MS || accepted.length >= MAX_ICONS_PER_BATCH) break;
@@ -151,8 +197,8 @@ export class LinkScanner {
     // Write pass.
     for (const link of accepted) {
       const icon = this.opts.attach(link);
-      this.icons.add(icon);
-      this.seen.set(link, { href: link.href, icon });
+      this.icons.set(icon, link);
+      this.seen.set(link, { href: link.href, text: link.textContent ?? '', icon });
     }
 
     this.opts.onBatch?.({ processed, added: accepted.length, ms: performance.now() - t0 });
@@ -167,3 +213,4 @@ export class LinkScanner {
     for (const r of resolvers) r();
   }
 }
+

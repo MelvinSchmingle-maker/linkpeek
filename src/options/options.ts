@@ -1,4 +1,4 @@
-import { ALL_SITES, grantedSiteOrigins, hasSiteAccess, hostFromPattern, sitePattern } from '../core/sites';
+import { ALL_SITES, grantedSiteOrigins, hasSiteAccess, hostFromPattern, sitePatterns } from '../core/sites';
 import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
 import { renderModePicker } from '../ui/mode-picker';
 import { applyBrand } from '../ui/theme';
@@ -20,10 +20,18 @@ const allSites = $<HTMLInputElement>('#all-sites');
 allSites.addEventListener('change', () => {
   if (allSites.checked) {
     // First call in the handler so Chrome shows its prompt.
-    void chrome.permissions.request({ origins: ALL_SITES }).then(render);
-  } else {
-    void chrome.permissions.remove({ origins: ALL_SITES }).then(render);
+    void chrome.permissions.request({ origins: ALL_SITES }).catch(() => false).then(render);
+    return;
   }
+  void (async () => {
+    // Removing "all sites" also takes away every site that sits inside it,
+    // including the ones turned on one by one. Put those back. Chrome doesn't
+    // ask again for access the extension itself gave back.
+    const keep = (await grantedSiteOrigins()).filter((o) => !ALL_SITES.includes(o));
+    await chrome.permissions.remove({ origins: ALL_SITES }).catch(() => false);
+    if (keep.length) await chrome.permissions.request({ origins: keep }).catch(() => false);
+    await render();
+  })();
 });
 
 function item(text: string, action: string, onClick: () => void): HTMLLIElement {
@@ -73,7 +81,16 @@ async function render(): Promise<void> {
             if (!hasAccess.has(h)) {
               // Access was given back when it was turned off: ask again.
               // The service worker clears the "off" mark once granted.
-              void chrome.permissions.request({ origins: [sitePattern(h)] }).then(render);
+              void chrome.permissions
+                .request({ origins: sitePatterns(h) })
+                .then(async (granted) => {
+                  if (granted) {
+                    const s = await getSettings();
+                    await updateSettings({ disabledSites: s.disabledSites.filter((x) => x !== h) });
+                  }
+                })
+                .catch(() => undefined)
+                .then(render);
               return;
             }
             void updateSettings({ disabledSites: disabledSites.filter((x) => x !== h) });

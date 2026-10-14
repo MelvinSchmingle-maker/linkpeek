@@ -1,16 +1,8 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, test, TEST_SERVER } from './fixtures';
+import { expect, setSettings, test, TEST_SERVER } from './fixtures';
 
 const NEWS = `${TEST_SERVER}/news-front.html`;
 const icons = (page: Page) => page.locator('[data-linkpeek="icon"]');
-
-async function setSettings(context: BrowserContext, patch: Record<string, unknown>) {
-  const [worker] = context.serviceWorkers();
-  await worker!.evaluate(async (p) => {
-    const { settings } = await chrome.storage.local.get('settings');
-    await chrome.storage.local.set({ settings: { ...(settings as object), ...p } });
-  }, patch);
-}
 
 /** Send a message to the test page's content script, as the popup or service worker would. */
 async function sendToPage(context: BrowserContext, msg: unknown) {

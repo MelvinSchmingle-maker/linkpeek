@@ -35,12 +35,24 @@ export async function syncSiteScripts(): Promise<void> {
   else await chrome.scripting.registerContentScripts([script]);
 }
 
-/** "https://news.example.com/*" for a page URL, or undefined for non-web pages. */
+/**
+ * Pages Chrome never lets extensions run on, even with access to every site.
+ * Treated like browser pages so the popup doesn't claim LinkPeek runs there.
+ */
+export function isRestrictedUrl(u: URL): boolean {
+  return (
+    u.hostname === 'chromewebstore.google.com' ||
+    (u.hostname === 'chrome.google.com' && u.pathname.startsWith('/webstore'))
+  );
+}
+
+/** "https://news.example.com/*" for a page URL, or undefined for pages LinkPeek can't run on. */
 export function originPattern(pageUrl: string | undefined): string | undefined {
   if (!pageUrl) return undefined;
   try {
     const u = new URL(pageUrl);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
+    if (isRestrictedUrl(u)) return undefined;
     return `${u.protocol}//${u.hostname}/*`;
   } catch {
     return undefined;
@@ -63,16 +75,17 @@ export function hostFromPattern(pattern: string): string {
   return pattern.replace(/^[\w*]+:\/\//, '').replace(/\/.*$/, '');
 }
 
-/** Access pattern for a hostname on both http and https. */
-export function sitePattern(host: string): string {
-  return `*://${host}/*`;
+/**
+ * Access patterns for a hostname, one per scheme. Chrome only accepts a
+ * request whose patterns each fit inside one manifest entry (all https sites,
+ * or all http sites), so a combined "any scheme" pattern is refused.
+ */
+export function sitePatterns(host: string): string[] {
+  return [`https://${host}/*`, `http://${host}/*`];
 }
 
 /** True if LinkPeek may run on this host over https or http. */
 export async function hasSiteAccess(host: string): Promise<boolean> {
-  const [https, http] = await Promise.all([
-    chrome.permissions.contains({ origins: [`https://${host}/*`] }),
-    chrome.permissions.contains({ origins: [`http://${host}/*`] }),
-  ]);
-  return https || http;
+  const results = await Promise.all(sitePatterns(host).map((o) => chrome.permissions.contains({ origins: [o] })));
+  return results.some(Boolean);
 }

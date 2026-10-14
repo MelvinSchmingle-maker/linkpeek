@@ -49,7 +49,7 @@
 
 **Tested (actual results):**
 - typecheck, lint, production build: pass
-- Unit tests: 97/97 pass, including 59 labelled classifier examples (precision 100% on the set, required 95%+), site-pattern helpers, the new "can't read articles yet" state.
+- Unit tests: 97/97 pass, including 57 labelled classifier examples (precision 100% on the set, required 95%+; earlier versions of this note said 59, which was the number of tests, not examples), site-pattern helpers, the new "can't read articles yet" state.
 - Browser tests: 40/40 pass in Chromium 141. New: icons exactly on the expected links on the nav-heavy and blog pages; feed items get icons as they load; single-page app route changes, re-renders and href changes with no duplicates; 1,200-link page (all icons in about 0.4 s, slowest batch about 12 ms, no long tasks); Smart default; Scan mode (no icons until scan, popup reports "Found 11 article links"); Manual peek by URL and by focused link, temporary icon removed on close with focus returned to the link; mode persists across reloads; turn off/on for a site from the popup; turn back on from Settings.
 - Screenshots: `docs/screenshots/part-03/`.
 
@@ -58,3 +58,28 @@
 - Chrome's permission prompt for "Turn on" (automated tests can't click it). The test build has access to the local test server already, so tests cover what happens after access exists.
 - Real websites. The classifier has only seen our test pages and labelled examples. Part 10 tests it on live sites.
 - The keyboard shortcut showed as "not set" in the automated browser. In normal Chrome it should be Alt+Shift+P unless another extension already uses it.
+
+## Review and fixes (14 Oct 2026)
+
+**What happened:** a multi-agent code review of Parts 01 to 03. Four reviewers each took one area (page-side correctness, security and privacy, permissions and the service worker, the classifier and brief compliance). A sceptic then tried to disprove every finding, mostly by reproducing it in a real Chromium. 37 findings were confirmed (about 30 distinct problems, several found twice) and 2 rejected. All confirmed ones are fixed or documented. Design changes are in `docs/decisions.md` D22.
+
+**The serious ones:**
+- The first right-click peek or "Scan this page" on a site you hadn't turned on usually failed or was undone straight away (a start-up race). Fixed. A new test build (`dist-e2e-on-demand/`) now tests exactly this path; the old tests couldn't, because their build loaded LinkPeek differently. The new tests fail on the old code and pass on the new.
+- Any website could make LinkPeek show a "Headline check passed" tick on its own links using LinkPeek's demo markup. Fixed: demo markup only works on the local test server.
+- A page could stop LinkPeek from starting with one HTML element, or hide its card with CSS. Fixed.
+- A right-click peek on a site you hadn't turned on started Smart mode scanning the whole page. Fixed.
+- "Turn back on" in Settings never worked (Chrome refused the permission pattern), and unticking "all websites" also removed every site turned on one by one. Fixed.
+
+**Tested (actual results):**
+- typecheck, lint, production build: pass. The production build has no test hooks, closed Shadow DOM, and no site access at install (checked in `dist/`).
+- Unit tests: 113/113 pass. The classifier's labelled set grew from 57 to 71 real-world shapes (GitHub commits, Google Docs, Amazon and eBay products, Wikipedia categories, WordPress "Continue reading" and "Leave a comment", comment counts, sidebars, old Reddit titles, a Guardian month-name date, Chinese and Thai headlines, Bluesky posts and profiles). Precision 100%, recall 100% on that set. The figures now appear in the test output.
+- Browser tests: 62/62 pass (53 with the auto-loading test build, 9 with the on-demand one). New: first peek and first scan on 10 fresh pages each; Smart mode doesn't start on sites not turned on; turning a site on while LinkPeek is already on the page; a page element named `__linkpeekLoaded`; leftover icons from an old version; double injection; demo markup ignored on another site; hostile `!important` CSS; re-ordered lists; swapped links; headlines whose text arrives late; SVG links; Escape and focus belonging to the page; a card whose link gets hidden; peeking the same link twice; a URL that appears twice on a page.
+
+**Not verified (honest list):**
+- Chrome's real permission prompt, and what follows it: registering the site script, keeping it after a browser restart, "Turn on for all websites", "Turn back on". The test builds have test-server access baked in, so this path never runs in automated tests.
+- The real right-click menu, the real keyboard shortcut and the "?" badge when a peek fails. Tests send the same messages, but can't click Chrome's own menu or press a browser-level shortcut.
+- Right-click peeks inside frames (code sends to the right frame; no test page with frames yet).
+- Cleaning up after an extension update. The new copy removes the old copy's icons (tested with planted leftovers); the old copy stopping itself was not tested, because tests can't update the extension in place.
+- Sites built with React and similar tools. The first automatic scan now waits for the page to settle, which avoids the problem the reviewer reproduced, but parts of a page that load much later could still be affected. Drawing icons in an overlay would remove the risk; not done.
+- Real websites in general. Still only test pages and labelled examples. Part 10 is where that gets measured.
+- A real screen reader.

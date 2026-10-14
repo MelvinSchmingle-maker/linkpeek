@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Hostile page (LinkPeek test page)</title>
+  <style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:16px auto;padding:0 16px}</style></head>
+  <body>
+    <p>LinkPeek test page. This page tries to switch LinkPeek off, and contains a leftover icon from an "old version". Nothing here is real.</p>
+    <!-- An element with this id shows up as window.__linkpeekLoaded. -->
+    <div id="__linkpeekLoaded"></div>
+    <!-- Named elements that shadow built-in document methods. -->
+    <img name="querySelectorAll" alt="" />
+    <form name="closest"><input name="querySelectorAll" /></form>
+    <main>
+      <h3><a data-expect="icon" href="/2026/10/13/council-approves-new-library-opening-hours">Council approves new library opening hours</a><span data-linkpeek="icon" class="leftover">OLD ICON</span></h3>
+      <h3><a data-expect="icon" href="/2026/10/12/bus-fares-frozen-for-another-year">Bus fares frozen for another year</a></h3>
+    </main>
+  </body>
+</html>

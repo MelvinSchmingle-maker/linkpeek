@@ -17,8 +17,8 @@ const ICONS = {
   128: 'icons/icon-128.png',
 };
 
-/** @param {{ e2e?: boolean }} opts */
-export function buildManifest({ e2e = false } = {}) {
+/** @param {{ e2e?: boolean, onDemand?: boolean }} opts */
+export function buildManifest({ e2e = false, onDemand = false } = {}) {
   const manifest = {
     manifest_version: 3,
     name: brand.name,
@@ -47,14 +47,21 @@ export function buildManifest({ e2e = false } = {}) {
   };
 
   if (e2e) {
-    // Test-only build. Lets automated browser tests run the content script on
-    // the local test server without a permission prompt nobody can click.
-    // Never shipped: the normal build has no host access at all.
-    manifest.name = `${brand.name} (test build)`;
-    manifest.host_permissions = ['http://127.0.0.1/*'];
-    manifest.content_scripts = [
-      { matches: ['http://127.0.0.1/*'], js: ['content.js'], run_at: 'document_idle' },
-    ];
+    // Test-only builds. Let automated browser tests reach the local test
+    // server (127.0.0.1, and demo.test mapped onto it) without a permission
+    // prompt nobody can click. Never shipped: the normal build has no host
+    // access at all.
+    //  - default test build: Chrome adds LinkPeek to those pages by itself,
+    //    like a site you turned on.
+    //  - on-demand test build: nothing runs until the test injects it, like
+    //    a right-click peek or "Scan this page" on any other site.
+    manifest.name = `${brand.name} (test build${onDemand ? ', on demand' : ''})`;
+    manifest.host_permissions = ['http://127.0.0.1/*', 'http://demo.test/*'];
+    if (!onDemand) {
+      manifest.content_scripts = [
+        { matches: ['http://127.0.0.1/*', 'http://demo.test/*'], js: ['content.js'], run_at: 'document_idle' },
+      ];
+    }
   }
 
   return manifest;

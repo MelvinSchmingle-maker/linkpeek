@@ -12,6 +12,9 @@
       <button type="button" data-route="world">World</button>
       <button type="button" id="rerender">Re-render same content</button>
       <button type="button" id="change-href">Change first link's address</button>
+      <button type="button" id="reverse">Reverse the order</button>
+      <button type="button" id="replace-first">Replace the first link with a new element</button>
+      <button type="button" id="skeleton">Add a headline that fills in later</button>
     </div>
     <main id="app"></main>
     <script>
@@ -52,6 +55,30 @@
         const a = document.querySelector('#app a');
         a.href = '/2026/10/14/updated-story-address-after-correction';
         a.textContent = 'Updated story address after a correction';
+      });
+      // Re-order the existing elements, the way keyed lists in React/Vue/Svelte do.
+      document.getElementById('reverse').addEventListener('click', () => {
+        const app = document.getElementById('app');
+        for (const h3 of [...app.querySelectorAll('h3')].reverse()) app.append(h3);
+      });
+      // Swap a link for a new element with the same address (a re-keyed item).
+      document.getElementById('replace-first').addEventListener('click', () => {
+        const old = document.querySelector('#app a');
+        const fresh = document.createElement('a');
+        fresh.href = old.getAttribute('href');
+        fresh.textContent = old.textContent;
+        fresh.dataset.expect = 'icon';
+        old.replaceWith(fresh);
+      });
+      // Insert an empty link, then fill in its title (skeleton screens do this).
+      document.getElementById('skeleton').addEventListener('click', () => {
+        const h3 = document.createElement('h3');
+        const a = document.createElement('a');
+        a.href = '/2026/10/14/headline-that-arrived-after-its-link';
+        a.dataset.expect = 'icon';
+        h3.append(a);
+        document.getElementById('app').append(h3);
+        setTimeout(() => { a.textContent = 'A headline that arrived after its link was added'; }, 300);
       });
       render();
     </script>

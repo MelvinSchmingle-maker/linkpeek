@@ -1,5 +1,5 @@
 import { hostOf, originPattern, ALL_SITES } from '../core/sites';
-import { getSettings, updateSettings } from '../core/storage/settings';
+import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
 import type { ContentResponse } from '../content/messages';
 import { renderModePicker } from '../ui/mode-picker';
 import { applyBrand } from '../ui/theme';
@@ -41,7 +41,7 @@ async function renderSite(): Promise<void> {
   const toggle = $<HTMLButtonElement>('#site-toggle');
   if (!pattern || !host) {
     name.textContent = 'This page';
-    state.textContent = "LinkPeek can't run on browser pages.";
+    state.textContent = "LinkPeek can't run on browser pages or the Chrome Web Store.";
     toggle.hidden = true;
     $<HTMLButtonElement>('#scan').disabled = true;
     return;
@@ -62,7 +62,19 @@ function turnOn(allowed: boolean, disabled: boolean): void {
     // Must be the first thing in the click handler, or Chrome refuses to show
     // the prompt. Chrome may close this popup while asking; the service worker
     // finishes the job when access is granted.
-    void chrome.permissions.request({ origins: [pattern!] }).then(renderSite);
+    void chrome.permissions
+      .request({ origins: [pattern!] })
+      .then(async (granted) => {
+        // Chrome doesn't always show a prompt (e.g. access LinkPeek gave back
+        // earlier), so the popup may still be open: finish the job here too.
+        // The service worker does the same; doing it twice is harmless.
+        if (granted && disabled) {
+          const s = await getSettings();
+          await updateSettings({ disabledSites: s.disabledSites.filter((h) => h !== host) });
+        }
+      })
+      .catch(() => undefined)
+      .then(renderSite);
     return;
   }
   void (async () => {
@@ -71,7 +83,12 @@ function turnOn(allowed: boolean, disabled: boolean): void {
       await updateSettings({ disabledSites: s.disabledSites.filter((h) => h !== host) });
     }
     if (tab?.id) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).catch(() => undefined);
-    await renderSite();
+    // Keep the popup honest if something changes while it's open.
+onSettingsChanged(() => void renderSite());
+chrome.permissions.onAdded.addListener(() => void renderSite());
+chrome.permissions.onRemoved.addListener(() => void renderSite());
+
+await renderSite();
   })();
 }
 

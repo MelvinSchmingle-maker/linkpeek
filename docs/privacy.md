@@ -8,7 +8,7 @@
 
 | What | Where | Why |
 |---|---|---|
-| Settings (mode, demo toggle) | `chrome.storage.local` | Remember your choices |
+| Settings (mode, demo toggle, hostnames of sites you turned off) | `chrome.storage.local` | Remember your choices. A site you turn off stays listed (hostname only, e.g. `news.example.com`) until you turn it back on, so LinkPeek stays off there. |
 | Feedback votes (thumbs up/down) | `chrome.storage.local` | Find out which summaries help. Keeps the website's hostname (e.g. `news.example.com`), never the full address or any article text. One vote per result, at most 500 kept. |
 
 ## Rules for every future change

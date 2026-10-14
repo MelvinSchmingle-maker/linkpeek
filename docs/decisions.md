@@ -32,8 +32,15 @@ A simple eye on a blue square, rendered by `scripts/make-icons.mjs`. Replace bef
 ## D10. The card floats over the page (Part 02)
 The card uses `position: fixed` just under the link, so opening it never pushes the article around. It follows the link on scroll and resize, and flips above the link when there's no room below. Known limit: a page that applies CSS `zoom` to its own body (rare) could misplace it. Normal browser zoom (Ctrl +/-) is tested and works.
 
-## D11. Shadow DOM is closed in the real build, open in the test build (Part 02)
-Closed means page scripts can't reach into LinkPeek's card to read what you previewed. Playwright can only test inside open shadow roots, so the test build (`dist-e2e/`) uses open. This is the only behaviour difference between the two builds besides the test-server permission.
+## D11. Shadow DOM is closed in the real build, open in the test builds (Part 02, corrected after review)
+Closed means page scripts can't reach into LinkPeek's card to read what you previewed. Playwright can only test inside open shadow roots, so the test builds use open. All the differences between the test builds and the real one, so nobody mistakes test coverage for coverage of the real thing:
+- open instead of closed Shadow DOM;
+- access to `127.0.0.1` and `demo.test` baked in (no permission prompt);
+- `dist-e2e/` also has Chrome add LinkPeek to those pages by itself; `dist-e2e-on-demand/` doesn't, so it behaves like any site you haven't turned on;
+- the popup accepts `?tab=<id>`, so tests can point it at a tab;
+- the page's `<html>` gets `data-linkpeek-max-batch-ms` and `data-linkpeek-icons` (timing for the speed test);
+- the service worker reads `e2eSiteAllowed` from storage, so tests can play "site turned on / not turned on".
+Because the test-server access is baked in, the real "turn a site on" path (Chrome's prompt, registering the site script, keeping it across restarts) never runs in the automated tests. See "Not verified" in `docs/progress.md`.
 
 ## D12. Basic feedback stored on the device now (Part 02)
 The brief says no button may pretend to work. Instead of fake thumbs, the thumbs save a real vote to `chrome.storage.local`: hostname only, no full URL, no article text, one vote per result, capped at 500 entries. Part 09 adds reasons, export and delete-all. Nothing is sent anywhere.
@@ -64,3 +71,15 @@ Until Part 04, clicking the icon on a real (non-demo) link opens a card that say
 
 ## D21. Known risk: sites that rebuild their own HTML (Part 03)
 LinkPeek inserts its icon right after a link. Sites built with React and similar tools may occasionally remove it when they redraw. The scanner notices and puts it back. A site could in theory complain about the extra element during start-up. Tested on our single-page-app page; to be checked on real sites in Part 10.
+
+## D22. Review fixes, October 2026 (Parts 01 to 03)
+A multi-agent review (four reviewers, each finding then checked by a sceptic who tried to disprove it) confirmed 37 findings, about 30 distinct problems. The design changes that came out of it:
+- **Start-up order.** The content script listens for messages immediately, but handles none until its first set-up is done. Before, the first right-click peek or scan on a page was usually lost or undone (reproduced 18 times in 20).
+- **Smart mode only where you turned it on.** When LinkPeek is added to a page on demand (a peek or a one-off scan), it asks the service worker whether the site is turned on and only scans by itself if so.
+- **Demo data only on the local test server.** `data-linkpeek-demo` is ignored everywhere except `127.0.0.1` and `localhost`, so a real website can't make LinkPeek show a "Headline check passed" tick on its own links.
+- **Pages can't switch LinkPeek off or restyle it.** The "already running" check can't be fooled by a page element with the same id; host elements use their own tag names (`linkpeek-icon`, `linkpeek-card`) so page frameworks can't reuse them; their styles are `!important` inline styles, which beat page CSS.
+- **Wait for the page to settle before the first automatic scan** (load, then 300 ms without changes, at most 3 s). Adding icons while a React or similar site is still "hydrating" its HTML can make it throw the page away and rebuild it. A later fix would be drawing icons in an overlay instead of next to links; not done yet.
+- **Escape and focus belong to the page** unless you're in LinkPeek's card. Focus moving to the page closes the card.
+- **Classifier needs a structural signal.** Wordy link text alone isn't enough; the link also needs a heading, an article block, a date, a readable title in its address, a PDF, an article-style path or a story number. Addresses with commit hashes and document IDs no longer count as titles. Shop product pages, code-host objects, wiki category pages, "Continue reading", "Leave a comment", "245 comments" and links into comment sections are excluded. Page sidebars count against a link. Chinese, Japanese and Thai headlines are word-counted properly.
+- **Site permissions.** "Turn back on" asks for `https://` and `http://` separately (Chrome refuses a combined pattern). Unticking "all websites" keeps the sites you turned on one by one. The Chrome Web Store counts as a page LinkPeek can't run on.
+- **Right-click peeks** go to the frame the link is in, use the exact link that was right-clicked, and show a "?" on the toolbar button for a few seconds when they can't work.

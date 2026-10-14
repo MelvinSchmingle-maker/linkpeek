@@ -66,8 +66,22 @@ const CASES: [string, string, boolean][] = [
   ['account', '<main><a data-t href="https://news.example.com/account/settings">Manage your account and saved articles</a></main>', false],
   ['reddit user profile', '<main><a data-t href="https://www.reddit.com/u/somebody">u/somebody</a></main>', false],
   ['short section link in body', '<main><p><a data-t href="https://news.example.com/sport">Sport</a></p></main>', false],
-  ['in-text link to a reference article', '<main><p><a data-t href="https://en.wikipedia.org/wiki/History_of_the_bicycle_in_the_United_Kingdom">History of the bicycle in the United Kingdom</a></p></main>', false],
+  ['in-text link to a reference article', '<main><p>Cycling took off quickly in Victorian Britain; see <a data-t href="https://en.wikipedia.org/wiki/History_of_the_bicycle_in_the_United_Kingdom">History of the bicycle in the United Kingdom</a> for the full background and the clubs that formed.</p></main>', false],
   ['in-text link with short anchor', '<main><p>Figures <a data-t href="https://stats.example.gov/releases/housing-q3">published on Tuesday</a> show a rise.</p></main>', false],
+  ['github commit message', '<main><table><tr><td><a data-t href="https://github.com/owner/repo/commit/3f9a1c2b7d4e5f60718293a4b5c6d7e8f9012345">Fix typo in README installation section</a></td></tr></table></main>', false],
+  ['github commit title in h4', '<main><h4><a data-t href="https://github.com/owner/repo/commit/a1b2c3d4e5f60718293a4b5c6d7e8f901234abcd">Refactor the parser to stream large inputs</a></h4></main>', false],
+  ['google docs id', '<main><div><a data-t href="https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit">Q3 planning notes for the marketing team</a></div></main>', false],
+  ['amazon product title', '<main><h2><a data-t href="https://www.amazon.co.uk/Anker-Charger-Foldable-Compatible-MacBook/dp/B0B2MLJ3R8/ref=sr_1_1">Anker USB C charger, 65W foldable, compatible with MacBook</a></h2></main>', false],
+  ['ebay item', '<main><h3><a data-t href="https://www.ebay.co.uk/itm/1234567890123">Vintage brass desk lamp in working order</a></h3></main>', false],
+  ['wikipedia category link', '<main id="content"><div id="catlinks"><ul><li><a data-t href="https://en.wikipedia.org/wiki/Category:Transport_in_the_London_Borough_of_Camden">Transport in the London Borough of Camden</a></li></ul></div></main>', false],
+  ['continue reading with screen-reader title', '<main><article><a data-t class="more-link" href="https://blog.example.org/2026/10/our-ci-move/">Continue reading<span class="screen-reader-text"> Moving our CI to self-hosted runners</span></a></article></main>', false],
+  ['leave a comment on title', '<main><article><footer class="entry-footer"><a data-t href="https://blog.example.org/2026/10/our-ci-move/#respond">Leave a comment<span class="screen-reader-text"> on Moving our CI to self-hosted runners</span></a></footer></article></main>', false],
+  ['comment count inside main article', '<main><article><a data-t href="https://news.example.com/2026/10/12/council-approves-new-cycle-lanes#comments">245 comments</a></article></main>', false],
+  ['read full story', '<main><article><a data-t href="https://news.example.com/2026/10/12/council-approves-new-cycle-lanes">Read full story</a></article></main>', false],
+  ['sidebar recent comment link', '<main><aside role="complementary"><ul><li><a data-t href="https://blog.example.org/2026/09/30/moving-our-ci-to-self-hosted-runners/#comment-42">Moving our CI to self-hosted runners</a></li></ul></aside></main>', false],
+  ['sidebar docs menu', '<aside><ul><li><a data-t href="https://docs.example.org/guide/getting-started-with-the-command-line">Getting started with the command line tools</a></li></ul></aside>', false],
+  ['bluesky profile', '<main><p>Follow <a data-t href="https://bsky.app/profile/someone.bsky.social">our reporter on Bluesky for live updates</a> today.</p></main>', false],
+  ['account settings deep path', '<main><a data-t href="https://news.example.com/account/settings/privacy">Manage your account privacy and data settings</a></main>', false],
   ['rss feed', '<main><a data-t href="https://news.example.com/feeds/latest.rss">Subscribe to our latest headlines feed</a></main>', false],
 ];
 
@@ -83,6 +97,21 @@ function classifySnippet(html: string) {
   return classifyLink(features);
 }
 
+function score() {
+  let tp = 0;
+  let fp = 0;
+  let fn = 0;
+  for (const [, html, expected] of CASES) {
+    const got = classifySnippet(html).isCandidate;
+    if (got && expected) tp++;
+    else if (got) fp++;
+    else if (expected) fn++;
+  }
+  return { precision: tp / Math.max(1, tp + fp), recall: tp / Math.max(1, tp + fn) };
+}
+const SCORES = score();
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+
 describe('link classifier', () => {
   for (const [name, html, expected] of CASES) {
     it(`${expected ? 'icon' : 'no icon'}: ${name}`, () => {
@@ -97,14 +126,8 @@ describe('link classifier', () => {
 
   // Precision matters most: an icon on a menu link annoys more than a
   // missing icon, which the user can fix with right-click > Peek.
-  it('precision on the labelled set is at least 95%', () => {
-    let tp = 0;
-    let fp = 0;
-    for (const [, html, expected] of CASES) {
-      if (!classifySnippet(html).isCandidate) continue;
-      if (expected) tp++;
-      else fp++;
-    }
-    expect(tp / Math.max(1, tp + fp)).toBeGreaterThanOrEqual(0.95);
+  // The measured figures are in the test's name, so they show in the output.
+  it(`precision ${pct(SCORES.precision)} and recall ${pct(SCORES.recall)} on ${CASES.length} labelled links (precision must be 95%+)`, () => {
+    expect(SCORES.precision).toBeGreaterThanOrEqual(0.95);
   });
 });
