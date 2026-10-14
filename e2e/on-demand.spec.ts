@@ -93,10 +93,12 @@ test('turning a site on while LinkPeek is already on the page starts Smart mode 
 test('a page element named __linkpeekLoaded cannot stop LinkPeek; old leftover icons are removed', async ({ page, context }) => {
   await setSettings(context, { mode: 'scan' });
   await page.goto(`${TEST_SERVER}/clobber.html`);
+  // Playwright's own locators trip over this page's crafted forms, so wait plainly. (The page adds a third story after 1.5 s.)
+  await page.waitForFunction(() => Boolean(document.getElementById('late')?.querySelector('a')));
   expect(await injectAndSend(context, { type: 'ping' })).toEqual({ ok: true });
-  expect(await injectAndSend(context, { type: 'scan' })).toEqual({ ok: true, found: 2 });
+  expect(await injectAndSend(context, { type: 'scan' })).toEqual({ ok: true, found: 3 });
   await expect(page.locator('.leftover')).toHaveCount(0);
-  await expect(icons(page)).toHaveCount(2);
+  await expect(icons(page)).toHaveCount(3);
 });
 
 test('injecting twice is harmless: no duplicate icons', async ({ page, context }) => {
@@ -116,4 +118,71 @@ test('demo markup is ignored on a site that is not LinkPeek’s test server', as
   await expect(card(page)).toContainText("can't read articles yet");
   await expect(card(page)).not.toContainText('Headline check passed');
   await expect(card(page)).not.toContainText('Demo data');
+});
+
+// ---------- Frames ----------
+
+/** Frame ids by page address, after adding LinkPeek to every frame (as the shortcut does). */
+async function frameIds(context: BrowserContext): Promise<Record<string, number>> {
+  return inWorker(
+    context,
+    async () => {
+      const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
+      await chrome.scripting.executeScript({ target: { tabId: tab!.id!, allFrames: true }, files: ['content.js'] });
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab!.id!, allFrames: true },
+        func: () => location.pathname,
+      });
+      return Object.fromEntries(results.map((r) => [r.result as string, r.frameId]));
+    },
+    null,
+  );
+}
+
+function sendToFrame(context: BrowserContext, msg: unknown, frameId?: number) {
+  return inWorker(
+    context,
+    async ([m, f]) => {
+      const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
+      const options = f === undefined ? {} : { frameId: f as number };
+      return chrome.tabs.sendMessage(tab!.id!, m, options).catch(() => null);
+    },
+    [msg, frameId] as const,
+  );
+}
+
+const frameCard = (page: Page) => page.frameLocator('#frame').locator('[data-linkpeek="card"] .card');
+
+test('frames: only one card is open in a tab at a time, across frames', async ({ page, context }) => {
+  await setSettings(context, { mode: 'manual' });
+  await page.goto(`${TEST_SERVER}/frames.html`);
+  await page.frameLocator('#frame').locator('#frame-story').waitFor();
+  const ids = await frameIds(context);
+  const inner = ids['/frame-inner.html']!;
+  expect(inner).toBeGreaterThan(0);
+
+  // Peek in the top page.
+  expect(await sendToFrame(context, { type: 'peek', url: `${TEST_SERVER}/2026/10/14/top-page-story-about-bin-collections` }, 0)).toEqual({ ok: true });
+  await expect(card(page)).toBeVisible();
+
+  // Then in the frame: the service worker closes cards everywhere first.
+  await sendToFrame(context, { type: 'close-card' });
+  expect(
+    await sendToFrame(context, { type: 'peek', url: `${TEST_SERVER}/2026/10/14/framed-story-about-the-harbour-wall-repairs` }, inner),
+  ).toEqual({ ok: true });
+  await expect(frameCard(page)).toBeVisible();
+  await expect(card(page)).toHaveCount(0);
+});
+
+test('frames: the shortcut peeks at a focused link inside a frame; other frames stay silent', async ({ page, context }) => {
+  await setSettings(context, { mode: 'manual' });
+  await page.goto(`${TEST_SERVER}/frames.html`);
+  const frameLink = page.frameLocator('#frame').locator('#frame-story');
+  await frameLink.waitFor();
+  await frameIds(context); // LinkPeek in every frame, as the shortcut handler does
+  await frameLink.focus();
+  // Sent to the whole tab, like the shortcut. Only the frame with the focused link answers.
+  expect(await sendToFrame(context, { type: 'peek-focused' })).toEqual({ ok: true });
+  await expect(frameCard(page)).toContainText("can't read articles yet");
+  await expect(card(page)).toHaveCount(0);
 });

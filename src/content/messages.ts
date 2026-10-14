@@ -8,7 +8,9 @@ export type ContentMessage =
   /** Open the card for the focused link (keyboard shortcut). */
   | { type: 'peek-focused' }
   /** The site was turned on or off: check again whether to run by itself. */
-  | { type: 'refresh' };
+  | { type: 'refresh' }
+  /** A card is about to open in another frame of this tab: close ours. */
+  | { type: 'close-card' };
 
 export interface ContentResponse {
   ok: boolean;
@@ -16,7 +18,7 @@ export interface ContentResponse {
   found?: number;
 }
 
-const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh']);
+const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh', 'close-card']);
 
 export function isContentMessage(msg: unknown): msg is ContentMessage {
   return typeof msg === 'object' && msg !== null && TYPES.has((msg as { type?: unknown }).type as string);

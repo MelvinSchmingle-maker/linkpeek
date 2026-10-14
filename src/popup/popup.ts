@@ -59,9 +59,11 @@ async function renderSite(): Promise<void> {
 
 function turnOn(allowed: boolean, disabled: boolean): void {
   if (!allowed) {
-    // Must be the first thing in the click handler, or Chrome refuses to show
-    // the prompt. Chrome may close this popup while asking; the service worker
-    // finishes the job when access is granted.
+    // Chrome may close this popup while it asks. Leave a note so the service
+    // worker can finish the job ("undo turn off") once access is granted.
+    // Not awaited: the request below must happen within this click.
+    void chrome.storage.local.set({ pendingTurnOn: { host, at: Date.now() } });
+    // Must be in the click handler itself, or Chrome refuses to show the prompt.
     void chrome.permissions
       .request({ origins: [pattern!] })
       .then(async (granted) => {
@@ -83,12 +85,7 @@ function turnOn(allowed: boolean, disabled: boolean): void {
       await updateSettings({ disabledSites: s.disabledSites.filter((h) => h !== host) });
     }
     if (tab?.id) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).catch(() => undefined);
-    // Keep the popup honest if something changes while it's open.
-onSettingsChanged(() => void renderSite());
-chrome.permissions.onAdded.addListener(() => void renderSite());
-chrome.permissions.onRemoved.addListener(() => void renderSite());
-
-await renderSite();
+    await renderSite();
   })();
 }
 
@@ -101,6 +98,11 @@ async function turnOff(allowed: boolean): Promise<void> {
   if (allowed && !everywhere) await chrome.permissions.remove({ origins: [pattern!] }).catch(() => false);
   await renderSite();
 }
+
+// Keep the popup honest if something changes while it's open.
+onSettingsChanged(() => void renderSite());
+chrome.permissions.onAdded.addListener(() => void renderSite());
+chrome.permissions.onRemoved.addListener(() => void renderSite());
 
 // ---------- Scan this page ----------
 

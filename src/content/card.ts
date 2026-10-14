@@ -20,16 +20,43 @@ const EDGE = 8;
 export const HOST_ATTR = 'data-linkpeek';
 
 /**
- * Host elements use tag names no real page markup has (valid custom-element
- * names, never defined). DOM-patching frameworks (morphdom, idiomorph, Turbo,
- * LiveView) match nodes by tag, so they can't mistake our icon for one of
- * their own <span>s and reuse it for page content.
+ * Host elements use tag names no page markup has: valid custom-element names
+ * that are never defined, with a random part chosen per page. DOM-patching
+ * frameworks (morphdom, idiomorph, Turbo, LiveView) match nodes by tag, so
+ * they can't mistake our icon for one of their own <span>s. The random part
+ * stops a page from defining the name in advance (a page-defined element
+ * could get hold of our closed shadow root through ElementInternals); if a
+ * page defines it anyway, we pick another name.
  */
-const HOST_TAG = { icon: 'linkpeek-icon', card: 'linkpeek-card' } as const;
+const HOST_PREFIX = 'linkpeek-';
+let hostSuffix = randomSuffix();
+
+function randomSuffix(): string {
+  return Math.random().toString(36).slice(2, 8).replace(/^[0-9]+/, '') || 'x';
+}
+
+// Read through the prototype: a page <form> with an input named "localName"
+// or "hasAttribute" would otherwise answer with that input.
+const localNameOf = Object.getOwnPropertyDescriptor(Element.prototype, 'localName')!.get!;
+const hasAttr = Element.prototype.hasAttribute;
+const matches = Element.prototype.matches;
 
 /** True only for an element LinkPeek created and still owns. */
 export function isOurHost(el: Element): boolean {
-  return el.localName.startsWith('linkpeek-') && el.hasAttribute(HOST_ATTR);
+  if (!hasAttr.call(el, HOST_ATTR)) return false;
+  const name = localNameOf.call(el) as string;
+  return name.startsWith(HOST_PREFIX) || name === 'span' || name === 'div';
+}
+
+function createHostElement(kind: 'icon' | 'card'): HTMLElement {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const el = document.createElement(`${HOST_PREFIX}${kind}-${hostSuffix}`);
+    // ":defined" is true only if the page registered this name itself.
+    if (!matches.call(el, ':defined')) return el;
+    hostSuffix = randomSuffix();
+  }
+  // A page that keeps guessing gets plain elements. Still marked as ours.
+  return document.createElement(kind === 'icon' ? 'span' : 'div');
 }
 
 /**
@@ -46,11 +73,11 @@ export function isWebUrl(href: string): boolean {
 }
 
 function makeShadowHost(kind: 'icon' | 'card'): { host: HTMLElement; root: ShadowRoot } {
-  const host = document.createElement(HOST_TAG[kind]);
+  const host = createHostElement(kind);
   host.setAttribute(HOST_ATTR, kind);
   const root = host.attachShadow({ mode: SHADOW_MODE });
   const style = document.createElement('style');
-  style.textContent = brandCss(':host') + css;
+  style.textContent = brandCss(':host', true) + css;
   root.append(style);
   // Keep page click handlers (e.g. "whole teaser is a link") from firing
   // when someone uses our controls.
@@ -74,8 +101,9 @@ export function attachIcon(
     'vertical-align': 'middle',
     'margin-left': '0.3em',
     'line-height': '0',
-    visibility: 'visible',
     opacity: '1',
+    // No forced visibility: an icon must stay hidden when its link is
+    // (e.g. a faded-out carousel slide), so it inherits visibility.
   });
   const button = document.createElement('button');
   button.type = 'button';
@@ -251,6 +279,8 @@ export class CardController {
       display: 'block',
       visibility: 'visible',
       opacity: '1',
+      direction: 'ltr',
+      'unicode-bidi': 'isolate',
     });
     this.host = host;
     this.root = root;

@@ -31,6 +31,20 @@ const CASES: [string, string, boolean][] = [
   ['category in path but real article', '<main><h3><a data-t href="https://news.example.com/category/politics/2026/10/vote-on-planning-bill-delayed">Vote on planning bill delayed again</a></h3></main>', true],
   ['same-site article in list item heading', '<main><li><h3><a data-t href="/2026/10/school-meals-pilot-extended">School meals pilot extended to more areas</a></h3></li></main>', true],
 
+  // Real-world shapes found in review (Oct 2026).
+  ['old reddit title in p.title', '<div role="main"><div class="thing"><p class="title"><a data-t class="title" href="https://www.bbc.co.uk/news/uk-politics-68412345">Minister resigns after row over housing targets</a> <span class="domain">(bbc.co.uk)</span></p></div></div>', true],
+  ['old reddit title to an opaque id (FT)', '<div role="main"><div class="thing"><p class="title"><a data-t class="title" href="https://www.ft.com/content/6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b">UK inflation falls to 2.1% in September</a> <span class="domain">(ft.com)</span></p></div></div>', true],
+  ['guardian month-name date', '<div role="main"><p class="title"><a data-t href="https://www.theguardian.com/uk-news/2026/oct/12/rail-fares-to-rise-in-january">Rail fares to rise in January</a></p></div>', true],
+  ['chinese headline', '<main><ul><li><a data-t href="https://news.example.cn/c/2026-10-12/doc-imzxyz1234567.shtml">国务院常务会议部署进一步稳就业举措</a></li></ul></main>', true],
+  ['thai headline', '<main><h3><a data-t href="https://news.example.th/news/2026/10/12/987654">รัฐบาลประกาศมาตรการช่วยเหลือค่าครองชีพรอบใหม่</a></h3></main>', true],
+  ['hindi slug in a list', '<main><ul><li><a data-t href="https://news.example.in/india/%E0%A4%AD%E0%A4%BE%E0%A4%B0%E0%A4%A4-%E0%A4%AE%E0%A5%87%E0%A4%82-%E0%A4%AD%E0%A4%BE%E0%A4%B0%E0%A5%80-%E0%A4%AC%E0%A4%BE%E0%A4%B0%E0%A4%BF%E0%A4%B6-%E0%A4%B8%E0%A5%87-%E0%A4%AC%E0%A4%BE%E0%A4%A2%E0%A4%BC">भारत में भारी बारिश से बाढ़ का खतरा</a></li></ul></main>', true],
+  ['bluesky post', '<main><article><a data-t href="https://bsky.app/profile/someone.bsky.social/post/3kxyzabc">Thread on what the new budget means for renters</a></article></main>', true],
+  ['reddit post via user path', '<main><h3><a data-t href="https://www.reddit.com/user/somebody/comments/1abcde/my_notes_on_switching_energy_supplier/">My notes on switching energy supplier</a></h3></main>', true],
+  ['guardian help-section article', '<main><h3><a data-t href="https://www.theguardian.com/help/insideguardian/2026/oct/12/how-we-report-on-elections">How we report on elections</a></h3></main>', true],
+  ['google blog search post', '<main><h3><a data-t href="https://blog.google/products/search/google-search-ai-mode-update/">An update on AI Mode in Search</a></h3></main>', true],
+  ['law360 ip section article', '<main><h3><a data-t href="https://www.law360.com/ip/articles/2537586/liquidia-settles-united-therapeutics-suits-with-380-7m-deal">Liquidia settles United Therapeutics suits with $380.7M deal</a></h3></main>', true],
+  ['bbc video promo (screen-reader text + aria-hidden visible text)', '<main><h3><a data-t href="https://www.bbc.co.uk/news/videos/c0000000000o"><p><span class="visually-hidden">Watch: BBC joins police on front line against car theft. Video, 00:01:43</span><span aria-hidden="true">Watch: BBC joins police on front line against car theft</span></p></a></h3></main>', true],
+
   // ---- Should NOT get an icon ----
   ['nav link', '<nav><a data-t href="https://news.example.com/world">World</a></nav>', false],
   ['nav link with long text', '<nav><a data-t href="https://news.example.com/2026/10/some-long-headline-in-a-mega-menu">A long headline inside a mega menu</a></nav>', false],
@@ -82,6 +96,10 @@ const CASES: [string, string, boolean][] = [
   ['sidebar docs menu', '<aside><ul><li><a data-t href="https://docs.example.org/guide/getting-started-with-the-command-line">Getting started with the command line tools</a></li></ul></aside>', false],
   ['bluesky profile', '<main><p>Follow <a data-t href="https://bsky.app/profile/someone.bsky.social">our reporter on Bluesky for live updates</a> today.</p></main>', false],
   ['account settings deep path', '<main><a data-t href="https://news.example.com/account/settings/privacy">Manage your account privacy and data settings</a></main>', false],
+  ['newsletter sign-up under a news section', '<main><a data-t href="https://news.example.com/news/newsletters">Sign up for our free morning briefing newsletter</a></main>', false],
+  ['subscribe page under the blog', '<main><a data-t href="https://blog.example.org/blog/subscribe">Subscribe to get new posts by email</a></main>', false],
+  ['login under opinion', '<main><a data-t href="https://news.example.com/opinion/login?return=%2Fopinion">Log in to read and comment on our opinion pieces</a></main>', false],
+  ['help page under news, in a heading', '<main><h3><a data-t href="https://news.example.com/news/help">How to contact the newsroom with a story tip</a></h3></main>', false],
   ['rss feed', '<main><a data-t href="https://news.example.com/feeds/latest.rss">Subscribe to our latest headlines feed</a></main>', false],
 ];
 

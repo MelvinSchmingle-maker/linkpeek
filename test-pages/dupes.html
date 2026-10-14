@@ -12,6 +12,9 @@
       <h3><a id="top-link" href="/2026/10/13/town-hall-roof-repairs-finally-approved">Town hall roof repairs finally approved</a></h3>
       <div class="slide" id="slide"><h3><a id="slide-link" href="/2026/10/13/carousel-story-about-the-autumn-fair">Carousel story about the autumn fair</a></h3></div>
       <button type="button" id="hide-slide">Next slide (hides the first one)</button>
+      <div style="visibility: hidden"><h3><a id="faded-link" href="/2026/10/13/faded-out-slide-about-the-new-swimming-pool">Faded-out slide about the new swimming pool</a></h3></div>
+      <h3><a id="live-link" href="/2026/10/14/live-updates-on-the-council-budget-vote">Live: council budget vote <span id="ago">updated 1 min ago</span></a></h3>
+      <h3><a id="badge-link" href="/2026/10/14/market-hall-reopens-after-two-year-restoration">Market hall reopens after two-year restoration</a><span class="badge">NEW</span></h3>
       <div class="spacer"></div>
       <h3><a id="bottom-link" href="/2026/10/13/town-hall-roof-repairs-finally-approved">Town hall roof repairs finally approved (again, in Most read)</a></h3>
       <p><label>Site search <input id="site-search" /></label></p>
@@ -21,6 +24,14 @@
     </main>
     <script>
       document.getElementById('hide-slide').addEventListener('click', () => document.getElementById('slide').classList.add('hidden'));
+      // A ticking "updated N min ago" inside a headline link.
+      let n = 1;
+      setInterval(() => { document.getElementById('ago').textContent = `updated ${++n} min ago`; }, 200);
+      // Page code that insists its badge sits right after its link.
+      const badgeLink = document.getElementById('badge-link');
+      const badge = badgeLink.nextElementSibling;
+      new MutationObserver(() => { if (badgeLink.nextElementSibling !== badge) badgeLink.after(badge); })
+        .observe(badgeLink.parentElement, { childList: true });
       window.pageEscapes = 0;
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.pageEscapes++; });
     </script>

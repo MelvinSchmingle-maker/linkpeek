@@ -23,8 +23,18 @@ const PAGE_LEVEL_EXCEPTIONS = 'article, [role="article"]';
 
 const CONTROL_ROLES = new Set(['button', 'tab', 'menuitem', 'option', 'switch']);
 
-/** Text that's only there for screen readers, or hidden. Not part of what the link "says" on screen. */
-const HIDDEN_TEXT = '.screen-reader-text, .sr-only, .visually-hidden, .visuallyhidden, .a11y-hidden, [hidden], [aria-hidden="true"]';
+/**
+ * Text that's only there for screen readers, or hidden. Not part of what the
+ * link says on screen. (aria-hidden text IS on screen, it's just skipped by
+ * screen readers, so it counts.)
+ */
+const HIDDEN_TEXT = '.screen-reader-text, .sr-only, .visually-hidden, .visuallyhidden, .a11y-hidden, [hidden]';
+
+// Called through the prototype: page elements found by closest() can be a
+// <form> whose named inputs ("matches", "contains") hide these methods.
+const matchesFn = Element.prototype.matches;
+const containsFn = Node.prototype.contains;
+const closestFn = Element.prototype.closest;
 
 export function readLinkFeatures(link: HTMLAnchorElement): LinkFeatures {
   const text = linkText(link);
@@ -36,6 +46,7 @@ export function readLinkFeatures(link: HTMLAnchorElement): LinkFeatures {
     inArticle: Boolean(link.closest('article, [role="article"]')),
     inMain: Boolean(link.closest('main, [role="main"]')),
     inParagraph: inRunningText(link, text),
+    isParagraphTitle: isParagraphTitle(link, text),
     inAside: inAside(link),
     inNavigation: inNavigation(link),
     isControl: isControl(link),
@@ -49,8 +60,10 @@ function linkText(link: HTMLAnchorElement): string {
   // slow on pages with thousands of links. Skip screen-reader-only text, so
   // "Continue reading <span class=screen-reader-text>Title</span>" reads as
   // "Continue reading".
-  const raw = link.children.length && link.querySelector(HIDDEN_TEXT) ? visibleText(link) : (link.textContent ?? '');
-  const visible = raw.replace(/\s+/g, ' ').trim();
+  const all = link.textContent ?? '';
+  const raw = link.children.length && link.querySelector(HIDDEN_TEXT) ? visibleText(link) : all;
+  // If everything was screen-reader-only text, that text is all there is.
+  const visible = (raw.trim() ? raw : all).replace(/\s+/g, ' ').trim();
   if (visible) return visible;
   return (link.getAttribute('aria-label') ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -60,7 +73,7 @@ function inNavigation(link: HTMLAnchorElement): boolean {
   if (!nav) return false;
   const article = link.closest(PAGE_LEVEL_EXCEPTIONS);
   // Inside an article's own header: not navigation.
-  if (article && article.contains(nav) && (nav.matches('header, footer'))) return false;
+  if (article && containsFn.call(article, nav) && matchesFn.call(nav, 'header, footer')) return false;
   return true;
 }
 
@@ -68,7 +81,8 @@ function visibleText(root: Element): string {
   let out = '';
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (!node.parentElement?.closest(HIDDEN_TEXT)) out += node.nodeValue ?? '';
+    const parent = node.parentElement;
+    if (!parent || !closestFn.call(parent, HIDDEN_TEXT)) out += node.nodeValue ?? '';
   }
   return out;
 }
@@ -85,12 +99,20 @@ function inRunningText(link: HTMLAnchorElement, text: string): boolean {
   return text.length < paragraph.length * 0.6;
 }
 
+/** The link is most of its paragraph: a title line rather than a link in running text. */
+function isParagraphTitle(link: HTMLAnchorElement, text: string): boolean {
+  const p = link.closest('p');
+  if (!p) return false;
+  const paragraph = (p.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return text.length >= paragraph.length * 0.6;
+}
+
 /** A page sidebar (not a sidebar box inside an article). */
 function inAside(link: HTMLAnchorElement): boolean {
   const aside = link.closest('aside, [role="complementary"]');
   if (!aside) return false;
   const article = link.closest(PAGE_LEVEL_EXCEPTIONS);
-  return !(article && article.contains(aside));
+  return !(article && containsFn.call(article, aside));
 }
 
 function isControl(link: HTMLAnchorElement): boolean {

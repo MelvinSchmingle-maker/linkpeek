@@ -14,6 +14,8 @@ const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
 
 createServer(async (req, res) => {
   const path = normalize(decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname));
+  // /hang/...: never answers, like an ad or tracker that keeps a page "loading" forever.
+  if (path.startsWith('/hang/')) return;
   if (path.includes('..')) {
     res.writeHead(400).end();
     return;

@@ -1,24 +1,34 @@
 /*
  * Styles inside LinkPeek's Shadow DOM. The page's CSS can't reach in here,
  * and nothing here leaks out to the page.
+ *
+ * The colour variables are !important: a page can set custom properties on
+ * our host element (they inherit into the shadow tree), and inside a shadow
+ * tree an !important declaration beats the page's, even the page's own
+ * !important ones. Same for the pseudo-elements a page could hang off our host.
  */
 :host {
-  --lp-bg: #ffffff;
-  --lp-fg: #1f2328;
-  --lp-muted: #59636e;
-  --lp-border: #d0d7de;
-  --lp-tag-bg: #eef1f4;
-  --lp-shadow: 0 4px 16px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --lp-bg: #ffffff !important;
+  --lp-fg: #1f2328 !important;
+  --lp-muted: #59636e !important;
+  --lp-border: #d0d7de !important;
+  --lp-tag-bg: #eef1f4 !important;
+  --lp-shadow: 0 4px 16px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
 }
 @media (prefers-color-scheme: dark) {
   :host {
-    --lp-bg: #1f2227;
-    --lp-fg: #e6e8eb;
-    --lp-muted: #a0a7b0;
-    --lp-border: #3d434b;
-    --lp-tag-bg: #2c3138;
-    --lp-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --lp-bg: #1f2227 !important;
+    --lp-fg: #e6e8eb !important;
+    --lp-muted: #a0a7b0 !important;
+    --lp-border: #3d434b !important;
+    --lp-tag-bg: #2c3138 !important;
+    --lp-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4) !important;
   }
+}
+:host::before,
+:host::after {
+  content: none !important;
+  display: none !important;
 }
 
 /* ---------- Inline icon ---------- */

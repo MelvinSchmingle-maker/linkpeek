@@ -9,7 +9,8 @@ async function sendToPage(context: BrowserContext, msg: unknown) {
   const [worker] = context.serviceWorkers();
   return worker!.evaluate(async (m) => {
     const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
-    return chrome.tabs.sendMessage(tab!.id!, m);
+    // null = no frame answered (what the service worker treats as "couldn't peek").
+    return chrome.tabs.sendMessage(tab!.id!, m).catch(() => null);
   }, msg);
 }
 
@@ -75,7 +76,8 @@ test('keyboard shortcut path: peek at the focused link', async ({ page, context 
 
 test('peek with nothing focused or an unknown URL fails quietly', async ({ page, context }) => {
   await page.goto(NEWS);
-  expect(await sendToPage(context, { type: 'peek-focused' })).toEqual({ ok: false });
+  // Nothing focused: no frame answers, so the service worker shows its "?" badge.
+  expect((await sendToPage(context, { type: 'peek-focused' })) ?? null).toBeNull();
   expect(await sendToPage(context, { type: 'peek', url: 'https://nowhere.example/' })).toEqual({ ok: false });
 });
 

@@ -30,11 +30,29 @@ export interface ScannerOptions {
 /** Max time per batch before yielding back to the page. */
 const BATCH_BUDGET_MS = 8;
 const MAX_ICONS_PER_BATCH = 40;
+/** If the page keeps removing or displacing a link's icon, stop re-adding it after this many tries. */
+const MAX_REATTACH = 3;
 
 interface Seen {
   href: string;
   text: string;
   icon?: HTMLElement;
+}
+
+const normalise = (s: string | null) => (s ?? '').replace(/\s+/g, ' ').trim();
+
+/**
+ * The icon still belongs to the link: same parent, after the link, and no
+ * other link in between. Page elements may sit between them (a badge, an
+ * "external link" marker, another extension's button), and that's fine.
+ */
+function iconInPlace(link: HTMLAnchorElement, icon: HTMLElement): boolean {
+  if (!icon.isConnected || !link.isConnected || icon.parentNode !== link.parentNode) return false;
+  for (let n = link.nextSibling; n; n = n.nextSibling) {
+    if (n === icon) return true;
+    if (n instanceof HTMLAnchorElement) return false;
+  }
+  return false;
 }
 
 // Called through the prototype so a page can't break them by "clobbering"
@@ -58,6 +76,7 @@ export class LinkScanner {
   /** Icon host -> the link it belongs to. */
   private icons = new Map<HTMLElement, HTMLAnchorElement>();
   private idleResolvers: (() => void)[] = [];
+  private reattached = new WeakMap<HTMLAnchorElement, number>();
 
   constructor(
     private readonly doc: Document,
@@ -94,6 +113,7 @@ export class LinkScanner {
     for (const icon of this.icons.keys()) if (isOurHost(icon)) icon.remove();
     this.icons.clear();
     this.seen = new WeakMap();
+    this.reattached = new WeakMap();
   }
 
   /** Icons currently on the page. */
@@ -148,13 +168,11 @@ export class LinkScanner {
    */
   private sweep(): void {
     for (const [icon, link] of this.icons) {
-      if (icon.isConnected && link.isConnected && link.nextSibling === icon) continue;
+      if (iconInPlace(link, icon)) continue;
       if (isOurHost(icon)) icon.remove();
       this.icons.delete(icon);
-      if (link.isConnected) {
-        this.seen.delete(link);
-        this.pending.add(link);
-      }
+      // judge() decides whether to put it back (and gives up if the page keeps fighting).
+      if (link.isConnected) this.pending.add(link);
     }
   }
 
@@ -169,41 +187,77 @@ export class LinkScanner {
     else setTimeout(run, 0);
   }
 
+  /** Count a re-attachment; false once the page has fought us too often over this link. */
+  private mayReattach(link: HTMLAnchorElement): boolean {
+    const n = (this.reattached.get(link) ?? 0) + 1;
+    this.reattached.set(link, n);
+    return n <= MAX_REATTACH;
+  }
+
   private runBatch(): void {
     const t0 = performance.now();
     const accepted: HTMLAnchorElement[] = [];
     let processed = 0;
 
-    // Read pass.
-    for (const link of this.pending) {
-      this.pending.delete(link);
-      processed++;
-      if (!link.isConnected) continue;
-      const text = link.textContent ?? '';
-      const prev = this.seen.get(link);
-      const iconInPlace = prev?.icon ? prev.icon.isConnected && link.nextSibling === prev.icon : true;
-      if (prev && prev.href === link.href && prev.text === text && iconInPlace) continue;
-      if (prev?.icon) {
-        if (isOurHost(prev.icon)) prev.icon.remove();
-        this.icons.delete(prev.icon);
+    try {
+      // Read pass.
+      for (const link of this.pending) {
+        this.pending.delete(link);
+        processed++;
+        try {
+          if (this.judge(link)) accepted.push(link);
+        } catch {
+          // One odd link (e.g. a page that clobbers DOM methods) must not stop the rest.
+        }
+        // Inserting icons costs time too, so cap both reading and writing.
+        if (performance.now() - t0 > BATCH_BUDGET_MS || accepted.length >= MAX_ICONS_PER_BATCH) break;
       }
-      const ok = this.opts.accept(link);
-      this.seen.set(link, { href: link.href, text });
-      if (ok) accepted.push(link);
-      // Inserting icons costs time too, so cap both reading and writing.
-      if (performance.now() - t0 > BATCH_BUDGET_MS || accepted.length >= MAX_ICONS_PER_BATCH) break;
-    }
 
-    // Write pass.
-    for (const link of accepted) {
-      const icon = this.opts.attach(link);
-      this.icons.set(icon, link);
-      this.seen.set(link, { href: link.href, text: link.textContent ?? '', icon });
+      // Write pass.
+      for (const link of accepted) {
+        try {
+          const icon = this.opts.attach(link);
+          this.icons.set(icon, link);
+          this.seen.set(link, { href: link.href, text: normalise(link.textContent), icon });
+        } catch {
+          // Skip this link.
+        }
+      }
+      this.opts.onBatch?.({ processed, added: accepted.length, ms: performance.now() - t0 });
+    } finally {
+      this.scheduled = false;
+      this.schedule();
     }
+  }
 
-    this.opts.onBatch?.({ processed, added: accepted.length, ms: performance.now() - t0 });
-    this.scheduled = false;
-    this.schedule();
+  /**
+   * Decide about one link. Returns true when it needs a new icon. A link
+   * whose icon is still in place keeps it while it still qualifies, even if
+   * its text changed ("updated 2 min ago"), so focus and state aren't lost.
+   */
+  private judge(link: HTMLAnchorElement): boolean {
+    if (!link.isConnected) return false;
+    const text = normalise(link.textContent);
+    const prev = this.seen.get(link);
+    const placed = prev?.icon ? iconInPlace(link, prev.icon) : false;
+    if (prev && prev.href === link.href && prev.text === text && (placed || !prev.icon)) return false;
+
+    const ok = this.opts.accept(link);
+    if (prev?.icon && placed && ok) {
+      this.seen.set(link, { href: link.href, text, icon: prev.icon });
+      return false;
+    }
+    if (prev?.icon) {
+      if (isOurHost(prev.icon)) prev.icon.remove();
+      this.icons.delete(prev.icon);
+      // The page removed or moved our icon. Put it back, but not forever.
+      if (!placed && !this.mayReattach(link)) {
+        this.seen.set(link, { href: link.href, text });
+        return false;
+      }
+    }
+    this.seen.set(link, { href: link.href, text });
+    return ok;
   }
 
   private resolveIfIdle(): void {

@@ -10,6 +10,8 @@ import type { ContentMessage, ContentResponse, SiteStatus } from '../content/mes
 
 const MENU_ID = 'linkpeek-peek';
 const PEEK_COMMAND = 'peek-link';
+/** How long a "Turn on" press stays pending while Chrome shows its prompt. */
+const PENDING_TURN_ON_MS = 2 * 60 * 1000;
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason === 'install') {
@@ -52,11 +54,20 @@ async function siteAllowed(pageUrl: string | undefined): Promise<boolean> {
 // Site access changed (granted in the popup, or removed in Chrome's settings).
 chrome.permissions.onAdded.addListener(async (perms) => {
   await syncSiteScripts();
-  // Allowing a site again undoes an earlier "turn off for this site".
+  // The user pressed "Turn on" for a site (the popup may have closed while
+  // Chrome asked): undo their earlier "turn off" for exactly that site.
+  // Access granted for any other reason (e.g. LinkPeek restoring sites after
+  // "all websites" is unticked) leaves their "off" marks alone.
+  const { pendingTurnOn } = await chrome.storage.local.get('pendingTurnOn');
+  const pending = pendingTurnOn as { host: string; at: number } | undefined;
   const hosts = (perms.origins ?? []).map(hostFromPattern);
-  const settings = await getSettings();
-  if (settings.disabledSites.some((h) => hosts.includes(h))) {
-    await updateSettings({ disabledSites: settings.disabledSites.filter((h) => !hosts.includes(h)) });
+  if (pending && Date.now() - pending.at >= PENDING_TURN_ON_MS) await chrome.storage.local.remove('pendingTurnOn');
+  else if (pending && hosts.includes(pending.host)) {
+    await chrome.storage.local.remove('pendingTurnOn');
+    const settings = await getSettings();
+    if (settings.disabledSites.includes(pending.host)) {
+      await updateSettings({ disabledSites: settings.disabledSites.filter((h) => h !== pending.host) });
+    }
   }
   // Start right away on open tabs of the newly allowed sites.
   if (perms.origins?.length) {
@@ -80,15 +91,31 @@ chrome.permissions.onRemoved.addListener(() => void syncSiteScripts());
 // The link may be inside a frame, so talk to that frame.
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== MENU_ID || !tab?.id || !info.linkUrl) return;
-  const res = await send(tab.id, info.frameId ?? 0, { type: 'peek', url: info.linkUrl });
+  const frameId = info.frameId ?? 0;
+  await closeCardsInTab(tab.id);
+  const res = await send(tab.id, frameId, { type: 'peek', url: info.linkUrl });
   if (!res?.ok) await showProblem(tab.id);
 });
 
-// Keyboard shortcut on a focused link. The shortcut grants activeTab.
+// Keyboard shortcut on a focused link. The shortcut grants activeTab. The
+// focused link may be in a frame: add LinkPeek to every frame it may run in,
+// then ask them all; only the frame that has focus answers.
 chrome.commands.onCommand.addListener(async (command, tab) => {
   if (command !== PEEK_COMMAND || !tab?.id) return;
-  const res = await send(tab.id, 0, { type: 'peek-focused' });
-  if (!res?.ok) await showProblem(tab.id);
+  const tabId = tab.id;
+  await closeCardsInTab(tabId);
+  let res: ContentResponse | undefined;
+  try {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, files: ['content.js'] });
+    } catch {
+      await inject(tabId, 0); // some frames can't be scripted; the top one may still work
+    }
+    res = (await chrome.tabs.sendMessage(tabId, { type: 'peek-focused' } satisfies ContentMessage)) as ContentResponse;
+  } catch {
+    res = undefined;
+  }
+  if (!res?.ok) await showProblem(tabId);
 });
 
 async function inject(tabId: number, frameId: number): Promise<void> {
@@ -103,6 +130,15 @@ async function send(tabId: number, frameId: number, msg: ContentMessage): Promis
   } catch {
     // Chrome's own pages, the Web Store, PDFs and frames from other sites can't be scripted.
     return undefined;
+  }
+}
+
+/** One card at a time per tab: close any card open in any frame before a new peek. */
+async function closeCardsInTab(tabId: number): Promise<void> {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'close-card' } satisfies ContentMessage);
+  } catch {
+    // No LinkPeek in this tab yet. Nothing to close.
   }
 }
 

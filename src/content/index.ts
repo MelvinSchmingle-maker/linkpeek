@@ -23,6 +23,13 @@ declare global {
 const alreadyRunning =
   Object.prototype.hasOwnProperty.call(window, '__linkpeekLoaded') && window.__linkpeekLoaded === true;
 
+function focusedLinkHere(): boolean {
+  if (!document.hasFocus()) return false;
+  let el = document.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  return Boolean(el && Element.prototype.closest.call(el, 'a[href]') instanceof HTMLAnchorElement);
+}
+
 if (!alreadyRunning) {
   window.__linkpeekLoaded = true;
 
@@ -42,6 +49,10 @@ if (!alreadyRunning) {
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse: (r: ContentResponse) => void) => {
     if (!isContentMessage(msg)) return false;
+    // The shortcut is sent to every frame in the tab. Only the frame where a
+    // link actually has focus answers; the others stay silent. (A page whose
+    // focus is inside a frame also "has focus", so check for the link itself.)
+    if (msg.type === 'peek-focused' && !focusedLinkHere()) return false;
     void ready.then((c) => c.handle(msg)).then(sendResponse, () => sendResponse({ ok: false }));
     return true; // we answer asynchronously
   });

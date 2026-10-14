@@ -12,6 +12,23 @@
     <main>
       <h3><a data-expect="icon" href="/2026/10/13/council-approves-new-library-opening-hours">Council approves new library opening hours</a><span data-linkpeek="icon" class="leftover">OLD ICON</span></h3>
       <h3><a data-expect="icon" href="/2026/10/12/bus-fares-frozen-for-another-year">Bus fares frozen for another year</a></h3>
+      <!-- Forms whose named inputs hide DOM methods LinkPeek might call. -->
+      <article><form role="navigation"><input name="matches" /><a href="/about">About us</a></form></article>
+      <form role="article"><input name="contains" /><nav><a href="/">Home</a></nav></form>
+      <div id="late"></div>
     </main>
+    <script>
+      // Later, the page adds a form with an input named "localName" and a new article link.
+      setTimeout(() => {
+        const late = document.getElementById('late');
+        const f = document.createElement('form');
+        const i = document.createElement('input');
+        i.name = 'localName';
+        f.append(i);
+        const h3 = document.createElement('h3');
+        h3.innerHTML = '<a data-expect="icon" href="/2026/10/14/late-story-added-next-to-a-hostile-form">Late story added next to a hostile form</a>';
+        late.append(f, h3);
+      }, 1500);
+    </script>
   </body>
 </html>

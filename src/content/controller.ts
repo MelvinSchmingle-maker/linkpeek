@@ -30,6 +30,10 @@ const DEMO_HOSTS = new Set(['127.0.0.1', 'localhost']);
 /** Wait before the first automatic scan, so we don't touch a page while its framework is still building it. */
 const QUIET_MS = 300;
 const QUIET_MAX_MS = 3000;
+/** How often a copy of LinkPeek checks it's still the live one (a property read, no messages). */
+const ALIVE_CHECK_MS = 5000;
+/** Links within this element count as one story when they share an address. */
+const STORY_BLOCK = 'article, [role="article"], li';
 
 type Result = LinkResult | 'loading' | 'not-ready';
 
@@ -43,6 +47,9 @@ export class PageController {
   private applySeq = 0;
   private firstAutoScan = true;
   private dead = false;
+  private aliveTimer?: ReturnType<typeof setInterval>;
+  /** Links that have an icon, by address, so a story gets one icon, not one per duplicate link. */
+  private iconLinksByHref = new Map<string, Set<HTMLAnchorElement>>();
 
   constructor(
     private readonly doc: Document,
@@ -54,11 +61,17 @@ export class PageController {
       attach: (link) => this.attach(link),
       alive: () => this.alive(),
       onDead: () => this.teardown(),
-      onBatch: __E2E__ ? (s) => this.recordTiming(s.ms) : undefined,
+      // Test build only: timing for the speed test. Removed from the real build.
+      onBatch: __E2E__ ? (s) => recordTiming(doc, s.ms, this.scanner.iconCount) : undefined,
     });
     // Remember which link was right-clicked, so "Peek at this link" opens
     // the card on that exact link even when the page repeats the URL.
     doc.addEventListener('contextmenu', this.onContextMenu, true);
+    // After an extension update, this copy is dead but its icons are still on
+    // the page. Notice within a few seconds, in every mode, and clean up.
+    this.aliveTimer = setInterval(() => {
+      if (!this.alive()) this.teardown();
+    }, ALIVE_CHECK_MS);
   }
 
   /** Remove icons and cards left by an older copy of LinkPeek (e.g. before an update). */
@@ -77,6 +90,7 @@ export class PageController {
     this.cards.close({ restoreFocus: false });
     this.removeTempIcons();
     this.scanner.stop();
+    this.iconLinksByHref.clear();
     if (this.siteDisabled || settings.mode !== 'smart') return;
     const { allowed } = await this.siteStatus();
     if (seq !== this.applySeq || !allowed) return;
@@ -96,6 +110,9 @@ export class PageController {
         return { ok: true };
       case 'refresh':
         await this.apply(this.settings);
+        return { ok: true };
+      case 'close-card':
+        this.cards.close({ restoreFocus: false });
         return { ok: true };
       case 'scan':
         await this.scanner.scanOnce();
@@ -146,6 +163,7 @@ export class PageController {
     this.removeTempIcons();
     this.scanner.stop();
     this.doc.removeEventListener('contextmenu', this.onContextMenu, true);
+    clearInterval(this.aliveTimer);
   }
 
   /** Demo markup is only honoured on LinkPeek's local test pages, never on real websites. */
@@ -159,12 +177,41 @@ export class PageController {
   private accept(link: HTMLAnchorElement): boolean {
     if (link.closest(`[${HOST_ATTR}]`)) return false;
     if (this.demoKeyFor(link) !== null) return true;
-    return classifyLink(readLinkFeatures(link)).isCandidate;
+    if (!classifyLink(readLinkFeatures(link)).isCandidate) return false;
+    return !this.storyAlreadyHasIcon(link);
+  }
+
+  /**
+   * A teaser often links the same story twice (headline, then a description
+   * or "Read the full story"). One icon per story block is enough.
+   */
+  private storyAlreadyHasIcon(link: HTMLAnchorElement): boolean {
+    const others = this.iconLinksByHref.get(link.href);
+    if (!others) return false;
+    const block = link.closest(STORY_BLOCK) ?? link.parentElement?.parentElement;
+    for (const other of others) {
+      if (!other.isConnected || other === link) {
+        others.delete(other);
+        continue;
+      }
+      if (block && Node.prototype.contains.call(block, other)) return true;
+    }
+    return false;
   }
 
   private attach(link: HTMLAnchorElement): HTMLElement {
-    const { host, button } = attachIcon(link, (b) => this.toggleCard(link, b));
+    const { host, button } = attachIcon(link, (b) => {
+      // A dead copy (extension updated) cleans up instead of opening a card.
+      if (!this.alive()) {
+        this.teardown();
+        return;
+      }
+      this.toggleCard(link, b);
+    });
     this.buttons.set(link, button);
+    const set = this.iconLinksByHref.get(link.href) ?? new Set();
+    set.add(link);
+    this.iconLinksByHref.set(link.href, set);
     return host;
   }
 
@@ -267,13 +314,14 @@ export class PageController {
     this.lastContextLink = link instanceof HTMLAnchorElement ? link : undefined;
   };
 
-  /** Test build only: record the slowest batch so tests can check page speed. */
-  private recordTiming(ms: number): void {
-    const root = this.doc.documentElement;
-    const prev = Number(root.dataset.linkpeekMaxBatchMs ?? 0);
-    root.dataset.linkpeekMaxBatchMs = String(Math.max(prev, Math.round(ms * 10) / 10));
-    root.dataset.linkpeekIcons = String(this.scanner.iconCount);
-  }
+}
+
+/** Test build only: record the slowest batch so tests can check page speed. */
+function recordTiming(doc: Document, ms: number, icons: number): void {
+  const root = doc.documentElement;
+  const prev = Number(root.dataset.linkpeekMaxBatchMs ?? 0);
+  root.dataset.linkpeekMaxBatchMs = String(Math.max(prev, Math.round(ms * 10) / 10));
+  root.dataset.linkpeekIcons = String(icons);
 }
 
 /** document.activeElement, looking inside open shadow roots. */
@@ -290,26 +338,35 @@ function deepActiveElement(doc: Document): Element | null {
  * icons before that can make them throw the page away and rebuild it.
  */
 export function waitForQuietPage(doc: Document, quietMs = QUIET_MS, maxMs = QUIET_MAX_MS): Promise<void> {
-  const loaded =
-    doc.readyState === 'complete'
-      ? Promise.resolve()
-      : new Promise<void>((r) => doc.defaultView?.addEventListener('load', () => r(), { once: true }));
-  return loaded.then(
-    () =>
-      new Promise<void>((resolve) => {
-        let timer = setTimeout(done, quietMs);
-        const cap = setTimeout(done, maxMs);
-        const observer = new MutationObserver(() => {
-          clearTimeout(timer);
-          timer = setTimeout(done, quietMs);
-        });
-        observer.observe(doc.documentElement, { childList: true, subtree: true });
-        function done() {
-          clearTimeout(timer);
-          clearTimeout(cap);
-          observer.disconnect();
-          resolve();
-        }
-      }),
-  );
+  return new Promise<void>((resolve) => {
+    let finished = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let observer: MutationObserver | undefined;
+    const win = doc.defaultView;
+    // The cap runs from the start, so a page whose images or ads never finish
+    // loading still gets scanned after a few seconds.
+    const cap = setTimeout(done, maxMs);
+
+    function startQuietTimer() {
+      if (finished) return;
+      timer = setTimeout(done, quietMs);
+      observer = new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(done, quietMs);
+      });
+      observer.observe(doc.documentElement, { childList: true, subtree: true });
+    }
+    function done() {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      clearTimeout(cap);
+      observer?.disconnect();
+      win?.removeEventListener('load', startQuietTimer);
+      resolve();
+    }
+
+    if (doc.readyState === 'complete') startQuietTimer();
+    else win?.addEventListener('load', startQuietTimer, { once: true });
+  });
 }

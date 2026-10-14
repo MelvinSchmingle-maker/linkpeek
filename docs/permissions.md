@@ -14,7 +14,7 @@ LinkPeek asks for as little as possible. This file lists every permission, why i
 
 The keyboard shortcut (`commands` in the manifest, Alt+Shift+P by default) is not a permission and shows no warning. Chrome may leave it unassigned if another extension already uses that key. You can set it at `chrome://extensions/shortcuts`.
 
-Limits worth knowing: Chrome never lets extensions run on its own pages or the Chrome Web Store, even with access to all sites, and the popup says so there. A right-click peek on a link inside a frame from another site doesn't work with one-tab access (`activeTab` covers the tab's own site); LinkPeek shows a "?" on its toolbar button for a few seconds when a peek can't work.
+Limits worth knowing: Chrome never lets extensions run on its own pages or the Chrome Web Store, even with access to all sites, and the popup says so there. Right-click peeks and the shortcut work in frames from the same site; a link inside a frame from another site can't be reached with one-tab access (`activeTab` covers the tab's own site); LinkPeek shows a "?" on its toolbar button for a few seconds when a peek can't work.
 
 **After installing, LinkPeek has access to no websites at all.** It only works on a page when you click it, right-click a link, use the shortcut, or turn it on for that site.
 
