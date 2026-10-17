@@ -159,7 +159,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The model download button (needs a capable computer and a real click).
 - Your check from the build plan: using it on 10 real articles for a day to judge whether the free summary is good enough.
 
-## Part 06. AI summaries (17 Oct 2026, built and deployed; waiting on the key and the rate-limit rule)
+## Part 06. AI summaries (17 Oct 2026, done: deployed and measured)
 
 **Built:**
 - A backend in `server/`: one Vercel function, `POST /api/summarise`, which asks Claude through the official Anthropic SDK (D35 to D39). It has:
@@ -182,7 +182,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - An AI evaluation, `npm run eval:ai`: the 20 Part 05 articles plus three prompt-injection pages, through the real extension-to-backend code path, writing `docs/eval/part-06.md` with the measured cost.
 
 **Tested (actual results):**
-- typecheck, lint, production build: pass. The production build has no backend address unless `LINKPEEK_API_URL` is set.
+- typecheck, lint, production build: pass.
 - Backend: 39 tests pass, with a stand-in for Claude. They cover:
   - request rules, including that a page address is refused
   - the prompt (long enough to cache, injection tags can't break out)
@@ -204,11 +204,25 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - Endpoint: `https://linkpeek-api.vercel.app/api/summarise`. That address is public; the team-scoped `*.vercel.app` addresses sit behind Vercel's login (Standard Protection), so use this one.
 - Checked against the live endpoint with curl: the preflight answers 204 with `access-control-allow-origin: *`, GET 405, bad JSON 400, a request with a `url` field 400, and a valid request `500 misconfigured`, as designed while there's no rate-limit rule and no key.
 - The Hobby plan allows one rate-limit rule per project, so the backend was changed from two rules to one (D39).
-- Still to do in the Vercel dashboard (the Vercel connector here can't change this team's Firewall or secrets): the `summarise` rate-limit rule and the `ANTHROPIC_API_KEY` variable. `server/README.md` has the steps.
+- Set up by hand in the dashboards (the Vercel connector here can't change this team's Firewall or secrets): the `summarise` rate-limit rule, the `ANTHROPIC_API_KEY` variable, and a monthly spend limit in the Anthropic Console.
+- Production builds now point at the deployed backend by default (`scripts/build.mjs`); `LINKPEEK_API_URL` overrides it, and `LINKPEEK_API_URL=` builds without one.
+
+**Checked against the live backend, with the key (17 Oct 2026):**
+- A real summary came back from Claude Opus 5.5 in 2.4 seconds.
+- The rate-limit rule, checked directly at the deployment's rate-limit address (no Claude calls): exactly 30 requests per key, then 429. A rule ID that doesn't exist answers 404, which the backend treats as "refuse".
+- 36 real requests from this cloud machine, with a fresh install ID each time, were not stopped. This machine's traffic leaves from at least six IP addresses in turn, so they were spread across that many IP buckets. That's the per-IP limit working as built, and it's also exactly how someone with many addresses gets past it, so the Anthropic spend limit stays the real ceiling.
+- The production build in Chromium, with no site permissions granted, called the backend from its own `chrome-extension://` origin and got a summary back (200). The AI option in Settings is available.
+- `npm run eval:ai` (`docs/eval/part-06.md`):
+  - 20 of 20 articles got a Claude summary, all 20 words or fewer; 3 needed one request to shorten.
+  - 0.41 cents a summary (see `docs/cost/part-06-estimate.md` for why real articles will cost more).
+  - None of the 3 prompt-injection pages got Claude to follow the planted instruction.
+  - Key-word overlap with the hand-written summaries is a tie, 0.62 each. The measure misses the real difference. On the opinion piece, the review and the hedged science story, the free summary picks a sentence that isn't the point ("I have lived in Millbrook for thirty years."), and Claude says what the piece argues or found. Two of the three shortened sentences read clipped, though: "traders lost about a third" (of their trade, the article says) and "nobody hurt, cause unknown".
+- The first eval run failed every request without saying so: the unit-test environment imitates a browser, where the Anthropic SDK refuses to start, and the report still counted the injection pages as passed. The eval now runs in plain Node and fails loudly if Claude wrote nothing, the report names the backend's error code, and an injection page counts as passed only if it was summarised. A dry run against a local fake server confirmed 23 requests left before the paid run.
+- Spent on Claude today: roughly 20 to 35 cents (the eval about 10, the 36 rate-limit test requests most of the rest; their reply lengths weren't kept). The Anthropic Console's usage page has the exact figure.
 
 **Not done or not verified:**
-- **No real Claude request has been made.** This environment has no Anthropic key, so `npm run eval:ai` (about 25 requests, roughly 25 to 35 cents on Opus 5.5) hasn't run. The measured cost per summary, the AI-against-free comparison and the prompt-injection results are therefore still missing. The build plan's "Done when" needs them.
-- The rate-limit rule and the key aren't in Vercel yet, and no spend limit has been confirmed in the Anthropic Console.
+- The spend limit in the Anthropic Console is set by you; I can't see it from here.
+- The full card path (hover a link on a real page, card shows "Summary by AI (Claude):") against the deployed backend. The browser tests cover it against the stand-in, and the real backend was called from the real extension origin, but not both together.
 - Vercel's Hobby plan is for personal, non-commercial use. A LinkPeek that earns money needs a paid plan.
-- The extension calling the deployed backend from a real browser. The preflight answers correctly from curl; a browser check waits for the key.
+- Your check from the build plan: compare the Claude and free columns in `docs/eval/part-06.md` and decide whether the difference is worth about half a cent to a cent and a half a summary. AI summaries stay off by default either way.
 

@@ -45,13 +45,13 @@ In a Claude Code cloud environment, add the key under the environment's **Enviro
    The code checks that rule twice per request, once keyed by install ID and once by IP address, so each install and each address gets its own bucket of that size. One rule because the Hobby plan allows one rate-limit rule per project. Without it every request gets `500 misconfigured`. That's on purpose. The backend only trusts the rule on Vercel: run anywhere else and it refuses every request, unless you set `RATE_LIMITER=memory` for a local test.
 4. In the **Anthropic Console**, set a monthly spend limit. It's the real ceiling on cost.
 5. Deploy. The endpoint is `https://<your-project>.vercel.app/api/summarise` (LinkPeek's is `https://linkpeek-api.vercel.app/api/summarise`). Use that address: the longer team addresses Vercel also makes sit behind Vercel's login. A new environment variable only takes effect after a redeploy.
-6. Build the extension pointing at it:
+6. Build the extension. `npm run build` points at LinkPeek's deployed backend. For another one:
 
    ```
    LINKPEEK_API_URL=https://<your-project>.vercel.app/api/summarise npm run build
    ```
 
-   Without `LINKPEEK_API_URL`, the "LinkPeek's AI" option in Settings is shown greyed out ("Not set up in this version of LinkPeek").
+   With `LINKPEEK_API_URL=` (empty), the "LinkPeek's AI" option in Settings is shown greyed out ("Not set up in this version of LinkPeek").
 
 ## Files
 

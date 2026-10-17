@@ -86,7 +86,7 @@ build-plan/              the staged build plan
 
 ## Configuration
 
-The extension needs none. To offer AI summaries, build it with `LINKPEEK_API_URL` set to your deployed backend (`server/README.md`). The backend's own settings, including the Anthropic API key, are in `server/.env.example`. The key never goes in the extension.
+The extension needs none. Production builds use LinkPeek's deployed summary backend (`https://linkpeek-api.vercel.app/api/summarise`) for the optional AI summaries; set `LINKPEEK_API_URL` to use another one, or `LINKPEEK_API_URL=` to build without (`server/README.md`). The backend's own settings, including the Anthropic API key, are in `server/.env.example`. The key never goes in the extension.
 
 ## Docs
 

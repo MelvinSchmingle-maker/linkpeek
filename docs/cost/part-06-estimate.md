@@ -1,6 +1,17 @@
 # Part 06 cost estimate: AI summaries
 
-An estimate, made before any real request. The measured figure comes from `npm run eval:ai` (`docs/eval/part-06.md`) once it has been run with a real API key. Prices are Anthropic's first-party list prices, checked 17 Oct 2026.
+Prices are Anthropic's first-party list prices, checked 17 Oct 2026.
+
+## Measured (17 Oct 2026)
+
+`npm run eval:ai` on Claude Opus 5.5: **$0.0041 a summary** on average over the 20 evaluation articles, including the 3 that needed a second request to shorten them. That's 0.41 cents, under the estimate below. The catch: the evaluation articles are short (a few hundred words each), so they send far fewer tokens than a real 6,000-character article. Two real-sized requests to the deployed backend fit the estimate better:
+
+- a 700-character article, first request in a while: 298 input tokens, 945 instruction tokens written to the cache, 39 reply tokens, about 0.7 cents
+- a 380-character article with the instructions already cached: 187 input tokens, 945 cached, 351 reply tokens (most of it thinking), about 0.8 cents
+
+So the reply length, mostly thinking, varies more than the article does. Expect 0.4 to 1.5 cents a summary on Opus 5.5 until there are real usage numbers. The fixed instructions measured 945 tokens, not the 725 guessed below.
+
+## The estimate (made before any real request)
 
 ## What one summary uses
 

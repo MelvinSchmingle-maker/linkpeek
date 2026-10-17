@@ -19,6 +19,7 @@ import { resolve } from 'node:path';
 import { buildManifest } from './manifest.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+const DEPLOYED_API_URL = 'https://linkpeek-api.vercel.app/api/summarise';
 const onDemand = process.argv.includes('--e2e-on-demand');
 const live = process.argv.includes('--live');
 const e2e = onDemand || live || process.argv.includes('--e2e');
@@ -31,9 +32,10 @@ const shared = {
   define: {
     __E2E__: JSON.stringify(e2e),
     __LIVE__: JSON.stringify(live),
-    // Where LinkPeek's own summary backend lives (Part 06). Empty means "not set up": the option is hidden.
+    // Where LinkPeek's own summary backend lives (Part 06): the deployed one unless LINKPEEK_API_URL says
+    // otherwise. LINKPEEK_API_URL= (empty) builds without one, and the option is shown greyed out.
     // Test builds use the local test server's stand-in, so no test ever reaches the real one.
-    __API_URL__: JSON.stringify(e2e && !live ? 'http://127.0.0.1:4173/api/summarise' : (process.env.LINKPEEK_API_URL ?? '')),
+    __API_URL__: JSON.stringify(e2e && !live ? 'http://127.0.0.1:4173/api/summarise' : (process.env.LINKPEEK_API_URL ?? DEPLOYED_API_URL)),
   },
 };
 
