@@ -52,6 +52,8 @@ describe('the opening sentence, on layouts the live check tripped over', () => {
     ['labelled.html', 'Market traders will be able to renew stall licences online'],
     // The Guardian: a standfirst comes first, but it's laid out differently from the story.
     ['standfirst.html', 'The first time I stood in the shallow end of Millbrook baths'],
+    // The Mirror: a timestamp line sits above the opening, and used to be taken for the first sentence.
+    ['timestamp.html', 'The Old Mill footbridge reopened on Tuesday morning'],
   ])('%s starts with the story itself', (name, opening) => {
     const a = judge(name);
     expect(a.evidence).toBe('full');

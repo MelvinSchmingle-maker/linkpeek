@@ -1,6 +1,6 @@
 # LinkPeek handoff
 
-Read this first in a new window, then `todo.md`. Written 17 Oct 2026 at commit `f6c99c8` on `main`.
+Read this first in a new window, then `todo.md`. Written 17 Oct 2026 at commit `f6c99c8` on `main`. Updated 17 Oct 2026 on branch `claude/eager-darwin-6u5601` after a follow-up check of the browser-tab rule (see "Follow-up check" below).
 
 ## Where things stand
 
@@ -16,17 +16,32 @@ Read this first in a new window, then `todo.md`. Written 17 Oct 2026 at commit `
 The owner reported these on 17 Oct 2026, with a screenshot. Nothing has been changed in code for them yet.
 
 1. **Too many permission prompts.** The owner wants one grant, then no more asks. Chrome asks once per site, and each new site brings a prompt. Settings already has "Turn on for all websites", which is the one-grant route. The current model is in `docs/permissions.md`.
-2. **Most links fail.** The owner tried four links on a Facebook post. The talkSPORT one showed "Couldn't open this article. The page needs to run in a browser tab to show its text." LinkPeek reads pages without running their scripts. That message comes from `looksJsRendered` in `src/core/retrieve/diagnose.ts`, so the talkSPORT page probably builds its text in the browser. This is a likely cause, not yet checked against the real page. The other three links are unknown. The owner's report says they gave nothing, but we don't have the links or what each card showed.
+2. **Most links fail.** The owner tried four links on a Facebook post. The talkSPORT one showed "Couldn't open this article. The page needs to run in a browser tab to show its text." LinkPeek reads pages without running their scripts. That message comes from `looksJsRendered` in `src/core/retrieve/diagnose.ts`. The talkSPORT page could not be reproduced from here: every talkSPORT path returns a "Verifying Device" robot check, and its `robots.txt` disallows all agents not listed. So the owner's machine is the only place to reproduce it. The other three links are unknown. The owner's report says they gave nothing, but we don't have the links or what each card showed.
 3. **The card looks amateurish.** The owner said to fix this after the links work.
+
+## Follow-up check (17 Oct 2026)
+
+- **Browser-tab rule on real news pages:** done. 12 news pages in `docs/compat/part-04-live.md`, 7 read in full. The rule fired on none of them; it fired only on YouTube, as intended.
+- **Pages built in the browser:** decided, D52. Show the page's own description, with the browser-tab reason. No hidden tab, because that needs a permission.
+- **Findings, not fixed (owner decisions in `todo.md` section 3):**
+  - NPR shows a false paywall on free pages. `[id*="piano"]` matches NPR's Piano script and empty slots, on every page.
+  - The Verge's structured data says `isAccessibleForFree: false`, so the card shows only the description (D27). The page reads freely in a normal browser.
+  - LinkPeek doesn't read `robots.txt`, and talkSPORT disallows all agents not listed.
+- **Mirror opening, fixed (D29):** the opening was a timestamp, then a headline above the story. Date lines and short lines with no closing punctuation are now skipped. Only the Mirror opening changed across 16 saved pages. Test page `test-pages/articles/timestamp.html`.
+- **Live check:** it runs headless Chromium, which some sites refuse (Daily Mail 403, CNN "Unknown Error").
+- **Start-up flake:** the live check and one browser test (`on-demand.spec.ts`, "Scan: the first scan...") each failed once with `chrome.storage` undefined when a helper evaluated code in the extension's service worker. Each passed when re-run. The cause is not found, so re-run if it fails that way.
+- **Checks on this branch:** `npm run check` passed (403 unit tests pass, 5 skipped; backend 41 pass). Browser tests: 119 of 120 passed in the first full run, with the one start-up failure above.
 
 ## Open decisions for the owner
 
 1. **Permission model.** Two options:
    - **One all-websites grant at install.** This matches what the owner asked for. It conflicts with the owner's own rule in `build-plan/00-ground-rules.md` line 34: "Smallest permissions possible. Prefer optional host permissions requested when the user acts." It's the project's own rule, so the owner can change it. Code: the manifest's optional host permissions and the install flow.
    - **Keep per-site prompts.** This keeps the rule. The prompts can be made clearer, but there is still one per site.
-2. **Neutral headline result.** `docs/decisions.md` D45 shows "No headline verdict" on every article without a verdict. Changing that is a small edit.
-3. **AI for the headline check's second stage.** Not built. The owner said "ok" to leaving it for later.
-4. **Money.** `docs/progress.md` says Vercel's Hobby plan is for personal, non-commercial use. A paid plan is needed before LinkPeek earns anything.
+2. **Paywall flag and NPR.** Two decisions, in `todo.md` section 3: whether a publisher's `isAccessibleForFree: false` should count on a page that reads freely (The Verge), and how to narrow the Piano check without weakening real walls (NPR).
+3. **robots.txt.** Whether LinkPeek should honour `robots.txt` for each user-triggered read. talkSPORT disallows all agents. Nothing in the project decides this yet.
+4. **Neutral headline result.** `docs/decisions.md` D45 shows "No headline verdict" on every article without a verdict. Changing that is a small edit.
+5. **AI for the headline check's second stage.** Not built. The owner said "ok" to leaving it for later.
+6. **Money.** `docs/progress.md` says Vercel's Hobby plan is for personal, non-commercial use. A paid plan is needed before LinkPeek earns anything.
 
 ## Commands
 
@@ -66,12 +81,13 @@ Code, by folder:
 ## Remaining steps, in order
 
 1. The owner chooses the permission model (decision 1). Then implement it and update `docs/permissions.md` and `docs/decisions.md`.
-2. Get the full talkSPORT link and the other three links from the owner. Reproduce each one. Check whether `looksJsRendered` is the cause.
-3. Decide how to handle pages that build their text in the browser. Options are in `todo.md`.
-4. Check the "browser tab" rule on ten real news pages. Write the results to `docs/compat/`.
-5. The owner does two checks. Part 07: read the crosses in `docs/eval/part-07.md`. Part 08: open "About this source" on five sites.
-6. The card design pass, once the links work.
-7. Parts 09 to 14, as `todo.md` section 5 lists them. Part 11's threat lookup and Part 13's platform APIs each need the owner's go-ahead first.
+2. Get the full talkSPORT link and the other three links from the owner, and reproduce each one from their machine. Check whether `looksJsRendered` is the cause.
+3. Done (D52). Confirm it on a Standard article in a live run, once a URL is found.
+4. Done. The "browser tab" rule was checked on 12 news pages (`docs/compat/part-04-live.md`).
+5. The owner decides the paywall and robots.txt questions above, then the NPR fix can go in.
+6. The owner does two checks. Part 07: read the crosses in `docs/eval/part-07.md`. Part 08: open "About this source" on five sites.
+7. The card design pass, once the links work.
+8. Parts 09 to 14, as `todo.md` section 5 lists them. Part 11's threat lookup and Part 13's platform APIs each need the owner's go-ahead first.
 
 ## Known limits
 

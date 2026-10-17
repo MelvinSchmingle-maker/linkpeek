@@ -156,7 +156,20 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
 /** Paragraphs that are part of the running text, not tables, captions, asides or hidden labels. */
 const NOT_RUNNING_TEXT = 'table, figure, figcaption, aside, nav, footer, noscript, form, [aria-hidden="true"], .visually-hidden, .sr-only';
 const MIN_LEAD_WORDS = 6;
+/** Shorter lines than this need a full stop (or a closing mark) to count as a sentence. */
+const MIN_SENTENCE_WORDS = 15;
 const MAX_PARAGRAPHS = 40;
+
+/** A word that can appear in a date or time line: "20:13,", "17", "Oct", "2026", "Updated". */
+const DATE_WORD =
+  /^(\d{1,2}[:.]\d{2}|\d{1,4}|(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|updated|published|am|pm|bst|gmt|utc))\.?,?$/i;
+
+/** A line made only of dates and times, such as a timestamp under a headline. It's never running text. */
+function isDateLine(text: string): boolean {
+  // Some pages run the date into the next word ("2026Updated"), so split at digit and letter joins.
+  const words = text.replace(/(\d)([a-z])/gi, '$1 $2').split(' ');
+  return words.every((w) => DATE_WORD.test(w));
+}
 
 /** A paragraph's text, or undefined if it's too short to be running text or isn't running text at all. */
 function paragraphText(p: Element): string | undefined {
@@ -165,7 +178,9 @@ function paragraphText(p: Element): string | undefined {
   // Footnote markers like [1] or [note 1].
   for (const sup of copy.querySelectorAll('sup')) if (/^\s*\[[^\]]*\]\s*$/.test(sup.textContent ?? '')) sup.remove();
   const text = (copy.textContent ?? '').replace(/\s+/g, ' ').replace(/\s+([,.;:])/g, '$1').trim();
-  if (wordCount(text) < MIN_LEAD_WORDS || /^(by|updated|published|posted|last updated)\b/i.test(text)) return undefined;
+  if (wordCount(text) < MIN_LEAD_WORDS || /^(by|updated|published|posted|last updated)\b/i.test(text) || isDateLine(text)) return undefined;
+  // A short line with no full stop, question mark or closing quote is a headline or kicker above the story, not a sentence.
+  if (wordCount(text) < MIN_SENTENCE_WORDS && !/[.!?…"'”’)\]]$/.test(text)) return undefined;
   return text;
 }
 

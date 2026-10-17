@@ -35,6 +35,16 @@ const PAGES = [
   ['YouTube video', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'preview (needs Part 06)'],
   ['Reddit (old)', 'https://old.reddit.com/r/UKPersonalFinance/', 'login wall'],
   ['The Times (paywall)', 'https://www.thetimes.com/business/companies-markets/article/arrests-fca-nca-insider-trading-nbff2hm2x', 'paywall, description only'],
+  // Nine more news pages, for the "browser tab" rule (todo section 1). Taken from the publishers' front pages on 17 Oct 2026.
+  ['Guardian news (US)', 'https://www.theguardian.com/us-news/2026/oct/17/alligator-attack-florida-fisher-killed', 'full'],
+  ['BBC News article (entertainment)', 'https://www.bbc.co.uk/news/articles/c34g180knv91o', 'full'],
+  ['Mirror news', 'https://www.mirror.co.uk/news/uk-news/bedford-train-crash-hero-eli-37775689', 'full'],
+  ['Daily Mail news', 'https://www.dailymail.co.uk/news/article-16151631/mojave-desert-diner-route-66-bagdad-cafe.html', 'full'],
+  ['Al Jazeera news', 'https://www.aljazeera.com/news/2026/10/17/france-wave-of-nationwide-protests', 'full'],
+  ['CNN photo gallery', 'https://www.cnn.com/2026/10/08/world/gallery/photos-this-week-october-1-october-8', 'full or captions only'],
+  ['NPR news quiz', 'https://www.npr.org/2026/10/16/g-s1-148041/pope-leo-musk-mamdani-trump-guilfoyle-news-quiz', 'full or partial'],
+  ['Ars Technica news', 'https://arstechnica.com/ai/2026/10/youtube-music-begins-labeling-ai-songs/', 'full'],
+  ['The Verge news', 'https://www.theverge.com/ai-artificial-intelligence/1010962/jpmorgan-chase-is-keeping-ai-agents-out', 'full'],
 ];
 
 const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
@@ -46,8 +56,9 @@ const context = await chromium.launchPersistentContext('', {
 
 const rows = [];
 try {
-  let [worker] = context.serviceWorkers();
-  if (!worker) worker = await context.waitForEvent('serviceworker');
+  // Chromium can start other service workers first, so take LinkPeek's own by its address.
+  const isLinkPeek = (w) => w.url().startsWith('chrome-extension://');
+  const worker = context.serviceWorkers().find(isLinkPeek) ?? (await context.waitForEvent('serviceworker', { predicate: isLinkPeek }));
   await worker.evaluate(() => chrome.storage.session.clear());
 
   for (const [label, url, expected] of PAGES) {

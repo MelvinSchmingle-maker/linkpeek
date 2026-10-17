@@ -1,6 +1,6 @@
 # LinkPeek to-do
 
-Last updated 17 Oct 2026, after Part 08. Newest problems are at the top. Each item says what "done" looks like. Read `handoff.md` first for the context behind these.
+Last updated 17 Oct 2026, after Part 08 and a follow-up check of the browser-tab rule on real news pages. Newest problems are at the top. Each item says what "done" looks like. Read `handoff.md` first for the context behind these.
 
 ## 1. Problems the owner reported (17 Oct 2026)
 
@@ -8,13 +8,16 @@ Last updated 17 Oct 2026, after Part 08. Newest problems are at the top. Each it
   - Decision needed first (see `handoff.md`, "Open decisions"). Options: one all-sites grant at install, or keep per-site prompts and make them clearer.
   - Done when: a new site opens a card with no prompt after the one grant, and the choice is written into `docs/permissions.md` and `docs/decisions.md`.
 - [ ] **Most links fail.** The owner tried four links on a Facebook post. The talkSPORT one showed "Couldn't open this article. The page needs to run in a browser tab to show its text." The other three gave nothing.
-  - Get: the full talkSPORT link (the screenshot cuts it short) and the other three links, with what each card said.
+  - Get: the full talkSPORT link (the screenshot cuts it short) and the other three links, with what each card said. From this machine every talkSPORT path returns a "Verifying Device" robot check, so the owner's own machine is the only place to reproduce it.
   - Done when: each link either shows text, or shows a message that says what's actually wrong.
+  - 17 Oct check (`docs/compat/part-04-live.md`): 7 of 12 news pages read in full. The failures found: NPR shows a false paywall on free pages and The Verge's structured data flags it as paid (both in section 3). Mirror's opening was a timestamp, now fixed (item below).
+- [x] **Mirror opening is a timestamp.** On Mirror articles the opening sentence and the summary came out as "20:13, 17 Oct 2026Updated 21:01, 17 Oct 2026", and then as a headline above the story. The opening rule (D29) took the first paragraph of six words or more, and neither line is a sentence.
+  - Done 17 Oct 2026 (D29): date-and-time lines are skipped, and so are short lines with no closing punctuation. The Mirror article now opens on "Seconds after a terrifying train crash...". Test page `test-pages/articles/timestamp.html`, in `assess.test.ts`. Checked on 16 saved pages: only the Mirror opening changed.
 - [ ] **JavaScript-built pages show nothing.** LinkPeek reads pages without running their scripts, so a page that builds its text in the browser comes back nearly empty. That's the case behind the "browser tab" message.
-  - Options: show the page's own description when there's no article text (the card already does this for some failures); or read the page in a hidden tab (needs a new permission, so a decision).
-  - Done when: a known JavaScript-built news page shows its description, and the message says why the text is missing.
-- [ ] **The "browser tab" rule may fire too often.** It's `looksJsRendered` in `src/core/retrieve/diagnose.ts`. It fires when the article text is under 50 words and either the page's `<noscript>` asks for JavaScript, or the page has scripts and either an empty app container or under 30 words of body text. Not yet checked on pages that work.
-  - Done when: the rule has been checked on at least ten real news pages, with the results written to `docs/compat/`.
+  - Decided (D52): show the page's own description, labelled "Preview only", with the browser-tab reason. No hidden tab, because that needs a new permission (section 3). This is already built.
+  - Still open for "done": the Standard's news front page is a JavaScript-built example, and it shows its description when read from saved HTML. Confirm it in a live run on a Standard article. The URL needs finding first, since the front page has no article links in its raw HTML.
+- [x] **The "browser tab" rule may fire too often.** It's `looksJsRendered` in `src/core/retrieve/diagnose.ts`. It fires when the article text is under 50 words and either the page's `<noscript>` asks for JavaScript, or the page has scripts and either an empty app container or under 30 words of body text.
+  - Checked 17 Oct 2026 on 12 real news pages, with the results in `docs/compat/part-04-live.md`. It fired on none of them. The one page it fired on was YouTube, which is built in the browser. The rule can't fire on a page with 50 or more article words, so the remaining risk is a short page with a `<noscript>` JavaScript message. None of the 12 showed that.
 - [ ] **The card looks amateurish.** The owner said this can wait until the links work.
   - Done when: a design pass has been agreed with the owner, and the card is reviewed on five real sites.
 
@@ -30,6 +33,9 @@ Last updated 17 Oct 2026, after Part 08. Newest problems are at the top. Each it
 - [ ] Whether the headline check should use AI for its second stage. It isn't built. The owner said "ok" to leaving it for later.
 - [ ] Whether a neutral headline result shows "No headline verdict" on every article. `docs/decisions.md` D45 says yes. Changing it is a small edit.
 - [ ] Hosting for money. `docs/progress.md` says Vercel's Hobby plan is for personal, non-commercial use, so a paid plan is needed before LinkPeek earns anything.
+- [ ] **Paywall flag on a free page** (The Verge, 17 Oct). Its structured data says `isAccessibleForFree: false`, so LinkPeek shows only the description (D27). The page reads freely in a normal browser. Keep trusting the flag, or only trust it when the body is also hidden? Keeping it is the current behaviour.
+- [ ] **False paywall on NPR.** `[id*="piano"]` in `src/core/extract/html.ts` matches NPR's Piano script and empty Piano slots, which every NPR page has. So a short NPR item reads as "behind a subscription". Options: (a) leave it; (b) narrow the selector to exclude NPR's slots by name, which is quick but tied to NPR's markup; (c) count only Piano elements that hold text. (c) would stop empty slots counting, but a wall filled in by script on a short page would then show its teaser text instead of the description. That goes against "never show body text from such a page" (D27), so it needs a yes. Recommended: (b), with a test.
+- [ ] **robots.txt.** LinkPeek doesn't read `robots.txt`, and nothing in the docs says it should or shouldn't. talkSPORT's file says `User-agent: *` / `Disallow: /`, with a note that its content isn't licensed for large language models. Options: (a) honour `robots.txt` for each user-triggered read, and show "the site's robots.txt asks automated tools to stay out" on a card; (b) keep reading as the user's own browser does, and write that choice down in `docs/permissions.md` and a new decision. Either way the owner should decide, and this is worth a look with whoever handles the project's legal questions.
 
 ## 4. Known limits, not blocking
 
