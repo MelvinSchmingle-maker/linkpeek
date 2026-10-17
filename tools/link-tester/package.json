@@ -1,0 +1,13 @@
+{
+  "name": "linkpeek-link-tester",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests whether LinkPeek can read the articles behind a list of links.",
+  "scripts": {
+    "test-links": "node link-test.mjs links.txt"
+  },
+  "dependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}

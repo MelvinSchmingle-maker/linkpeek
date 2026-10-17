@@ -3,6 +3,9 @@ dist/
 dist-e2e/
 dist-e2e-on-demand/
 dist-live/
+dist-tools/
+tools/link-tester/node_modules/
+tools/link-tester/results/
 test-results/
 playwright-report/
 .env

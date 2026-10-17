@@ -7,6 +7,7 @@ Last updated 17 Oct 2026, after Part 08 and a follow-up check of the browser-tab
 - [ ] **Too many permission prompts.** Chrome asks once per website, so every new site brings a prompt. The owner wants one grant after install, and never asked again. Today's model is in `docs/permissions.md`.
   - Decision needed first (see `handoff.md`, "Open decisions"). Options: one all-sites grant at install, or keep per-site prompts and make them clearer.
   - Done when: a new site opens a card with no prompt after the one grant, and the choice is written into `docs/permissions.md` and `docs/decisions.md`.
+- [ ] **Run the link tester on the owner's own links** (`tools/link-tester/`, zip in `dist-tools/`). Record each result in `docs/link-testing/log.md`. Done when the Facebook post links have a recorded outcome and reason, with the card's own message in the `your check` column.
 - [ ] **Most links fail.** The owner tried four links on a Facebook post. The talkSPORT one showed "Couldn't open this article. The page needs to run in a browser tab to show its text." The other three gave nothing.
   - Get: the full talkSPORT link (the screenshot cuts it short) and the other three links, with what each card said. From this machine every talkSPORT path returns a "Verifying Device" robot check, so the owner's own machine is the only place to reproduce it.
   - Done when: each link either shows text, or shows a message that says what's actually wrong.

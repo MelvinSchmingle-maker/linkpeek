@@ -1,0 +1,22 @@
+# One address per line. Lines starting with # are ignored.
+# Paste the links you want to test here, copied exactly as they appear.
+#
+# Links copied from social posts often go through a wrapper first. Shapes to look for:
+#   https://l.facebook.com/l.php?u=...        (Facebook)
+#   https://l.instagram.com/?u=...            (Instagram)
+#   https://out.reddit.com/...                (Reddit)
+#   https://t.co/...                          (X)
+#   https://news.google.com/rss/articles/...  (Google News)
+# Paste the real ones from your posts below, and the tester will check the wrapper and, where it can, the address inside it.
+
+https://www.bbc.co.uk/news/articles/c3qjn45pepx1o
+https://www.theguardian.com/lifeandstyle/2026/oct/14/a-moment-that-changed-me-i-learned-to-read-at-42
+https://www.gov.uk/government/news/new-action-to-crackdown-on-bogus-self-employment-loopholes
+https://en.wikipedia.org/wiki/Dachshund
+https://github.blog/ai-and-ml/generative-ai/how-ai-code-generation-works/
+https://arxiv.org/pdf/1706.03762
+https://www.thetimes.com/business/companies-markets/article/arrests-fca-nca-insider-trading-nbff2hm2x
+https://old.reddit.com/r/UKPersonalFinance/
+# YouTube is left out on purpose: LinkPeek's fetching of YouTube pages is an open policy question (docs/adapters/youtube.md).
+https://www.mirror.co.uk/news/uk-news/bedford-train-crash-hero-eli-37775689
+https://www.theverge.com/ai-artificial-intelligence/1010962/jpmorgan-chase-is-keeping-ai-agents-out

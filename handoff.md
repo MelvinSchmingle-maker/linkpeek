@@ -51,6 +51,8 @@ Read this first in a new window, then `todo.md`. Updated 17 Oct 2026 on branch `
 | Social adapters (Part 13) | `docs/adapters/`, `src/adapters/` |
 | Measurement and money (Part 14) | `docs/measurement.md`, `src/core/measure/` |
 | Open to-do list | `todo.md` |
+| Link tester for real links (download: `dist-tools/linkpeek-link-tester.zip`, built by `scripts/make-link-tester.mjs`) | `tools/link-tester/`, `docs/link-testing/` |
+| Full assessment for outside review | `docs/review-brief.md` |
 
 ## Rules to keep
 
