@@ -159,14 +159,14 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The model download button (needs a capable computer and a real click).
 - Your check from the build plan: using it on 10 real articles for a day to judge whether the free summary is good enough.
 
-## Part 06. AI summaries (17 Oct 2026, built; not yet deployed)
+## Part 06. AI summaries (17 Oct 2026, built and deployed; waiting on the key and the rate-limit rule)
 
 **Built:**
 - A backend in `server/`: one Vercel function, `POST /api/summarise`, which asks Claude through the official Anthropic SDK (D35 to D39). It has:
   - strict request checks (no page address accepted)
   - a size limit
   - a switch (`SUMMARIES_ENABLED`)
-  - rate limits per install and overall (Vercel Firewall rules; it refuses to run without them)
+  - rate limits per install and per IP address (one Vercel Firewall rule; it refuses to run without it)
   - a prompt that treats article text as data, with our own tags stripped from it
   - a cached system prompt and low effort
   - refusal handling with `fallbacks: "default"`
@@ -183,13 +183,14 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 
 **Tested (actual results):**
 - typecheck, lint, production build: pass. The production build has no backend address unless `LINKPEEK_API_URL` is set.
-- Backend: 38 tests pass, with a stand-in for Claude. They cover:
+- Backend: 39 tests pass, with a stand-in for Claude. They cover:
   - request rules, including that a page address is refused
   - the prompt (long enough to cache, injection tags can't break out)
   - request settings: Opus 5.5 default, effort low, cache marker, fallbacks, and no fallbacks on Haiku
   - stop reasons checked before reading
   - SDK errors mapped to short codes
-  - CORS, method, size, JSON, the switch, both rate limits, and refusing to run when the limit rules are missing
+  - CORS, method, size, JSON, the switch, the in-memory limiter, and refusing to run when the limit rule is missing
+  - the Vercel limiter counting each request per install and per IP address against the one rule, and refusing without a client address
   - logs never containing text, headline or install ID
   - a missing key reported as "misconfigured" with no request made
   - the Firewall limiter trusted only on Vercel
@@ -198,9 +199,16 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - Extension: unit tests for the provider cover what's sent (never the address), the 6,000-character cap, shorten once, rewrite once, no third try, fallback when the backend is down, erroring, rate-limited or refusing, and the install ID rotating.
 - Browser tests: 113 pass (3 screenshot-only skipped). Seven are new for AI summaries, against a stand-in backend on the test server: the label and summary, the exact fields sent, shorten once, falling back when the backend fails, a paywalled page never sent, switching off stopping requests and deleting the install ID, and the Settings choice.
 
+**Deployed (17 Oct 2026):**
+- Vercel project `linkpeek-api` (Hobby plan), root directory `server`, linked to this repository: every push to `main` deploys it.
+- Endpoint: `https://linkpeek-api.vercel.app/api/summarise`. That address is public; the team-scoped `*.vercel.app` addresses sit behind Vercel's login (Standard Protection), so use this one.
+- Checked against the live endpoint with curl: the preflight answers 204 with `access-control-allow-origin: *`, GET 405, bad JSON 400, a request with a `url` field 400, and a valid request `500 misconfigured`, as designed while there's no rate-limit rule and no key.
+- The Hobby plan allows one rate-limit rule per project, so the backend was changed from two rules to one (D39).
+- Still to do in the Vercel dashboard (the Vercel connector here can't change this team's Firewall or secrets): the `summarise` rate-limit rule and the `ANTHROPIC_API_KEY` variable. `server/README.md` has the steps.
+
 **Not done or not verified:**
 - **No real Claude request has been made.** This environment has no Anthropic key, so `npm run eval:ai` (about 25 requests, roughly 25 to 35 cents on Opus 5.5) hasn't run. The measured cost per summary, the AI-against-free comparison and the prompt-injection results are therefore still missing. The build plan's "Done when" needs them.
-- Not deployed. The steps are in `server/README.md`: a Vercel project with root `server`, the key as an environment variable, two Firewall rate-limit rules, and a spend limit in the Anthropic Console.
-- Whether your Vercel plan includes Firewall rate-limit rules, and Vercel's terms for commercial use on the free plan.
-- The extension calling a real deployed backend (CORS from an extension origin was not tested against a real Vercel deployment; the test build has site access to the stand-in anyway).
+- The rate-limit rule and the key aren't in Vercel yet, and no spend limit has been confirmed in the Anthropic Console.
+- Vercel's Hobby plan is for personal, non-commercial use. A LinkPeek that earns money needs a paid plan.
+- The extension calling the deployed backend from a real browser. The preflight answers correctly from curl; a browser check waits for the key.
 
