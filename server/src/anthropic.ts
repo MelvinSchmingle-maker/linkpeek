@@ -1,8 +1,9 @@
 /**
  * Summaries from Claude, through the official Anthropic SDK.
  *
- * - Model: SUMMARY_MODEL, default claude-opus-5-5. Changing it is a cost
- *   decision (docs/cost/part-06-estimate.md), so it's one setting.
+ * - Model: SUMMARY_MODEL, default claude-haiku-5-5 (chosen on the measured
+ *   comparison in docs/cost/part-06-estimate.md). Changing it is a cost
+ *   decision, so it's one setting.
  * - Effort "low": a 20-word sentence doesn't need long reasoning, and effort
  *   is what bounds the thinking tokens billed as output.
  * - SUMMARY_THINKING=off switches thinking off where the model allows it:
@@ -23,7 +24,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { SummariseRequest, Usage } from './contract.js';
 import { cleanReply, INSUFFICIENT, SYSTEM_PROMPT, userMessage } from './prompt.js';
 
-export const DEFAULT_MODEL = 'claude-opus-5-5';
+export const DEFAULT_MODEL = 'claude-haiku-5-5';
 const MAX_TOKENS = 1024;
 const TIMEOUT_MS = 15_000;
 

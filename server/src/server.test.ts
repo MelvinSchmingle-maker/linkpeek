@@ -107,15 +107,20 @@ function fakeClient(reply: Partial<Anthropic.Beta.Messages.BetaMessage> | Error)
 describe('the Claude call', () => {
   const req = parseRequest(good()) as SummariseRequest;
 
-  it('defaults to Claude Opus 5.5 with low effort, a cached system prompt and refusal fallback', () => {
+  it('defaults to Claude Haiku 5.5 with low effort and a cached system prompt', () => {
     const p = buildParams(req, DEFAULT_MODEL) as unknown as Record<string, unknown>;
-    expect(p.model).toBe('claude-opus-5-5');
+    expect(DEFAULT_MODEL).toBe('claude-haiku-5-5');
+    expect(p.model).toBe('claude-haiku-5-5');
     expect(p.max_tokens).toBe(1024);
     expect(p.output_config).toEqual({ effort: 'low' });
     expect(p.system).toEqual([{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }]);
+    expect(p).not.toHaveProperty('thinking');
+  });
+
+  it('a model that has server-side refusal fallback (Opus 5.5) asks for it', () => {
+    const p = buildParams(req, 'claude-opus-5-5') as unknown as Record<string, unknown>;
     expect(p.betas).toEqual(['server-side-fallback-2026-07-01']);
     expect(p.fallbacks).toBe('default');
-    expect(p).not.toHaveProperty('thinking');
   });
 
   it('does not ask Haiku for a server-side fallback (it has none)', () => {

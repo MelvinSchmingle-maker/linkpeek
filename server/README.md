@@ -11,7 +11,7 @@ The Anthropic API key lives here, in an environment variable, and never in the e
 - **Doesn't store article text.** It logs one line per request: status, error code, timing and token counts. No text, no headline, no install ID.
 - **Rate limits** per install ID and per IP address (`src/ratelimit.ts`). If the rule isn't set up, it refuses requests rather than run unguarded. Nothing caps everyone together: that's the Anthropic Console spend limit.
 - **Article text is untrusted.** It's wrapped in tags, our own tags are stripped from it, and the instructions say nothing inside it is an instruction (`src/prompt.ts`). The extension checks every summary again before showing it.
-- **Model:** `claude-opus-5-5` by default, at effort "low", with a cached system prompt and `fallbacks: "default"` so a declined request is retried on Anthropic's recommended fallback model (not on Haiku, which has none). See `docs/cost/part-06-estimate.md` before choosing.
+- **Model:** `claude-haiku-5-5` by default, at effort "low", with a cached system prompt. Haiku has no server-side refusal fallback, so a refused request gets the extension's free summary instead. On models that have it (Opus 5.5, Sonnet 5.5), `fallbacks: "default"` retries a declined request on Anthropic's recommended fallback model. See `docs/cost/part-06-estimate.md` before changing it.
 
 ## Run the tests
 
@@ -38,7 +38,7 @@ In a Claude Code cloud environment, add the key under the environment's **Enviro
 1. In Vercel, create a new project from this repository and set its **Root Directory** to `server`.
 2. Under **Settings > Environment Variables**, add:
    - `ANTHROPIC_API_KEY` (required, from https://console.anthropic.com)
-   - `SUMMARY_MODEL` (optional: `claude-opus-5-5` by default, or `claude-sonnet-5-5` / `claude-haiku-5-5`; measured comparison in `docs/cost/part-06-estimate.md`)
+   - `SUMMARY_MODEL` (optional: `claude-haiku-5-5` by default; `claude-opus-5-5` or `claude-sonnet-5-5` also work; measured comparison in `docs/cost/part-06-estimate.md`)
    - `SUMMARIES_ENABLED` (optional: set to `false` to switch summaries off)
 3. Under **Firewall**, add one rate-limit rule. If: `@vercel/firewall`, Rate limit ID `summarise`. Then: Rate Limit, Fixed Window, for example 30 requests per 600 seconds (10 minutes is the most the Hobby plan allows), default 429 action. Publish it.
 

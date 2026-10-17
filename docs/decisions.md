@@ -173,10 +173,10 @@ Chrome's Summarizer API (stable since Chrome 138) writes summaries on the comput
 It gets the article's first 6,000 characters, the link text, the evidence level, the page's language and a random install ID. That's half the backend's 12,000 limit and half the cost; an article's point is near the top. It doesn't get the page's address: the summary doesn't need it, and addresses can carry tokens. The install ID is 128 random bits made on the device, used only for rate limits, replaced every 30 days and deleted when AI summaries are switched off. The backend validates strictly (unknown fields are a 400), stores no text and logs only status, timing and token counts. CORS allows any origin without cookies, so the extension needs no extra site permission. Nothing relies on who the caller is.
 
 ## D37. Model and request settings (Part 06)
-- **Model:** `claude-opus-5-5` by default. Anthropic's guidance is to use the current default model unless the owner chooses otherwise, so a cheaper model (`SUMMARY_MODEL`) is the owner's call. `docs/cost/part-06-estimate.md` has the numbers: about 1 to 1.5 cents a summary on Opus 5.5, under a tenth of that on Haiku 5.5.
+- **Model:** `claude-haiku-5-5` by default, chosen by the owner on 17 Oct 2026 after the measured comparison in `docs/cost/part-06-estimate.md`. On the 20 evaluation articles it matched Opus 5.5's sentences closely at about 1/40th of the cost per summary and the same speed. Opus 5.5 is one setting away (`SUMMARY_MODEL`) and is what the first measured run used.
 - **Effort and length:** effort is "low" (thinking can't be switched off on Opus 5.5, and effort bounds it), and `max_tokens` is 1024. Hitting the limit counts as a failure, never a cut-off summary.
 - **Caching:** the fixed system prompt (about 725 tokens, over the 512-token minimum) carries a cache marker.
-- **Refusals:** the stop reason is checked before the reply is read. `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) lets the API retry a declined request on Anthropic's recommended model. Haiku 5.5 has no server-side fallback, so it isn't sent there.
+- **Refusals:** the stop reason is checked before the reply is read. `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) lets the API retry a declined request on Anthropic's recommended model. Haiku 5.5, the default, has no server-side fallback, so it isn't sent there, and a refused request shows the card's free sentence instead.
 - **Timeouts:** 15 seconds with one retry, inside a 30-second function limit.
 
 ## D38. Prompt injection (Part 06)

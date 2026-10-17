@@ -159,7 +159,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The model download button (needs a capable computer and a real click).
 - Your check from the build plan: using it on 10 real articles for a day to judge whether the free summary is good enough.
 
-## Part 06. AI summaries (17 Oct 2026, done: deployed and measured)
+## Part 06. AI summaries (17 Oct 2026, done: deployed, measured, switched to Haiku 5.5)
 
 **Built:**
 - A backend in `server/`: one Vercel function, `POST /api/summarise`, which asks Claude through the official Anthropic SDK (D35 to D39). It has:
@@ -172,7 +172,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
   - refusal handling with `fallbacks: "default"`
   - 15-second timeouts
   - logs of counts and timings only
-- `docs/cost/part-06-estimate.md`: about 1 to 1.5 cents a summary on Claude Opus 5.5 (the default), 0.4 to 0.7 cents on Sonnet 5.5, 0.02 to 0.03 cents on Haiku 5.5, with monthly figures at 100, 1,000 and 10,000 summaries a day.
+- `docs/cost/part-06-estimate.md`: the estimate (made before any real request) and then the measured comparison of Opus 5.5, Sonnet 5.5 and Haiku 5.5. Haiku 5.5 is the default now.
 - In the extension:
   - a third choice in Settings, "LinkPeek's AI (Claude, by Anthropic)", off by default and saying exactly what it sends
   - a provider that sends only full articles (first 6,000 characters), asks once to shorten, once to rewrite filler, and otherwise uses the free summary
@@ -206,6 +206,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The Hobby plan allows one rate-limit rule per project, so the backend was changed from two rules to one (D39).
 - Set up by hand in the dashboards (the Vercel connector here can't change this team's Firewall or secrets): the `summarise` rate-limit rule, the `ANTHROPIC_API_KEY` variable, and a monthly spend limit in the Anthropic Console.
 - Production builds now point at the deployed backend by default (`scripts/build.mjs`); `LINKPEEK_API_URL` overrides it, and `LINKPEEK_API_URL=` builds without one.
+- Model switched to Haiku 5.5 on 17 Oct 2026: `SUMMARY_MODEL=claude-haiku-5-5` set in Vercel production and the code default changed to match. The default eval on Haiku: 20 of 20 within the limit, 0.63 key-word overlap (Opus: 0.59), 0.0001 dollars a summary on the test articles, median 1.5 s.
 
 **Checked against the live backend, with the key (17 Oct 2026):**
 - A real summary came back from Claude Opus 5.5 in 2.4 seconds.
@@ -224,5 +225,5 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The spend limit in the Anthropic Console is set by you; I can't see it from here.
 - The full card path (hover a link on a real page, card shows "Summary by AI (Claude):") against the deployed backend. The browser tests cover it against the stand-in, and the real backend was called from the real extension origin, but not both together.
 - Vercel's Hobby plan is for personal, non-commercial use. A LinkPeek that earns money needs a paid plan.
-- Your check from the build plan: compare the Claude and free columns in `docs/eval/part-06.md` and decide whether the difference is worth about half a cent to a cent and a half a summary. AI summaries stay off by default either way.
+- Your check from the build plan, answered 17 Oct 2026: you chose Haiku 5.5 as the model after comparing the Claude and free columns (`docs/eval/part-06.md`, with the Opus and Sonnet runs beside it). AI summaries stay off by default in the extension.
 

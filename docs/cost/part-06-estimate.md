@@ -46,7 +46,7 @@ About one request in ten is expected to need a second, much smaller request (ask
 
 ## Cost by model
 
-The code defaults to **Claude Opus 5.5**, Anthropic's current default model. Choosing a cheaper one is your decision: set `SUMMARY_MODEL` on the backend. No code change is needed.
+The backend defaults to **Claude Haiku 5.5**, the owner's choice after the measured comparison below (17 Oct 2026). To change it, set `SUMMARY_MODEL` on the backend. No code change is needed.
 
 | Model | Price per million tokens (in / out) | Per summary | 100 a day | 1,000 a day | 10,000 a day |
 |---|---|---|---|---|---|

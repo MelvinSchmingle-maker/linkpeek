@@ -10,7 +10,7 @@
  *
  * The system prompt never changes between requests, so it is sent with a
  * cache marker: after the first request, repeat reads cost a twentieth of
- * the normal input price on Claude Opus 5.5. It needs to be at least 512
+ * the normal input price on Claude Haiku 5.5 (a tenth, the same ratio as the other current models). It needs to be at least 512
  * tokens long to be cached at all, which the worked examples take it past.
  */
 import type { SummariseRequest } from './contract.js';
