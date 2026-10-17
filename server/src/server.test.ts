@@ -8,7 +8,10 @@ import { AnthropicSummaryModel, buildParams, DEFAULT_MODEL, supportsFallback, ty
 import { MAX_BODY_BYTES, MAX_TEXT_CHARS, parseRequest, type SummariseRequest } from './contract.js';
 import { handle, type Deps } from './handler.js';
 import { cleanReply, INSUFFICIENT, SYSTEM_PROMPT, userMessage } from './prompt.js';
-import { limiterFor, MemoryLimiter, RefuseAll, VercelFirewallLimiter, type RateLimiter } from './ratelimit.js';
+import { limiterFor, MemoryLimiter, RefuseAll, RULE, VercelFirewallLimiter, type RateLimiter } from './ratelimit.js';
+
+const { checkRateLimit } = vi.hoisted(() => ({ checkRateLimit: vi.fn() }));
+vi.mock('@vercel/firewall', () => ({ checkRateLimit }));
 
 const ID = 'abcdefghijklmnop1234';
 const good = (patch: Record<string, unknown> = {}) => ({
@@ -226,7 +229,7 @@ describe('the endpoint', () => {
     expect(d.model.summarise).not.toHaveBeenCalled();
   });
 
-  it('rate limits per install, and for everyone together', async () => {
+  it('the in-memory limiter (local runs) limits per install, and for everyone together', async () => {
     const d = deps({ limiter: new MemoryLimiter(2, 3) });
     expect((await handle(post(good()), d)).status).toBe(200);
     expect((await handle(post(good()), d)).status).toBe(200);
@@ -236,7 +239,7 @@ describe('the endpoint', () => {
     expect((await handle(post(good({ installId: 'another-install-id-0001' })), d)).status).toBe(429);
   });
 
-  it('refuses to run when the rate-limit rules are missing (an unguarded endpoint spends money)', async () => {
+  it('refuses to run when the rate-limit rule is missing (an unguarded endpoint spends money)', async () => {
     const missing: RateLimiter = { check: async () => 'misconfigured' };
     const d = deps({ limiter: missing });
     expect((await handle(post(good()), d)).status).toBe(500);
@@ -247,6 +250,35 @@ describe('the endpoint', () => {
     expect(limiterFor({ VERCEL: '1' })).toBeInstanceOf(VercelFirewallLimiter);
     expect(limiterFor({ RATE_LIMITER: 'memory' })).toBeInstanceOf(MemoryLimiter);
     expect(limiterFor({})).toBeInstanceOf(RefuseAll);
+  });
+
+  it('on Vercel, counts each request per install and per IP address, against one Firewall rule', async () => {
+    const limiter = new VercelFirewallLimiter();
+    const from = (ip?: string) =>
+      new Request('https://api.linkpeek.test/api/summarise', { method: 'POST', headers: ip ? { 'x-real-ip': ip } : {} });
+
+    checkRateLimit.mockReset().mockResolvedValue({ rateLimited: false });
+    expect(await limiter.check(ID, from('203.0.113.7'))).toBe('ok');
+    expect(checkRateLimit.mock.calls.map(([rule, o]) => [rule, o.rateLimitKey])).toEqual([
+      [RULE, `install:${ID}`],
+      [RULE, 'ip:203.0.113.7'],
+    ]);
+
+    // The IP count is over (a fresh install ID doesn't help).
+    checkRateLimit.mockReset().mockResolvedValueOnce({ rateLimited: false }).mockResolvedValueOnce({ rateLimited: true });
+    expect(await limiter.check(ID, from('203.0.113.7'))).toBe('limited');
+
+    checkRateLimit.mockReset().mockResolvedValue({ rateLimited: true, error: 'blocked' });
+    expect(await limiter.check(ID, from('203.0.113.7'))).toBe('limited');
+
+    // No such rule in the project: refuse.
+    checkRateLimit.mockReset().mockResolvedValue({ rateLimited: false, error: 'not-found' });
+    expect(await limiter.check(ID, from('203.0.113.7'))).toBe('misconfigured');
+
+    // No client address: refuse, and don't count.
+    checkRateLimit.mockReset();
+    expect(await limiter.check(ID, from())).toBe('misconfigured');
+    expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
   it('passes model failures on as short codes', async () => {

@@ -28,7 +28,7 @@ The server passes the text to Anthropic, whose Claude model writes the summary, 
 - your cookies, logins or browsing history
 - anything about you
 
-The server doesn't store the text and logs only counts and timings. The install ID is 128 random bits made on your device, used only to limit how many summaries one install can ask for, replaced every 30 days and deleted when you switch AI summaries off. Paywalled and partial pages are never sent. Switching back to either free option stops all of this at once.
+The server doesn't store the text and logs only counts and timings. The server's host, Vercel, also sees your IP address, as any website you visit does. LinkPeek uses it only to count requests for the rate limit (a count lasts 10 minutes at most) and doesn't log it. The install ID is 128 random bits made on your device, used only to limit how many summaries one install can ask for, replaced every 30 days and deleted when you switch AI summaries off. Paywalled and partial pages are never sent. Switching back to either free option stops all of this at once.
 
 A link to the page you're already on is read from that page in your browser, not fetched again. That copy can include what you see while logged in. It is read on your device and goes nowhere else.
 

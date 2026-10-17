@@ -33,12 +33,12 @@ Things that would change the numbers:
 
 ## Other costs
 
-- **Hosting.** A Vercel function. Check Vercel's plan terms: the Hobby plan is meant for personal, non-commercial projects, so a LinkPeek that earns money would need a paid plan. Check too which plans include the Firewall rate-limit rules the backend relies on.
+- **Hosting.** A Vercel function on the Hobby plan, which includes one rate-limit rule per project and 1,000,000 rate-limit checks. Each summary uses two checks. The Hobby plan is meant for personal, non-commercial projects, so a LinkPeek that earns money would need a paid plan.
 - **Nothing else.** No database and no other paid services.
 
 ## Keeping it in hand
 
 - Set a **monthly spend limit in the Anthropic Console** before going live. It's the only hard ceiling.
-- The backend's overall rate limit (`summarise-all`) is a second ceiling. For example, 600 requests an hour is at most about 14,400 a day, which is about $200 a day on Opus 5.5 at the top of the range, or about $5 a day on Haiku 5.5.
+- The backend's rate limit caps each install and each IP address, not everyone together. At 30 requests per 10 minutes, one address can make at most 4,320 a day: about $65 a day on Opus 5.5 at the top of the range, or about $1.30 on Haiku 5.5. Several addresses multiply that, which is why the Console limit matters.
 - `SUMMARIES_ENABLED=false` on the backend switches AI summaries off at once. The extension then uses its free summary.
 - AI summaries are off by default in the extension. Each person chooses them in Settings.

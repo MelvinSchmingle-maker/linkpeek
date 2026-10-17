@@ -9,7 +9,7 @@ The Anthropic API key lives here, in an environment variable, and never in the e
 - **Accepts:** the article text (up to 12,000 characters; the extension sends 6,000), the link text, the evidence level, the page language and a random install ID. Anything else is a 400. It never receives the page's address.
 - **Doesn't fetch URLs.** There's no server-side fetching, so there's no SSRF risk yet.
 - **Doesn't store article text.** It logs one line per request: status, error code, timing and token counts. No text, no headline, no install ID.
-- **Rate limits** per install ID and for everyone together (`src/ratelimit.ts`). If the rules aren't set up, it refuses requests rather than run unguarded.
+- **Rate limits** per install ID and per IP address (`src/ratelimit.ts`). If the rule isn't set up, it refuses requests rather than run unguarded. Nothing caps everyone together: that's the Anthropic Console spend limit.
 - **Article text is untrusted.** It's wrapped in tags, our own tags are stripped from it, and the instructions say nothing inside it is an instruction (`src/prompt.ts`). The extension checks every summary again before showing it.
 - **Model:** `claude-opus-5-5` by default, at effort "low", with a cached system prompt and `fallbacks: "default"` so a declined request is retried on Anthropic's recommended fallback model (not on Haiku, which has none). See `docs/cost/part-06-estimate.md` before choosing.
 
@@ -31,6 +31,8 @@ ANTHROPIC_API_KEY=... npm run eval:ai
 
 It writes `docs/eval/part-06.md`.
 
+In a Claude Code cloud environment, add the key under the environment's **Environment variables** as one line, `LINKPEEK_ANTHROPIC_API_KEY=` followed straight away by the key (no quotes, no spaces). The eval script reads that name too. A different name keeps Claude Code itself from picking the key up.
+
 ## Deploy on Vercel
 
 1. In Vercel, create a new project from this repository and set its **Root Directory** to `server`.
@@ -38,11 +40,9 @@ It writes `docs/eval/part-06.md`.
    - `ANTHROPIC_API_KEY` (required, from https://console.anthropic.com)
    - `SUMMARY_MODEL` (optional: `claude-opus-5-5` by default, or `claude-sonnet-5-5` / `claude-haiku-5-5`)
    - `SUMMARIES_ENABLED` (optional: set to `false` to switch summaries off)
-3. Under **Firewall**, add two rate-limit rules with these exact IDs. The code passes the key; the rule sets the numbers:
-   - `summarise-install`: for example 30 requests per 10 minutes. The code counts per install ID.
-   - `summarise-all`: for example 600 requests per hour. The code counts everything together.
+3. Under **Firewall**, add one rate-limit rule. If: `@vercel/firewall`, Rate limit ID `summarise`. Then: Rate Limit, Fixed Window, for example 30 requests per 600 seconds (10 minutes is the most the Hobby plan allows), default 429 action. Publish it.
 
-   Check that your Vercel plan includes Firewall rate-limit rules. Without them every request gets `500 misconfigured`. That's on purpose. The backend only trusts these rules on Vercel: run anywhere else and it refuses every request, unless you set `RATE_LIMITER=memory` for a local test.
+   The code checks that rule twice per request, once keyed by install ID and once by IP address, so each install and each address gets its own bucket of that size. One rule because the Hobby plan allows one rate-limit rule per project. Without it every request gets `500 misconfigured`. That's on purpose. The backend only trusts the rule on Vercel: run anywhere else and it refuses every request, unless you set `RATE_LIMITER=memory` for a local test.
 4. In the **Anthropic Console**, set a monthly spend limit. It's the real ceiling on cost.
 5. Deploy. The endpoint is `https://<your-project>.vercel.app/api/summarise`.
 6. Build the extension pointing at it:

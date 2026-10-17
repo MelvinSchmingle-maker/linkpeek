@@ -184,9 +184,9 @@ Article text is data. It's wrapped in `<article>` tags, any of our own tag names
 
 ## D39. Rate limits and spend ceilings (Part 06)
 The endpoint is public and every request costs money. The defences, from outside in:
-- Vercel Firewall rate-limit rules: `summarise-install`, keyed by install ID, and `summarise-all`, one bucket for everyone. They're checked from code with `@vercel/firewall`, so no database is needed. If the rules are missing the backend refuses requests rather than run unguarded.
+- One Vercel Firewall rate-limit rule, `summarise`, checked from code with `@vercel/firewall` twice per request: keyed by install ID, then by IP address. Each gets its own bucket of the rule's size (30 per 10 minutes to start). No database is needed. If the rule is missing the backend refuses requests rather than run unguarded.
 - A switch: `SUMMARIES_ENABLED=false`.
 - The real ceiling: a monthly spend limit in the Anthropic Console.
 
-An install ID is easy to fake, which is why the shared limit exists. Outside Vercel, `@vercel/firewall` lets every request through and only logs a warning (seen in a smoke test, 17 Oct 2026). So the backend only uses it when Vercel's own `VERCEL=1` is set, uses an in-memory limiter only when `RATE_LIMITER=memory` is chosen for local runs, and otherwise refuses every request. Not verified: which Vercel plans include rate-limit rules. Check before deploying (`server/README.md`).
+An install ID is easy to fake, which is why the IP count exists: one machine making up fresh IDs still hits its address's limit. The first design had a second rule, one bucket for everyone. Vercel's Hobby plan allows one rate-limit rule per project (checked 17 Oct 2026), so that went. Many machines together can still add up, and only the Anthropic spend limit stops that. A paid Vercel plan would allow the shared bucket back. Outside Vercel, `@vercel/firewall` lets every request through and only logs a warning (seen in a smoke test, 17 Oct 2026). So the backend only uses it when Vercel's own `VERCEL=1` is set, uses an in-memory limiter only when `RATE_LIMITER=memory` is chosen for local runs, and otherwise refuses every request.
 

@@ -1,19 +1,23 @@
 /**
  * Rate limits. Every summary costs money, and the endpoint is public (any
- * extension install, or anyone with curl, can call it), so there are two:
+ * extension install, or anyone with curl, can call it), so each request is
+ * counted twice:
  *
  * - per install: a random install ID the extension makes up and rotates
  *   monthly. Stops one install from running up the bill. It's easy to fake,
- *   which is why there's a second limit.
- * - for everyone together: a ceiling on the whole service, so a flood of
- *   fake IDs can't spend more than a known amount per hour.
+ *   which is why there's a second count.
+ * - per IP address: so one machine making up fresh install IDs still hits
+ *   the same limit. Vercel sees the address anyway; we don't log or keep it.
  *
- * On Vercel both are Vercel Firewall rate-limit rules, checked from code
- * with @vercel/firewall, so no database is needed. The rules must exist in
- * the project (server/README.md says how). If one is missing the request is
- * refused rather than let through: an unguarded endpoint spends money.
+ * On Vercel both counts use one Vercel Firewall rate-limit rule, checked
+ * from code with @vercel/firewall, so no database is needed. One rule
+ * because Vercel's Hobby plan allows one per project: both counts get the
+ * same numbers, in separate buckets. The rule must exist in the project
+ * (server/README.md says how). If it's missing the request is refused
+ * rather than let through: an unguarded endpoint spends money.
  *
- * The real ceiling on spend is the monthly limit set in the Anthropic
+ * Nothing here caps everyone together. Many machines can still add up, so
+ * the real ceiling on spend is the monthly limit set in the Anthropic
  * Console. Set one before going live.
  */
 import { checkRateLimit } from '@vercel/firewall';
@@ -24,16 +28,15 @@ export interface RateLimiter {
   check(installId: string, request: Request): Promise<LimitResult>;
 }
 
-export const INSTALL_RULE = 'summarise-install';
-export const GLOBAL_RULE = 'summarise-all';
+export const RULE = 'summarise';
 
 export class VercelFirewallLimiter implements RateLimiter {
   async check(installId: string, request: Request): Promise<LimitResult> {
-    for (const [rule, key] of [
-      [INSTALL_RULE, installId],
-      [GLOBAL_RULE, 'all'],
-    ] as const) {
-      const { rateLimited, error } = await checkRateLimit(rule, { request, rateLimitKey: key, timeout: 2000 });
+    // Vercel sets x-real-ip on every request. Without it there's no second count, so refuse.
+    const ip = request.headers.get('x-real-ip');
+    if (!ip) return 'misconfigured';
+    for (const key of [`install:${installId}`, `ip:${ip}`]) {
+      const { rateLimited, error } = await checkRateLimit(RULE, { request, rateLimitKey: key, timeout: 2000 });
       if (error === 'not-found') return 'misconfigured';
       if (rateLimited || error === 'blocked') return 'limited';
     }
