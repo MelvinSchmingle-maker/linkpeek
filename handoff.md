@@ -30,7 +30,7 @@ The owner reported these on 17 Oct 2026, with a screenshot. Nothing has been cha
 - **Mirror opening, fixed (D29):** the opening was a timestamp, then a headline above the story. Date lines and short lines with no closing punctuation are now skipped. Only the Mirror opening changed across 16 saved pages. Test page `test-pages/articles/timestamp.html`.
 - **Live check:** it runs headless Chromium, which some sites refuse (Daily Mail 403, CNN "Unknown Error").
 - **Start-up flake:** the live check and one browser test (`on-demand.spec.ts`, "Scan: the first scan...") each failed once with `chrome.storage` undefined when a helper evaluated code in the extension's service worker. Each passed when re-run. The cause is not found, so re-run if it fails that way.
-- **Checks on this branch:** `npm run check` passed (403 unit tests pass, 5 skipped; backend 41 pass). Browser tests: 119 of 120 passed in the first full run, with the one start-up failure above.
+- **Checks on this branch:** `npm run check` passed (403 unit tests pass, 5 skipped; backend 41 pass). Browser tests: 119 of 120 passed in the first full run, with the one start-up failure above. A second full run passed: 120 passed, 3 skipped.
 
 ## Open decisions for the owner
 
