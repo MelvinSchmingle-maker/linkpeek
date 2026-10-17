@@ -54,6 +54,20 @@
           </fieldset>
         </section>
 
+        <section aria-labelledby="warnings-heading">
+          <h2 id="warnings-heading">Link warnings you turned off</h2>
+          <p class="muted">A warning about a link's address or text (Part 11) can be switched off for that link's site with "Don't warn me on this site". The check still runs. Remove a site here to see its warnings again.</p>
+          <ul class="plain" id="overruled-list"></ul>
+        </section>
+
+        <section aria-labelledby="annoyance-options-heading">
+          <h2 id="annoyance-options-heading">Annoyance tools</h2>
+          <p class="muted">Off unless you turn them on. These are the choices for every site. The popup can change them for one site. They work on pages where LinkPeek runs, and the tools are separate: each one can be switched on alone.</p>
+          <div id="annoyance-global"></div>
+          <h3 style="margin-top: 12px">Sites with their own choices</h3>
+          <ul class="plain" id="annoyance-sites"></ul>
+        </section>
+
         <section aria-labelledby="headline-heading">
           <h2 id="headline-heading">Headline checks</h2>
           <p class="muted" id="headline-intro"></p>
@@ -74,9 +88,20 @@
           </label>
         </section>
 
+        <section aria-labelledby="feedback-heading">
+          <h2 id="feedback-heading">Your feedback</h2>
+          <p class="muted">Votes you've given on this device: thumbs up and down on summaries, and "Disagree with this rating?" on headline checks. Nothing is sent anywhere.</p>
+          <ul class="plain" id="feedback-counts"></ul>
+          <div class="actions">
+            <button type="button" class="secondary" id="feedback-export">Export feedback as a file</button>
+            <button type="button" class="secondary" id="feedback-delete">Delete all feedback</button>
+          </div>
+          <p class="muted" id="feedback-status" role="status"></p>
+        </section>
+
         <section>
           <h2>Your data</h2>
-          <p>Nothing goes to LinkPeek or anyone else. When you open a card, LinkPeek fetches that one page from its own website, without your cookies. Settings, your thumbs up/down votes and recent results stay in your browser.</p>
+          <p>Nothing goes to LinkPeek or anyone else. When you open a card, LinkPeek fetches that one page from its own website, without your cookies. Settings, your votes (with any reasons you gave) and recent results stay in your browser.</p>
         </section>
       </main>
     </div>

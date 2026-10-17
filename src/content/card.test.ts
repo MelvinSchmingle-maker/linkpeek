@@ -10,7 +10,7 @@ const link = { href: 'https://example.test/a', textContent: 'A headline' };
 function render(key: Parameters<typeof demoResult>[0]) {
   const r = demoResult(key, link);
   const input = r === 'loading' ? ({ kind: 'loading', isDemo: true } as const) : ({ kind: 'result', result: r as LinkResult } as const);
-  const handlers = { onClose: vi.fn(), onFeedback: vi.fn() };
+  const handlers = { onClose: vi.fn(), onFeedback: vi.fn(), onFeedbackReason: vi.fn(), onDisagree: vi.fn() };
   return { card: renderCard(toCardView(input), link.href, handlers), handlers };
 }
 
@@ -35,7 +35,7 @@ describe('renderCard', () => {
   it('inserts page text as text, never as markup', () => {
     const r = demoResult('full', link) as LinkResult;
     r.summary = { text: '<img src=x onerror=alert(1)>', wordCount: 3, provider: 'demo' };
-    const card = renderCard(toCardView({ kind: 'result', result: r }), link.href, { onClose: vi.fn(), onFeedback: vi.fn() });
+    const card = renderCard(toCardView({ kind: 'result', result: r }), link.href, { onClose: vi.fn(), onFeedback: vi.fn(), onFeedbackReason: vi.fn(), onDisagree: vi.fn() });
     expect(card.querySelector('img')).toBeNull();
     expect(card.querySelector('.summary')?.textContent).toBe('<img src=x onerror=alert(1)>');
   });

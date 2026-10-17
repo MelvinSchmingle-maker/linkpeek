@@ -298,6 +298,123 @@
   color: var(--lp-muted);
 }
 
+/* The thumbs-down reasons (Part 09). Each is a real button, so Tab and Enter work. */
+.feedback-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+  color: var(--lp-muted);
+  font-size: 13px;
+}
+.feedback-reasons .question {
+  margin: 0;
+}
+.reason-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.reason-option {
+  all: unset;
+  box-sizing: border-box;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--lp-tag-bg);
+  color: var(--lp-fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+.reason-option:hover {
+  background: var(--lp-tag-bg);
+}
+.reason-option:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+.reason-option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.reason-option.skip {
+  color: var(--lp-muted);
+}
+
+/* "Read here" in the footer (reading mode, Part 12). */
+.read-here {
+  all: unset;
+  box-sizing: border-box;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--lp-tag-bg);
+  color: var(--lp-fg);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.read-here:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* The link check's line under the card (Part 11): one compact row, in small muted type. */
+.link-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+.link-check-label {
+  margin: 0;
+}
+.check-where,
+.overrule-button {
+  all: unset;
+  box-sizing: border-box;
+  font-size: 12px;
+  text-decoration: underline;
+  color: var(--lp-fg);
+  cursor: pointer;
+}
+.check-where:focus-visible,
+.overrule-button:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+.check-where:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.overrule-button {
+  display: inline-block;
+  margin-top: 6px;
+}
+
+/* "Disagree with this rating?" under a tick or cross (Part 09). */
+.disagree {
+  margin-top: 6px;
+}
+.disagree-button {
+  all: unset;
+  box-sizing: border-box;
+  font-size: 12px;
+  color: var(--lp-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.disagree-button:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+.disagree-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

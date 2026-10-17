@@ -32,7 +32,7 @@ const SOURCE: SourceInfo = {
 function card(r: LinkResult, onCorrections?: () => Promise<CorrectionsResult>) {
   return renderCard(toCardView({ kind: 'result', result: r }), link.href, {
     onClose: vi.fn(),
-    onFeedback: vi.fn(),
+    onFeedback: vi.fn(), onFeedbackReason: vi.fn(), onDisagree: vi.fn(),
     onAction: vi.fn(),
     onCorrections,
   });

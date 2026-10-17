@@ -104,7 +104,14 @@ export interface ContentFacts {
 
 export interface LinkRisk {
   level: LinkRiskLevel;
+  /** One plain sentence from the strongest check that fired. */
   reason?: string;
+  /** The registrable site the address points to, e.g. "bbc.co.uk". Used for "Don't warn me on this site". */
+  site?: string;
+  /** Extra facts from a redirect check, e.g. "Opens on bbc.co.uk after redirects." */
+  note?: string;
+  /** The user switched warnings off for this site. The check still ran; only the warning is hidden. */
+  overruled?: boolean;
 }
 
 /** What kind of piece it is. "other" is a clear type we don't sort further; unclear pages get no kind at all. */
@@ -168,6 +175,8 @@ export interface ArticleExtract {
 }
 
 export interface LinkResult {
+  /** The article's paragraphs, only when reading mode asked for them (Part 12). Never stored. */
+  readable?: string[];
   /** Stable id for this result (used for one-vote-per-result feedback). */
   id: string;
   url: string;

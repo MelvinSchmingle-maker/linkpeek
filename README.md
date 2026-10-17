@@ -18,7 +18,12 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 06 AI summaries | Done. Deployed at `linkpeek-api.vercel.app`, Claude Haiku 5.5 by default. Measured in `docs/eval/part-06.md` |
 | 07 Clickbait tick, cross or neutral | Built. Headline checks with one reason each, from the headline alone or with the article. Measured on a labelled set and a held-out set (`docs/eval/part-07.md`); the held-out numbers are small, so read them as a first check, not a guarantee |
 | 08 Source card ("About this source") | Built. Publisher, dates, author, article type and links to primary sources, each with where it came from, plus a corrections-page check on request. Measured on the test pages and five real sites (`docs/compat/part-04-live.md`) |
-| 09 onward | Not started |
+| 09 Feedback buttons | Built. Thumbs up and down, optional reasons for a thumbs-down, "Disagree with this rating?" on headline checks, and a settings section to count, export or delete your votes. Stored on this device only; nothing is sent |
+| 10 Compatibility matrix | Built, with 20 scenarios run (`docs/compat/matrix.md`). The summary and the open issues are in `docs/compat/summary.md` and `docs/compat/open-issues.md`. One real failure (listing pages read as articles) is open |
+| 11 Link protector, stage 1 | Built. On-device checks on the link's address and text: lookalike domains, mismatches, IP addresses, downloads, sign-in pages on other sites. Warns, never blocks, never says "safe". "Don't warn me on this site" and "Check where this link goes" (asks the site once, on request). Stage 2, the threat lookup, is not built: see `docs/security-services.md` |
+| 12 Annoyance tools and reading mode | Built. Six separate tools, off by default, each undoable: reading mode ("Read here"), sign-up boxes, floating videos, large sticky bars, urgency labels, autoplay with sound. Settings for all sites and per site. Ten real pages checked (`docs/compat/annoyance.md`); a person still needs to look at them |
+| 13 Social adapters | Research only. Reddit, YouTube, X, Facebook and Instagram are written up in `docs/adapters/`. None is built. YouTube's rules conflict with how LinkPeek reads pages today: an owner decision |
+| 14 Measurement and money | Mostly not built, on purpose: each part waits for real users, a partner or a billing decision. The schema for usage counts exists, with a guard against URLs and article text. See `docs/measurement.md` |
 
 The build plan is in `build-plan/`. Each file there is one stage.
 
@@ -66,6 +71,13 @@ The app is small enough to change by hand. Each of these is one place:
 | The headline check's patterns and thresholds | `src/core/clickbait/rules.ts` (wording) and `check.ts` (combining) |
 | Which pages count as primary sources, or what counts as sponsored or opinion | `src/core/source/primary.ts` and `article-type.ts` |
 | The addresses the corrections check tries | `src/core/source/corrections.ts` (`CORRECTIONS_PATHS`) |
+| Which brands, shorteners, risky file types and sign-in words the link check uses | `src/core/security/lists.ts` (test the result in `eval/urls.json`) |
+| The link check's rules (lookalikes, mismatches, IP addresses, downloads) | `src/core/security/assess.ts` |
+| What the annoyance tools look for (sign-up boxes, urgency wording, consent words) | `src/content/annoyance/patterns.ts`; the actions are in `filter.ts` |
+| The annoyance tools' names and hints | `src/content/annoyance/labels.ts` |
+| The reading panel | `src/content/reader.ts` |
+| The reasons offered after a thumbs-down | `src/core/feedback/store.ts` (`FEEDBACK_REASONS`); wording in `src/core/messages.ts` |
+| A platform adapter (Part 13) | `src/adapters/` (none is registered; see `docs/adapters/`) |
 
 After any change, `npm run build` again, then reload LinkPeek at `chrome://extensions` and try the test pages.
 
@@ -84,6 +96,7 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
+| `node scripts/build.mjs --live && node scripts/annoyance-live.mjs` | Turns every annoyance tool on for ten real pages, and writes what changed to `docs/compat/annoyance.md`. Measures; it can't judge whether a site still works for a person |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once.
 

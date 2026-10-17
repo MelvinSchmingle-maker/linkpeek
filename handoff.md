@@ -1,106 +1,61 @@
 # LinkPeek handoff
 
-Read this first in a new window, then `todo.md`. Written 17 Oct 2026 at commit `f6c99c8` on `main`. Updated 17 Oct 2026 on branch `claude/eager-darwin-6u5601` after a follow-up check of the browser-tab rule (see "Follow-up check" below).
+Read this first in a new window, then `todo.md`. Updated 17 Oct 2026 on branch `claude/eager-darwin-6u5601`, after the build-out of Parts 09 to 14.
 
 ## Where things stand
 
-- Parts 01 to 08 are built and pushed. Parts 09 to 14 are not, apart from basic feedback votes (D12).
+- Parts 01 to 12 are built. Part 13 is research only, and Part 14 is mostly not built, on purpose (see `todo.md` section 5 and `docs/progress.md`).
 - LinkPeek is a Chrome extension (Manifest V3). It has access to no websites after install. Access is asked for per site, when the user acts.
-- The summary backend is a Vercel project, `linkpeek-api`, with root directory `server/`. Every push to `main` deploys it. Summaries use Claude Haiku 5.5 (`SUMMARY_MODEL=claude-haiku-5-5` in Vercel production).
-- Checks on `f6c99c8`, run on 17 Oct 2026 for this handoff:
-  - `npm run check`: passed. 402 unit tests pass and 5 are skipped. Backend: 41 pass.
-  - `npm run test:e2e`: passed. 120 browser tests pass and 3 are skipped.
+- The summary backend is a Vercel project, `linkpeek-api`, with root directory `server/`. Every push to `main` deploys it.
+- Checks on this branch: `npm run check` passes (465 unit tests pass, 5 skipped; backend 41 pass). Browser tests: see the commit message for the last full run.
 
-## Open problems from the owner's latest report
+## Things the owner asked for, and what they're waiting on
 
-The owner reported these on 17 Oct 2026, with a screenshot. Nothing has been changed in code for them yet.
+1. **Permission prompts.** Still undecided: one all-sites grant at install, or per-site prompts. Nothing has been built for either. Settings already has "Turn on for all websites". The current model is in `docs/permissions.md`.
+2. **Links that fail.** The owner's three checked links didn't work, and the owner hasn't sent them. One possible cause: a link from a Facebook post goes to another site, which needs its own permission (the card asks for it, and the card may have shown that rather than an article). Ask the owner whether those cards said "LinkPeek needs your permission". The talkSPORT page can't be reproduced from here: every path returns a robot check, and its robots.txt disallows all agents not listed.
+3. **Card look.** Waits until the links work.
 
-1. **Too many permission prompts.** The owner wants one grant, then no more asks. Chrome asks once per site, and each new site brings a prompt. Settings already has "Turn on for all websites", which is the one-grant route. The current model is in `docs/permissions.md`.
-2. **Most links fail.** The owner tried four links on a Facebook post. The talkSPORT one showed "Couldn't open this article. The page needs to run in a browser tab to show its text." LinkPeek reads pages without running their scripts. That message comes from `looksJsRendered` in `src/core/retrieve/diagnose.ts`. The talkSPORT page could not be reproduced from here: every talkSPORT path returns a "Verifying Device" robot check, and its `robots.txt` disallows all agents not listed. So the owner's machine is the only place to reproduce it. The other three links are unknown. The owner's report says they gave nothing, but we don't have the links or what each card showed.
-3. **The card looks amateurish.** The owner said to fix this after the links work.
+## Decisions the owner has to make (all in `todo.md` section 3)
 
-## Follow-up check (17 Oct 2026)
-
-- **Browser-tab rule on real news pages:** done. 12 news pages in `docs/compat/part-04-live.md`, 7 read in full. The rule fired on none of them; it fired only on YouTube, as intended.
-- **Pages built in the browser:** decided, D52. Show the page's own description, with the browser-tab reason. No hidden tab, because that needs a permission.
-- **Findings, not fixed (owner decisions in `todo.md` section 3):**
-  - NPR shows a false paywall on free pages. `[id*="piano"]` matches NPR's Piano script and empty slots, on every page.
-  - The Verge's structured data says `isAccessibleForFree: false`, so the card shows only the description (D27). The page reads freely in a normal browser.
-  - LinkPeek doesn't read `robots.txt`, and talkSPORT disallows all agents not listed.
-- **Mirror opening, fixed (D29):** the opening was a timestamp, then a headline above the story. Date lines and short lines with no closing punctuation are now skipped. Only the Mirror opening changed across 16 saved pages. Test page `test-pages/articles/timestamp.html`.
-- **Live check:** it runs headless Chromium, which some sites refuse (Daily Mail 403, CNN "Unknown Error").
-- **Start-up flake:** the live check and one browser test (`on-demand.spec.ts`, "Scan: the first scan...") each failed once with `chrome.storage` undefined when a helper evaluated code in the extension's service worker. Each passed when re-run. The cause is not found, so re-run if it fails that way.
-- **Checks on this branch:** `npm run check` passed (403 unit tests pass, 5 skipped; backend 41 pass). Browser tests: 119 of 120 passed in the first full run, with the one start-up failure above. A second full run passed: 120 passed, 3 skipped.
-
-## Open decisions for the owner
-
-1. **Permission model.** Two options:
-   - **One all-websites grant at install.** This matches what the owner asked for. It conflicts with the owner's own rule in `build-plan/00-ground-rules.md` line 34: "Smallest permissions possible. Prefer optional host permissions requested when the user acts." It's the project's own rule, so the owner can change it. Code: the manifest's optional host permissions and the install flow.
-   - **Keep per-site prompts.** This keeps the rule. The prompts can be made clearer, but there is still one per site.
-2. **Paywall flag and NPR.** Two decisions, in `todo.md` section 3: whether a publisher's `isAccessibleForFree: false` should count on a page that reads freely (The Verge), and how to narrow the Piano check without weakening real walls (NPR).
-3. **robots.txt.** Whether LinkPeek should honour `robots.txt` for each user-triggered read. talkSPORT disallows all agents. Nothing in the project decides this yet.
-4. **Neutral headline result.** `docs/decisions.md` D45 shows "No headline verdict" on every article without a verdict. Changing that is a small edit.
-5. **AI for the headline check's second stage.** Not built. The owner said "ok" to leaving it for later.
-6. **Money.** `docs/progress.md` says Vercel's Hobby plan is for personal, non-commercial use. A paid plan is needed before LinkPeek earns anything.
+- The permission model (item 1 above).
+- NPR shown as "behind a subscription" on free pages: how to narrow the Piano check without weakening real paywalls.
+- The Verge's paywall flag on a free page: trust the flag or not.
+- robots.txt: whether LinkPeek should honour it for each user-triggered read.
+- YouTube: LinkPeek fetches youtube.com pages, which YouTube's developer policies prohibit scraping. Proposed: stop fetching them, and read only the open page (`docs/adapters/youtube.md`).
+- Threat lookup (Part 11, stage 2): which service, and the budget for it (`docs/security-services.md`).
+- Reddit and X: whether to build them after their terms are read (`docs/adapters/`).
+- Money and measurement (Part 14): gated by the plan on real users, a partner and billing.
 
 ## Commands
 
-- Setup: `npm install`. For the backend: `npm --prefix server install --legacy-peer-deps`. `server/.npmrc` is set up for this.
+- Setup: `npm install`. For the backend: `npm --prefix server install --legacy-peer-deps`.
 - Build: `npm run build` writes `dist/`. Load that folder unpacked in Chrome.
-- Full check: `npm run check`. It runs typecheck, lint, unit tests, build, and the backend's typecheck and tests.
-- Browser tests: `npm run test:e2e`. It builds the test version, then runs Playwright with the Chromium that's already installed. Don't run `playwright install`. After a plain build, run `npm run build:e2e` before running Playwright on its own.
-- Headline eval (free): `npm run eval`. Add `EVAL_WRITE=1` to rewrite `docs/eval/part-07.md`.
-- AI eval (costs money): `npm run eval:ai`. It needs `LINKPEEK_ANTHROPIC_API_KEY` in the environment. Never commit it.
-- Real-site check: `node scripts/build.mjs --live`, then `node scripts/live-check.mjs`. It reads ten real sites. The result is in `docs/compat/part-04-live.md`.
-- Backend settings: the variables are in `server/.env.example`. Set `ANTHROPIC_API_KEY` in the Vercel dashboard only. Set `RATE_LIMITER=memory` only for local runs.
+- Full check: `npm run check`.
+- Browser tests: `npm run test:e2e`. Don't run `playwright install`.
+- Live checks (need the internet; snapshots, not tests): `node scripts/build.mjs --live && node scripts/live-check.mjs` (news pages, `docs/compat/part-04-live.md`) and `node scripts/annoyance-live.mjs` (`docs/compat/annoyance.md`).
+- Headline eval (free): `npm run eval`. AI eval (costs money): `npm run eval:ai`.
 
 ## Where things are
 
 | What | Where |
 |---|---|
-| Plan and "Done when" for each part | `build-plan/00` to `14`, index in `build-plan/README.md` |
-| Every decision, D1 to D51 | `docs/decisions.md` |
+| Plan and "Done when" for each part | `build-plan/00` to `14` |
+| Every decision, D1 to D58 | `docs/decisions.md` |
 | What each part built, tested and didn't | `docs/progress.md` |
-| Permissions and why each is needed | `docs/permissions.md` |
+| Permissions | `docs/permissions.md` |
 | Privacy | `docs/privacy.md` |
-| Evaluations | `docs/eval/` (parts 05, 06 per model, 07) |
-| Real-site results | `docs/compat/part-04-live.md` |
-| Which file to change for what | `README.md`, "Where to change things" |
+| Link check (Part 11) | `src/core/security/`, `eval/urls.json`, `docs/security-services.md` |
+| Annoyance tools and reading mode (Part 12) | `src/content/annoyance/`, `src/content/reader.ts`, `docs/compat/annoyance.md` |
+| Feedback (Part 09) | `src/core/feedback/` |
+| Compatibility matrix (Part 10) | `docs/compat/matrix.md`, `summary.md`, `open-issues.md` |
+| Social adapters (Part 13) | `docs/adapters/`, `src/adapters/` |
+| Measurement and money (Part 14) | `docs/measurement.md`, `src/core/measure/` |
 | Open to-do list | `todo.md` |
-
-Code, by folder:
-
-- `src/background`: the service worker. It fetches and retrieves articles, runs the corrections check, and answers the page's messages.
-- `src/content`: the card, the link scanner and the page controller.
-- `src/core`: the logic, with no browser calls. `clickbait` (headline check), `source` (About this source), `summary` (including `remote.ts`, the backend client), `retrieve`, `extract`, `detect` (which links get an icon), `security`, `storage`, `feedback`.
-- `src/offscreen`: reads fetched HTML and PDFs.
-- `src/options`, `src/popup`, `src/permission`: settings, toolbar popup, and the access window.
-- `src/adapters`: empty apart from a README. Part 13 hasn't started.
-- `server/`: the Vercel backend. `server/src/handler.ts` is the endpoint.
-
-## Remaining steps, in order
-
-1. The owner chooses the permission model (decision 1). Then implement it and update `docs/permissions.md` and `docs/decisions.md`.
-2. Get the full talkSPORT link and the other three links from the owner, and reproduce each one from their machine. Check whether `looksJsRendered` is the cause.
-3. Done (D52). Confirm it on a Standard article in a live run, once a URL is found.
-4. Done. The "browser tab" rule was checked on 12 news pages (`docs/compat/part-04-live.md`).
-5. The owner decides the paywall and robots.txt questions above, then the NPR fix can go in.
-6. The owner does two checks. Part 07: read the crosses in `docs/eval/part-07.md`. Part 08: open "About this source" on five sites.
-7. The card design pass, once the links work.
-8. Parts 09 to 14, as `todo.md` section 5 lists them. Part 11's threat lookup and Part 13's platform APIs each need the owner's go-ahead first.
-
-## Known limits
-
-- Headline check (`docs/eval/part-07.md`): on the tuned set it catches 92% of crosses and 69% of ticks, with no false crosses. On the held-out set it catches 90% and 67%, also with no false crosses. The tuned numbers are the optimistic ones. Withheld results without a listed pattern are missed, and so are ticks where the headline has no figure.
-- Source card (D46 to D51): article type and primary-source counts come from rough rules. Ownership and independent coverage are not built. A paywall page gets no link counts, and the Hacker News thread shows zero.
-- Card at 200% zoom: the default card fits above its link with about 3 pixels to spare. A longer reason could push it off screen. That case isn't tested.
-- One browser test (the infinite-feed test) failed once in a full run from a scroll race in its test page. It passes alone and isn't fixed.
-- Live check: 7 of the 10 real URLs returned full article text (`docs/compat/part-04-live.md`).
 
 ## Rules to keep
 
 - The extension holds no API keys. The key lives only in Vercel.
 - The extension sends no cookies or login details, and requests go out without credentials.
-- No paywall, login or CAPTCHA bypass. Page text is data, never instructions.
+- No paywall, login, CAPTCHA or anti-bot bypass. Page text is data, never instructions. Never impersonate a browser or a search engine to get past a block (the talkSPORT probe on 17 Oct used one request with a Googlebot user agent as a diagnostic, and that is not to be repeated).
 - Smallest permissions possible (`build-plan/00-ground-rules.md` line 34).
 - Pushes to `main` deploy the backend. Run `npm run check` before pushing.

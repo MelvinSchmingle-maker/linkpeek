@@ -280,3 +280,46 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - Pages that aren't articles still get link counts when their text is long enough (the Hacker News thread shows zero). The paywall page gets no counts, because only its public description was read.
 
 **Your check:** open the source card on five sites you know well. Is anything wrong or misleading? Wrong facts hurt more than missing ones.
+
+## Parts 09 to 14: the build-out (17 Oct 2026, built to a first stage; not checked by you yet)
+
+The owner asked for every remaining part to be built, with bugs and the card's look dealt with later. What was built, what wasn't, and why is below, part by part. Numbers are from the final run on this branch; see the commit for the exact result.
+
+### Part 09. Feedback (built)
+- Thumbs up and down; a thumbs-down opens the optional reasons (skip is fine). "Disagree with this rating?" on a tick or cross, in the "What does this mean?" panel, so the card keeps its height.
+- One vote per result and signal; the same vote twice is stored once; a reason joins its thumbs-down; delete and export on the options page (delete takes two presses).
+- The upload setting exists, is off and hidden, and sends nothing. `docs/privacy.md` says what would be sent if it were ever turned on.
+- Tests: unit (store, report, upload stub, view model) and six browser tests (`e2e/feedback.spec.ts`), including keyboard use.
+
+### Part 10. Compatibility matrix (built, 20 scenarios run)
+- `docs/compat/matrix.md`: twenty rows, each traced to a live run, a fixture test, or a labelled set. Rows not run are marked.
+- `docs/compat/summary.md`: 13 of 22 unique pages came back full; 20 of 22 had the correct state. Two wrong states: a free quiz shown as paid (NPR), and a listing page read as an article (Guardian UK).
+- `docs/compat/open-issues.md`: the bugs and the decisions for the owner.
+
+### Part 11. Link protector, stage 1 (built); stage 2 not built
+- On-device rules on the link's address and text (`src/core/security/`): lookalike names, brand names beside sign-in words, brand names in another site's address, sign-in pages on other sites, addresses with a user name in front, bare IP addresses, mixed alphabets (Punycode decoded), long addresses, downloads of programs and archives, link text that names another site.
+- Five outcomes in the exact words. "Known threat detected" can't be reached without a threat list. Shorteners are "Not checked". Warns, never blocks, never says "safe".
+- "Open link anyway", "Don't warn me on this site" (per site, undoable in Settings), and "Check where this link goes" (asks the site once, only with access to it). The redirect check can only report the final address (Chrome doesn't show each hop).
+- Labelled set: `eval/urls.json`, 69 addresses. Exact match 69 of 69 (written with the rules, so a first check only). No false alarms on 37 clean addresses.
+- Stage 2 (threat lookup): compared in `docs/security-services.md`, not integrated. Google Safe Browsing's terms forbid commercial use without an agreement; Web Risk's prices were not verified.
+
+### Part 12. Annoyance tools and reading mode (built)
+- Six tools, each a switch, off by default, each undoable: reading mode ("Read here", which reads the article again and keeps nothing), sign-up boxes, floating videos, large sticky bars, urgency labels (a note, never a hide), autoplay with sound (paused, not muted media). Never hides a login form or a consent notice.
+- Per-site choices in the popup; global defaults and a site list in Settings; "Undo on this page".
+- Browser tests: `e2e/annoyance.spec.ts` and `e2e/reading.spec.ts`. Ten real pages measured in `docs/compat/annoyance.md`: automated measures only, and two pages' scripts didn't start.
+- Not built: a collapse button on large bars (they're hidden and undo brings them back), and any handling of cookie banners (the plan leaves that for later).
+
+### Part 13. Social adapters (research only)
+- Reddit, YouTube, X, Facebook and Instagram are written up in `docs/adapters/`. None is built.
+- YouTube: its developer policies prohibit scraping, and LinkPeek currently fetches YouTube pages. That's an owner decision, flagged in `docs/adapters/youtube.md`.
+- The shared hook is in: `src/adapters/index.ts`, asked before the general reader. Nothing is registered.
+
+### Part 14. Measurement and money (mostly not built, on purpose)
+- The usage-count schema exists, with a guard that refuses URLs, paths, queries and article text (`src/core/measure/events.ts`). Nothing sends it.
+- Opt-in switch, backend, aggregation, referral links, and the premium test: not built. Each waits for real users, a partner, or a billing decision (`docs/measurement.md`).
+- A test reads the source of the modules that judge a result, and fails if any of them imports settings or storage.
+
+### Also in this round
+- A bug found by Part 10's runs and fixed: the Mirror article opened on its timestamp (D29, `timestamp.html`).
+- A layout problem found and fixed: the link check line made cards too tall at 200% zoom. It's now one compact row, and the "disagree" control moved into the "What does this mean?" panel.
+- Two regressions found and fixed during the build: a first-run settings check that stopped the scanner, and a refresh path that skipped the scan after a site was turned on. Both are covered by the browser tests that now pass.

@@ -1,6 +1,7 @@
 import { hostOf, originPattern, ALL_SITES } from '../core/sites';
-import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
-import type { ContentResponse } from '../content/messages';
+import { annoyanceFor, getSettings, onSettingsChanged, updateSettings, type AnnoyanceSettings } from '../core/storage/settings';
+import type { ContentMessage, ContentResponse } from '../content/messages';
+import { ANNOYANCE_LABEL, ANNOYANCE_ORDER } from '../content/annoyance/labels';
 import { renderModePicker } from '../ui/mode-picker';
 import { applyBrand } from '../ui/theme';
 
@@ -123,3 +124,59 @@ $('#scan').addEventListener('click', async () => {
 });
 
 await renderSite();
+
+// ---------- Annoyance tools on this site (Part 12) ----------
+
+/** Each tool is a switch for this site only. Undo puts back what the tools changed on the open page. */
+async function renderAnnoyance(): Promise<void> {
+  if (!host) return;
+  $<HTMLElement>('#annoyance-section').hidden = false;
+  const list = $('#annoyance-list');
+  list.replaceChildren(
+    ...ANNOYANCE_ORDER.map((tool) => {
+      const label = document.createElement('label');
+      label.className = 'toggle';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.dataset.tool = tool;
+      box.addEventListener('change', () => void setSiteTool(tool, box.checked));
+      const text = document.createElement('span');
+      text.textContent = ANNOYANCE_LABEL[tool].name;
+      const hint = document.createElement('span');
+      hint.className = 'muted';
+      hint.textContent = ANNOYANCE_LABEL[tool].hint;
+      text.append(document.createElement('br'), hint);
+      label.append(box, text);
+      return label;
+    }),
+  );
+  await showAnnoyance();
+}
+
+async function showAnnoyance(): Promise<void> {
+  const current = annoyanceFor(await getSettings(), host!);
+  for (const box of document.querySelectorAll<HTMLInputElement>('#annoyance-list input')) {
+    box.checked = current[box.dataset.tool as keyof typeof current];
+  }
+}
+
+async function setSiteTool(tool: keyof AnnoyanceSettings, on: boolean): Promise<void> {
+  const settings = await getSettings();
+  const sites = { ...settings.annoyanceSites };
+  sites[host!] = { ...(sites[host!] ?? {}), [tool]: on };
+  await updateSettings({ annoyanceSites: sites });
+}
+
+$('#annoyance-undo').addEventListener('click', async () => {
+  const status = $('#annoyance-status');
+  try {
+    if (!tab?.id) throw new Error('no tab');
+    await chrome.tabs.sendMessage(tab.id, { type: 'annoyance-undo' } satisfies ContentMessage);
+    status.textContent = 'Put back what was hidden or labelled on this page.';
+  } catch {
+    status.textContent = "LinkPeek isn't running on this page, so there's nothing to undo.";
+  }
+});
+
+onSettingsChanged(() => void showAnnoyance());
+await renderAnnoyance();

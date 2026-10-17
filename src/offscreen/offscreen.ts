@@ -17,14 +17,14 @@ import { isOffscreenRequest, type OffscreenResponse } from './messages';
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse: (r: OffscreenResponse) => void) => {
   if (!isOffscreenRequest(msg)) return false;
-  assess(msg.raw, msg.headline, msg.engine, msg.remote).then(
+  assess(msg.raw, msg.headline, msg.engine, msg.remote, msg.readable).then(
     (assessment) => sendResponse({ ok: true, assessment }),
     (e: unknown) => sendResponse({ ok: false, error: String(e) }),
   );
   return true;
 });
 
-async function assess(raw: RawFetch, headline: string, engine: SummaryEngine, remote?: RemoteConfig): Promise<Assessment> {
+async function assess(raw: RawFetch, headline: string, engine: SummaryEngine, remote?: RemoteConfig, readable?: boolean): Promise<Assessment> {
   const meta = { requestedUrl: raw.requestedUrl, finalUrl: raw.finalUrl, status: raw.status };
   const kind = contentKind(raw.contentType, raw.finalUrl);
   if (kind === 'pdf' && raw.base64) {
@@ -35,12 +35,14 @@ async function assess(raw: RawFetch, headline: string, engine: SummaryEngine, re
       return { evidence: 'unavailable', failure: 'extraction-failed' };
     }
     const paragraphs = pdf.text ? [withoutLeadingTitle(pdf.text, pdf.title).slice(0, 20_000)] : [];
-    return withSummary(withFacts(assessPdf(meta, pdf), paragraphs), { headline, url: raw.finalUrl, paragraphs }, engine, remote);
+    const a = await withSummary(withFacts(assessPdf(meta, pdf), paragraphs), { headline, url: raw.finalUrl, paragraphs }, engine, remote);
+    return readable && a.evidence === 'full' ? { ...a, readable: paragraphs } : a;
   }
   if (kind === 'html' && raw.text !== undefined) {
     const ex = extractHtml(raw.text, raw.finalUrl);
     const a = assessHtml(meta, raw.text, ex);
-    return withSummary(withFacts(a, ex.paragraphs), { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine, remote);
+    const result = await withSummary(withFacts(a, ex.paragraphs), { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine, remote);
+    return readable && result.evidence === 'full' ? { ...result, readable: ex.paragraphs } : result;
   }
   // An error page served as something other than HTML still counts as the error.
   if (raw.status >= 400) return assessHtml(meta, '', extractHtml('', raw.finalUrl));

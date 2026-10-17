@@ -15,15 +15,21 @@
  */
 import { classifyLink } from '../core/detect/classify';
 import { readLinkFeatures } from '../core/detect/features';
-import { hostnameOf, recordFeedback, type FeedbackValue } from '../core/feedback/store';
-import type { Settings } from '../core/storage/settings';
+import { addFeedbackReason, hostnameOf, recordFeedback, type FeedbackReason, type FeedbackValue } from '../core/feedback/store';
 import type { RetrieveRequest, RetrieveResponse } from '../background/retrieve';
 import { fetchLimited, type FetchOutcome } from '../core/retrieve/fetcher';
 import { samePage } from '../core/retrieve/url';
-import type { LinkResult } from '../core/types';
+import type { LinkResult, LinkRisk } from '../core/types';
 import { attachIcon, CardController, HOST_ATTR, isOurHost, isWebUrl } from './card';
 import { demoResult, isDemoKey } from './fixtures';
-import type { ContentMessage, ContentResponse, SiteStatus, WorkerMessage } from './messages';
+import type { ContentMessage, ContentResponse, RedirectCheckError, RedirectCheckResult, SiteStatus, WorkerMessage } from './messages';
+import { assessLink } from '../core/security/assess';
+import { MSG } from '../core/messages';
+import { getSettings, updateSettings, type Settings } from '../core/storage/settings';
+import type { CardInput } from './view-model';
+import { AnnoyanceFilter } from './annoyance/filter';
+import { openReader } from './reader';
+import { annoyanceFor } from '../core/storage/settings';
 import type { CorrectionsResult } from '../core/source/corrections';
 import { htmlLinksIn, LinkScanner } from './scanner';
 
@@ -46,6 +52,8 @@ export class PageController {
   private cards = new CardController();
   private scanner: LinkScanner;
   private settings: Settings;
+  /** The settings the page last applied. The first apply always runs in full. */
+  private applied?: Settings;
   private buttons = new WeakMap<HTMLAnchorElement, HTMLButtonElement>();
   private tempIcons = new Set<HTMLElement>();
   private lastContextLink?: HTMLAnchorElement;
@@ -59,12 +67,19 @@ export class PageController {
   private shown?: LinkResult;
   /** Bumped per load, so a slow answer for an older request can't overwrite a newer one. */
   private loadSeq = 0;
+  /** The annoyance tools on this page (Part 12). */
+  private annoyance: AnnoyanceFilter;
+  /** Closes the reading panel, when one is open. */
+  private closeReader?: () => void;
+  /** "Check where this link goes" for the open card, once the site has answered. */
+  private redirect?: { link: HTMLAnchorElement; finalUrl?: string; error?: RedirectCheckError };
 
   constructor(
     private readonly doc: Document,
     settings: Settings,
   ) {
     this.settings = settings;
+    this.annoyance = new AnnoyanceFilter(doc);
     this.scanner = new LinkScanner(doc, {
       accept: (link) => this.accept(link),
       attach: (link) => this.attach(link),
@@ -93,9 +108,18 @@ export class PageController {
    * Resolves once the mode is decided; Smart mode's first automatic scan may
    * start a little later (see waitForQuietPage), without holding anything up.
    */
-  async apply(settings: Settings): Promise<void> {
-    const seq = ++this.applySeq;
+  async apply(settings: Settings, full = false): Promise<void> {
+    const before = this.applied;
+    this.applied = settings;
     this.settings = settings;
+    this.annoyance.apply(annoyanceFor(settings, this.doc.location.hostname));
+    // A "refresh" comes when the site's access changed, which the settings don't show: always do the full apply.
+    if (!full && before && sameExcept(before, settings, ['overruledWarnings', 'annoyance', 'annoyanceSites'])) {
+      // Only warnings or annoyance settings changed: refresh the open card, and leave the scanning alone.
+      this.refreshOpenCard();
+      return;
+    }
+    const seq = ++this.applySeq;
     this.cards.close({ restoreFocus: false });
     this.removeTempIcons();
     this.scanner.stop();
@@ -118,10 +142,13 @@ export class PageController {
       case 'ping':
         return { ok: true };
       case 'refresh':
-        await this.apply(this.settings);
+        await this.apply(this.settings, true);
         return { ok: true };
       case 'close-card':
         this.cards.close({ restoreFocus: false });
+        return { ok: true };
+      case 'annoyance-undo':
+        this.annoyance.undoAll();
         return { ok: true };
       case 'retry': {
         // Access to a site was just granted in LinkPeek's permission window.
@@ -174,6 +201,7 @@ export class PageController {
   private teardown(): void {
     if (this.dead) return;
     this.dead = true;
+    this.closeReader?.();
     this.cards.close({ restoreFocus: false });
     this.removeTempIcons();
     this.scanner.stop();
@@ -236,21 +264,30 @@ export class PageController {
       return;
     }
     const result = this.resultFor(link);
+    this.redirect = undefined;
     const callbacks = {
       onFeedback: (value: FeedbackValue) => this.feedback(this.shown, value),
-      onClosed,
+      onFeedbackReason: (reason: FeedbackReason) => this.feedbackReason(this.shown, reason),
+      onDisagree: () => this.disagree(this.shown),
+      onOverrule: () => void this.overrule(link),
+      onCheckWhere: () => void this.checkWhere(link),
+      onReadHere: () => void this.readHere(link),
+      onClosed: () => {
+        this.redirect = undefined;
+        onClosed?.();
+      },
       onAction: () => this.askForAccess(link),
       onCorrections: () => this.checkCorrections(link),
     };
     if (result === 'loading') {
-      this.cards.open(link, button, { kind: 'loading', isDemo: true }, callbacks);
+      this.cards.open(link, button, { kind: 'loading', isDemo: true, risk: this.riskFor(link) }, callbacks);
     } else if (result === 'fetch') {
       this.shown = undefined;
-      this.cards.open(link, button, { kind: 'loading', isDemo: false }, callbacks);
+      this.cards.open(link, button, { kind: 'loading', isDemo: false, risk: this.riskFor(link) }, callbacks);
       void this.load(link);
     } else {
       this.shown = result;
-      this.cards.open(link, button, { kind: 'result', result }, callbacks);
+      this.cards.open(link, button, { kind: 'result', result: this.withRisk(result, link), readingMode: this.readingOn() }, callbacks);
     }
   }
 
@@ -265,9 +302,9 @@ export class PageController {
     const show = (result: LinkResult) => {
       if (seq !== this.loadSeq || this.cards.openFor !== link) return;
       this.shown = result;
-      this.cards.update({ kind: 'result', result });
+      this.cards.update({ kind: 'result', result: this.withRisk(result, link), readingMode: this.readingOn() });
     };
-    if (this.cards.openFor === link) this.cards.update({ kind: 'loading', isDemo: false });
+    if (this.cards.openFor === link) this.cards.update({ kind: 'loading', isDemo: false, risk: this.riskFor(link) });
 
     const req: RetrieveRequest = { type: 'retrieve', url: link.href, headline };
     // The link points at this very page: read it as it is.
@@ -373,8 +410,102 @@ export class PageController {
     return 'fetch';
   }
 
+  /**
+   * The link check for this link: what its address and text show, then what
+   * the site said about where it goes (if the user asked), then whether the
+   * user has switched warnings off for its site. Demo results keep their own.
+   */
+  private riskFor(link: HTMLAnchorElement): LinkRisk {
+    const text = (link.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const own = assessLink({ href: link.href, text });
+    let risk: LinkRisk = { level: own.level, reason: own.reason, site: own.site };
+    const r = this.redirect;
+    if (r?.link === link) {
+      if (r.finalUrl) {
+        const final = assessLink({ href: r.finalUrl, text });
+        const flagged = final.level === 'suspicious' || final.level === 'mismatch';
+        // The destination is what we now know, so it decides, unless the original already warned.
+        if (flagged || risk.level === 'not-checked' || risk.level === 'no-known-warning') {
+          risk = { level: final.level, reason: final.reason, site: final.site ?? risk.site };
+        }
+        if (final.site) risk.note = MSG.checkedWhere(final.site);
+      } else if (r.error) {
+        risk.note = r.error === 'no-access' && risk.site ? MSG.checkWhereNeedsAccess(risk.site) : MSG.checkWhereFailed;
+      }
+    }
+    const warnable = risk.level === 'suspicious' || risk.level === 'mismatch';
+    if (warnable && risk.site && this.settings.overruledWarnings.includes(risk.site)) risk.overruled = true;
+    return risk;
+  }
+
+  /** Reading mode is on for this site (Part 12). */
+  private readingOn(): boolean {
+    return annoyanceFor(this.settings, this.doc.location.hostname).readingMode;
+  }
+
+  /**
+   * "Read here": reads the article again (nothing from the card is reused),
+   * and shows its paragraphs in LinkPeek's own panel.
+   */
+  private async readHere(link: HTMLAnchorElement): Promise<void> {
+    const headline = (link.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const res = await this.askWorker({ type: 'retrieve', url: link.href, headline, readable: true });
+    const r = res?.kind === 'result' ? res.result : undefined;
+    this.closeReader?.();
+    this.closeReader = openReader(
+      this.doc,
+      { title: r?.extract?.title ?? headline, url: link.href, paragraphs: r?.readable ?? [] },
+      () => {
+        this.closeReader = undefined;
+      },
+    );
+  }
+
+  /** A result with this link's current link check, so the card shows what the site said. */
+  private withRisk(result: LinkResult, link: HTMLAnchorElement): LinkResult {
+    return result.isDemo ? result : { ...result, linkRisk: this.riskFor(link) };
+  }
+
+  /** Re-draws the open card with the current link check (after a redirect check or an overrule). */
+  private refreshOpenCard(): void {
+    const link = this.cards.openFor;
+    if (!link) return;
+    const input: CardInput =
+      this.shown && this.cards.openFor === link
+        ? { kind: 'result', result: this.withRisk(this.shown, link), readingMode: this.readingOn() }
+        : { kind: 'loading', isDemo: this.demoKeyFor(link) !== null, risk: this.riskFor(link) };
+    this.cards.update(input);
+  }
+
+  /** "Don't warn me on this site": the warning for this link's site is switched off, and the rest of the check still runs. */
+  private async overrule(link: HTMLAnchorElement): Promise<void> {
+    const site = this.riskFor(link).site;
+    if (!site) return;
+    const { overruledWarnings } = await getSettings();
+    if (overruledWarnings.includes(site)) return;
+    // Saving the setting tells the page, which refreshes the open card.
+    await updateSettings({ overruledWarnings: [...overruledWarnings, site] });
+  }
+
+  /** "Check where this link goes": asks the site once, without cookies, and shows where the link ends up. */
+  private async checkWhere(link: HTMLAnchorElement): Promise<void> {
+    this.redirect = { link };
+    let res: RedirectCheckResult | undefined;
+    try {
+      res = (await chrome.runtime.sendMessage({ type: 'check-redirects', url: link.href } satisfies WorkerMessage)) as
+        | RedirectCheckResult
+        | undefined;
+    } catch {
+      res = undefined;
+    }
+    if (this.redirect?.link !== link || this.cards.openFor !== link) return;
+    this.redirect = res?.kind === 'ok' ? { link, finalUrl: res.finalUrl } : { link, error: res?.reason ?? 'network' };
+    this.refreshOpenCard();
+  }
+
+  /** Thumbs up or down on the summary. */
   private async feedback(result: LinkResult | undefined, value: FeedbackValue): Promise<void> {
-    if (!result) return;
+    if (!result) throw new Error('no result to vote on');
     await recordFeedback({
       resultId: result.id,
       signal: 'summary-usefulness',
@@ -383,6 +514,26 @@ export class PageController {
       evidence: result.evidence,
       provider: result.summary?.provider,
       wordCount: result.summary?.wordCount,
+      isDemo: result.isDemo,
+    });
+  }
+
+  /** The reason for a thumbs-down that was just given. */
+  private async feedbackReason(result: LinkResult | undefined, reason: FeedbackReason): Promise<void> {
+    if (!result) throw new Error('no result to add a reason to');
+    await addFeedbackReason(result.id, 'summary-usefulness', reason);
+  }
+
+  /** "Disagree with this rating?": a separate signal from the summary thumbs. */
+  private async disagree(result: LinkResult | undefined): Promise<void> {
+    if (!result) throw new Error('no result to disagree with');
+    await recordFeedback({
+      resultId: result.id,
+      signal: 'clickbait',
+      value: 'disagree',
+      hostname: hostnameOf(result.url),
+      evidence: result.evidence,
+      verdict: result.headlineCheck.verdict,
       isDemo: result.isDemo,
     });
   }
@@ -466,6 +617,16 @@ export function waitForQuietPage(doc: Document, quietMs = QUIET_MS, maxMs = QUIE
     if (doc.readyState === 'complete') startQuietTimer();
     else win?.addEventListener('load', startQuietTimer, { once: true });
   });
+}
+
+/** Whether two settings are the same once the listed keys are left out. */
+function sameExcept(a: Settings, b: Settings, keys: (keyof Settings)[]): boolean {
+  const strip = (s: Settings) => {
+    const copy: Partial<Settings> = { ...s };
+    for (const k of keys) delete copy[k];
+    return JSON.stringify(copy);
+  };
+  return strip(a) === strip(b);
 }
 
 /** Shown when the service worker couldn't be reached at all. */

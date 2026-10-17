@@ -44,13 +44,23 @@ Last updated 17 Oct 2026, after Part 08 and a follow-up check of the browser-tab
 - [ ] Card at 200% zoom: the default card fits above its link with about 3 pixels to spare. A longer reason on a cross card could push it off screen, and that case isn't tested.
 - [ ] One browser test (the infinite-feed test) failed once in a full run from a scroll race in its test page. It passes alone. Not fixed.
 
-## 5. Build plan, still to do
+## 5. Build plan, status after the 17 Oct build-out
 
-The full plan is in `build-plan/`. Each part has a "Done when" and a "Your check".
+The owner asked for every part to be built to a first stage, with bugs and the card's look dealt with later. Each part's own notes are in `docs/progress.md`.
 
-- [ ] **Part 09, feedback** (`build-plan/09-feedback.md`): basic votes are already stored on the device (D12, `src/core/feedback`). The rest of the part isn't built.
-- [ ] **Part 10, real-world testing** (`build-plan/10-real-world-testing.md`): the compatibility matrix, filled in with real results. `docs/compat/part-04-live.md` is the only one so far.
-- [ ] **Part 11, link protector** (`build-plan/11-link-protector.md`): stage 1 is free and on-device. Stage 2, the threat lookup, needs the owner's decision, as the plan says.
-- [ ] **Part 12, annoyance filter and reading mode** (`build-plan/12-annoyance-filter.md`): each item is a separate toggle, with cookie and consent banners covered.
-- [ ] **Part 13, social adapters** (`build-plan/13-social-adapters.md`): one platform per session. The plan lists Reddit, YouTube and X, and says to check each platform's rules before writing code.
-- [ ] **Part 14, measurement and money** (`build-plan/14-measurement-and-money.md`): only after real users. Sections 14a to 14d, each decided on its own.
+- [x] **Part 09, feedback**: built. Reasons, "Disagree" on headline checks, options section with counts, export and delete. Nothing is sent.
+- [x] **Part 10, real-world testing**: built, 20 scenarios run (`docs/compat/matrix.md`). Summary and open issues in `docs/compat/`.
+- [x] **Part 11, link protector, stage 1**: built. Stage 2 (threat lookup) is not built and needs a choice from the owner (`docs/security-services.md`).
+- [x] **Part 12, annoyance tools and reading mode**: built. Cookie banners are not handled, as the plan says. Large bars are hidden, not collapsed.
+- [ ] **Part 13, social adapters**: research only. Reddit's terms couldn't be read. YouTube's policy conflicts with fetching its pages (owner decision, `docs/adapters/youtube.md`). X, Facebook and Instagram: skip (`docs/adapters/README.md`).
+- [ ] **Part 14, measurement and money**: mostly gated by the plan (real users, a partner, a billing decision). The usage-count schema exists; nothing sends it (`docs/measurement.md`).
+
+## 6. Bugs the build-out found (not yet fixed)
+
+- [ ] Listing pages read as articles (Guardian UK news). Matrix row 2.
+- [ ] Ars's opening looks like a pull quote; arXiv's opening is the licence note.
+- [ ] No "No transcript available" message on YouTube (waits on the YouTube decision).
+- [ ] Cards at 200% zoom with long real reasons or summaries haven't been tested.
+- [x] Mirror's opening was a timestamp (fixed, D29).
+- [x] Link check line made cards too tall at 200% zoom (fixed: one compact row; disagree moved into the panel).
+

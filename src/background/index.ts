@@ -11,6 +11,7 @@ import type { LinkResult } from '../core/types';
 import { clearCached } from '../core/retrieve/cache';
 import { retrieve, type RetrieveResponse } from './retrieve';
 import { checkSiteCorrections } from './corrections';
+import { checkRedirects } from './redirects';
 import type { CorrectionsResult } from '../core/source/corrections';
 
 const MENU_ID = 'linkpeek-peek';
@@ -61,6 +62,10 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse: (r: un
     case 'corrections':
       if (!fromContentScript) return false;
       checkSiteCorrections(msg.url).then(sendResponse, () => sendResponse({ kind: 'error' } satisfies CorrectionsResult));
+      return true;
+    case 'check-redirects':
+      if (!fromContentScript) return false;
+      checkRedirects(msg.url).then(sendResponse, () => sendResponse({ kind: 'error', reason: 'network' }));
       return true;
     case 'open-permission':
       if (!fromContentScript || !sender.tab?.id) return false;

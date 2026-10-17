@@ -5,8 +5,8 @@
  * (position: fixed) just under the link, so opening it never pushes page
  * content around. Only one card is open at a time.
  */
-import { MSG } from '../core/messages';
-import type { FeedbackValue } from '../core/feedback/store';
+import { FEEDBACK_REASON_LABEL, MSG } from '../core/messages';
+import { FEEDBACK_REASONS, type FeedbackReason, type FeedbackValue } from '../core/feedback/store';
 import { brandCss } from '../ui/theme';
 import { icon } from './svg';
 import { toCardView, type CardInput, type CardView } from './view-model';
@@ -125,7 +125,18 @@ export function attachIcon(
 
 export interface CardHandlers {
   onClose: () => void;
-  onFeedback: (value: FeedbackValue) => void;
+  /** A thumbs up or down. Resolves once it's saved; rejects if it couldn't be. */
+  onFeedback: (value: FeedbackValue) => Promise<void>;
+  /** The optional reason for the thumbs-down just given. */
+  onFeedbackReason: (reason: FeedbackReason) => Promise<void>;
+  /** "Disagree with this rating?" under a tick or a cross. */
+  onDisagree: () => Promise<void>;
+  /** "Don't warn me on this site", on a warning. */
+  onOverrule?: () => void;
+  /** "Check where this link goes", on the link check line. */
+  onCheckWhere?: () => void;
+  /** "Read here" (reading mode, Part 12). */
+  onReadHere?: () => void;
   onAction?: () => void;
   /** Looks for the site's corrections page. Only ever asked for by the user's button. */
   onCorrections?: () => Promise<CorrectionsResult>;
@@ -134,6 +145,11 @@ export interface CardHandlers {
 /** What the card's owner wants to hear about. */
 export interface CardCallbacks {
   onFeedback: (value: FeedbackValue) => Promise<void>;
+  onFeedbackReason: (reason: FeedbackReason) => Promise<void>;
+  onDisagree: () => Promise<void>;
+  onOverrule: () => void;
+  onCheckWhere: () => void;
+  onReadHere: () => void;
   /** The card closed (for any reason). */
   onClosed?: () => void;
   /** The card's button (e.g. "Allow access…") was pressed. */
@@ -158,7 +174,7 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     status.append(icon(view.status.verdict), text(view.status.label));
     top.append(status);
   }
-  const definitions = view.showDefinitions ? definitionsBlock() : undefined;
+  const definitions = view.showDefinitions ? definitionsBlock(view.canDisagree ? disagreeControl(handlers, card) : undefined) : undefined;
   const source = view.sourceLines ? sourceBlock(view.sourceLines, handlers) : undefined;
   if (view.evidenceTag) top.append(el('span', 'tag', view.evidenceTag));
   if (view.isDemo) {
@@ -184,6 +200,14 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     words.append(el('strong', '', view.warning));
     if (view.warningDetail) words.append(el('span', 'warning-detail', view.warningDetail));
     warning.append(icon('warning'), words);
+    if (view.canOverrule && handlers.onOverrule) {
+      const overrule = document.createElement('button');
+      overrule.type = 'button';
+      overrule.className = 'overrule-button';
+      overrule.textContent = MSG.overruleButton;
+      overrule.addEventListener('click', handlers.onOverrule);
+      warning.append(overrule);
+    }
     card.append(warning);
   }
 
@@ -210,6 +234,7 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
       if (view.revealNote) body.append(el('p', 'reveal-note', view.revealNote));
     }
     if (view.note) body.append(el('p', 'note', view.note));
+    if (view.linkCheck || view.canCheckWhere) body.append(linkCheckLine(view, handlers));
     if (view.action && handlers.onAction) {
       const action = document.createElement('button');
       action.type = 'button';
@@ -241,15 +266,28 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
       open.textContent = view.openLabel;
       footer.append(open);
     }
+    if (view.canReadHere && handlers.onReadHere) {
+      const read = document.createElement('button');
+      read.type = 'button';
+      read.className = 'read-here';
+      read.textContent = MSG.readHere;
+      read.addEventListener('click', handlers.onReadHere);
+      footer.append(read);
+    }
     footer.append(el('span', 'spacer'));
-    if (view.showFeedback) footer.append(feedbackControls(handlers.onFeedback));
+    if (view.showFeedback) footer.append(feedbackControls(handlers, card));
     card.append(footer);
   }
 
   return card;
 }
 
-function feedbackControls(onFeedback: (v: FeedbackValue) => void): HTMLElement {
+/**
+ * "Was this useful?" thumbs. A thumbs-down then offers the optional reasons.
+ * Each step is saved as it happens. A double press can't vote twice, because
+ * the buttons are off as soon as one is pressed.
+ */
+function feedbackControls(handlers: CardHandlers, card: HTMLElement): HTMLElement {
   const wrap = el('span', 'feedback');
   wrap.setAttribute('role', 'group');
   wrap.setAttribute('aria-label', MSG.feedbackQuestion);
@@ -265,10 +303,135 @@ function feedbackControls(onFeedback: (v: FeedbackValue) => void): HTMLElement {
     b.title = label;
     b.dataset.value = value;
     b.append(icon(iconName));
-    b.addEventListener('click', () => onFeedback(value));
+    b.addEventListener('click', () => void vote(wrap, value));
     wrap.append(b);
   }
+
+  async function vote(group: HTMLElement, value: FeedbackValue): Promise<void> {
+    setDisabled(group, true);
+    try {
+      await handlers.onFeedback(value);
+    } catch {
+      group.replaceWith(statusLine(MSG.feedbackFailed));
+      card.focus({ preventScroll: true });
+      return;
+    }
+    if (value === 'down') {
+      // Focus goes to the first reason, so a keyboard user can pick one straight away.
+      const reasons = reasonControls(handlers, card);
+      group.replaceWith(reasons);
+      reasons.querySelector<HTMLElement>('.reason-option')?.focus({ preventScroll: true });
+      return;
+    }
+    group.replaceWith(statusLine(MSG.feedbackThanks));
+    card.focus({ preventScroll: true });
+  }
   return wrap;
+}
+
+/** The optional "What was wrong?" list after a thumbs-down. Skipping it is fine. */
+function reasonControls(handlers: CardHandlers, card: HTMLElement): HTMLElement {
+  const wrap = el('div', 'feedback-reasons');
+  wrap.setAttribute('role', 'group');
+  wrap.setAttribute('aria-label', MSG.feedbackWrongQuestion);
+  wrap.append(el('p', 'question', MSG.feedbackWrongQuestion));
+  const list = el('div', 'reason-list');
+  for (const reason of FEEDBACK_REASONS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'reason-option';
+    b.dataset.reason = reason;
+    b.textContent = FEEDBACK_REASON_LABEL[reason];
+    b.addEventListener('click', () => void choose(reason));
+    list.append(b);
+  }
+  const skip = document.createElement('button');
+  skip.type = 'button';
+  skip.className = 'reason-option skip';
+  skip.textContent = MSG.feedbackSkip;
+  skip.addEventListener('click', () => finish(statusLine(MSG.feedbackThanks)));
+  list.append(skip);
+  wrap.append(list);
+
+  async function choose(reason: FeedbackReason): Promise<void> {
+    setDisabled(wrap, true);
+    try {
+      await handlers.onFeedbackReason(reason);
+    } catch {
+      finish(statusLine(MSG.feedbackFailed));
+      return;
+    }
+    finish(statusLine(MSG.feedbackThanks));
+  }
+
+  function finish(node: HTMLElement): void {
+    wrap.replaceWith(node);
+    card.focus({ preventScroll: true });
+  }
+  return wrap;
+}
+
+/**
+ * The link check's outcome, in small type, with a button that asks the site
+ * where the link really goes. Nothing is asked of the site until that button
+ * is pressed.
+ */
+function linkCheckLine(view: CardView, handlers: CardHandlers): HTMLElement {
+  // One compact row, so a card keeps its height (the 200% zoom test depends on it).
+  const line = el('div', 'link-check');
+  if (view.linkCheck) {
+    const text = [`${MSG.linkCheckHeading} ${view.linkCheck.label}.`, ...view.linkCheck.notes].join(' ');
+    line.append(el('p', 'link-check-label', text));
+  }
+  if (view.canCheckWhere && handlers.onCheckWhere) {
+    const check = document.createElement('button');
+    check.type = 'button';
+    check.className = 'check-where';
+    check.textContent = MSG.checkWhere;
+    check.addEventListener('click', () => {
+      check.disabled = true;
+      check.textContent = MSG.checkingWhere;
+      handlers.onCheckWhere?.();
+    });
+    line.append(check);
+  }
+  return line;
+}
+
+/** "Disagree with this rating?" under a tick or cross. Kept apart from the thumbs: it's a separate signal. */
+function disagreeControl(handlers: CardHandlers, card: HTMLElement): HTMLElement {
+  const wrap = el('div', 'disagree');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'disagree-button';
+  b.textContent = MSG.feedbackDisagree;
+  b.addEventListener('click', () => void press());
+  wrap.append(b);
+
+  async function press(): Promise<void> {
+    b.disabled = true;
+    let line: HTMLElement;
+    try {
+      await handlers.onDisagree();
+      line = statusLine(MSG.feedbackDisagreeThanks);
+    } catch {
+      line = statusLine(MSG.feedbackFailed);
+    }
+    wrap.replaceWith(line);
+    card.focus({ preventScroll: true });
+  }
+  return wrap;
+}
+
+/** A short confirmation that replaces a control once it's used. Announced politely. */
+function statusLine(message: string): HTMLElement {
+  const node = el('span', 'thanks', message);
+  node.setAttribute('role', 'status');
+  return node;
+}
+
+function setDisabled(group: HTMLElement, disabled: boolean): void {
+  for (const b of group.querySelectorAll('button')) b.disabled = disabled;
 }
 
 /** A toggle that opens a panel under the card. The panel is built the first time it's opened, so a shut panel costs nothing. */
@@ -298,7 +461,12 @@ function explainerToggle(
 }
 
 /** "What does this mean?": the three outcomes. */
-function definitionsBlock(): { toggle: HTMLElement; panel: HTMLElement } {
+/**
+ * The three outcomes, in the "What does this mean?" panel. "Disagree with this
+ * rating?" sits at the end of it, so the card's height doesn't change (the 200%
+ * zoom test depends on that).
+ */
+function definitionsBlock(disagree?: HTMLElement): { toggle: HTMLElement; panel: HTMLElement } {
   return explainerToggle(MSG.whatDoesThisMean, 'definitions-toggle', 'definitions', (panel) => {
     panel.append(el('p', 'definitions-intro', MSG.definitionsIntro));
     for (const [term, meaning] of MSG.verdictDefinitions) {
@@ -306,6 +474,7 @@ function definitionsBlock(): { toggle: HTMLElement; panel: HTMLElement } {
       line.append(el('strong', '', term), text(` ${meaning}`));
       panel.append(line);
     }
+    if (disagree) panel.append(disagree);
   });
 }
 
@@ -473,28 +642,17 @@ export class CardController {
     this.root.querySelector('.card')?.remove();
     const card = renderCard(toCardView(input), this.anchor.href, {
       onClose: () => this.close({ restoreFocus: true }),
-      onFeedback: (value) => void this.giveFeedback(value),
+      onFeedback: (value) => this.callbacks?.onFeedback(value) ?? Promise.resolve(),
+      onFeedbackReason: (reason) => this.callbacks?.onFeedbackReason(reason) ?? Promise.resolve(),
+      onDisagree: () => this.callbacks?.onDisagree() ?? Promise.resolve(),
+      onOverrule: () => this.callbacks?.onOverrule(),
+      onCheckWhere: () => this.callbacks?.onCheckWhere(),
+      onReadHere: () => this.callbacks?.onReadHere(),
       onAction: () => this.callbacks?.onAction?.(),
       onCorrections: () => this.callbacks?.onCorrections?.() ?? Promise.resolve({ kind: 'error' }),
     });
     this.root.append(card);
     this.position();
-  }
-
-  private async giveFeedback(value: FeedbackValue): Promise<void> {
-    const footerFeedback = this.root?.querySelector('.feedback');
-    const onFeedback = this.callbacks?.onFeedback;
-    if (!footerFeedback || !onFeedback) return;
-    let message: string = MSG.feedbackThanks;
-    try {
-      await onFeedback(value);
-    } catch {
-      message = MSG.feedbackFailed;
-    }
-    const thanks = el('span', 'thanks', message);
-    thanks.setAttribute('role', 'status');
-    footerFeedback.replaceWith(thanks);
-    this.focus();
   }
 
   private position = (): void => {

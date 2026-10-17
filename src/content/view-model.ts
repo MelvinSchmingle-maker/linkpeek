@@ -6,6 +6,8 @@ import {
   ARTICLE_KIND_LABEL,
   EVIDENCE_TAG,
   FAILURE_MESSAGE,
+  LINK_CHECK_LABEL,
+  LINK_NOT_A_GUARANTEE,
   MSG,
   opensOn,
   permissionNeeded,
@@ -15,7 +17,7 @@ import {
   VERDICT_LABEL,
 } from '../core/messages';
 import { siteOf } from '../core/retrieve/url';
-import type { HeadlineVerdict, LinkResult, PrimaryCounts, SourceInfo } from '../core/types';
+import type { HeadlineVerdict, LinkResult, LinkRisk, PrimaryCounts, SourceInfo } from '../core/types';
 
 /** One fact in "About this source": what it says, and where it came from. */
 export interface SourceLine {
@@ -24,7 +26,16 @@ export interface SourceLine {
   from?: string;
 }
 
-export type CardInput = { kind: 'loading'; isDemo: boolean } | { kind: 'result'; result: LinkResult };
+export type CardInput =
+  | { kind: 'loading'; isDemo: boolean; risk?: LinkRisk }
+  /** `readingMode`: the user has reading mode on for this site (Part 12). */
+  | { kind: 'result'; result: LinkResult; readingMode?: boolean };
+
+/** The link check's line under the card: the outcome, and any notes that go with it. */
+export interface LinkCheckLine {
+  label: string;
+  notes: string[];
+}
 
 export interface CardView {
   /** Tick / cross / neutral mark. Absent while loading, when nothing could be read, or when no check ran. */
@@ -57,6 +68,18 @@ export interface CardView {
   revealNote?: string;
   /** Offer the "What does this mean?" explanation of the three outcomes. */
   showDefinitions?: boolean;
+  /** Offer "Disagree with this rating?" under a tick or cross (never under "no verdict"). */
+  canDisagree?: boolean;
+  /** The link check's outcome, shown quietly under the card when there's no warning row. */
+  linkCheck?: LinkCheckLine;
+  /** Offer "Don't warn me on this site" with a warning. */
+  canOverrule?: boolean;
+  /** The site a warning or an overrule is about. */
+  warningSite?: string;
+  /** Offer "Check where this link goes" (asks the site, once, when pressed). */
+  canCheckWhere?: boolean;
+  /** Offer "Read here" (reading mode, Part 12): only for a full article, when the user has it on. */
+  canReadHere?: boolean;
   /** "About this source": one line per fact, each with where it came from. Only when the page was read. */
   sourceLines?: SourceLine[];
   /** A small factual note, e.g. the link opens on another site. */
@@ -68,7 +91,9 @@ export interface CardView {
 
 export function toCardView(input: CardInput): CardView {
   if (input.kind === 'loading') {
-    return { isDemo: input.isDemo, loading: true, message: MSG.loading, showFeedback: false, openLabel: MSG.openArticle };
+    const view: CardView = { isDemo: input.isDemo, loading: true, message: MSG.loading, showFeedback: false, openLabel: MSG.openArticle };
+    if (input.risk) riskView(view, input.risk);
+    return view;
   }
 
   const r = input.result;
@@ -76,14 +101,11 @@ export function toCardView(input: CardInput): CardView {
     isDemo: r.isDemo,
     loading: false,
     evidenceTag: EVIDENCE_TAG[r.evidence],
-    warning: RISK_WARNING[r.linkRisk.level],
     showFeedback: false,
     openLabel: MSG.openArticle,
   };
-  if (view.warning) {
-    view.warningDetail = r.linkRisk.reason;
-    view.openLabel = MSG.openAnyway;
-  }
+  riskView(view, r.linkRisk);
+  view.canReadHere = Boolean(input.readingMode && r.evidence === 'full' && !r.isDemo && !r.failure);
   if (r.finalUrl && siteOf(r.finalUrl) && siteOf(r.finalUrl) !== siteOf(r.url)) view.note = opensOn(siteOf(r.finalUrl));
   if (r.source) view.sourceLines = sourceLines(r.source);
 
@@ -146,10 +168,38 @@ export function toCardView(input: CardInput): CardView {
   return view;
 }
 
+/**
+ * The link check, as the card shows it. A suspicious or mismatched link gets a
+ * warning row (unless the user has switched warnings off for its site). Every
+ * other outcome gets a quiet line. Nothing here says a link is safe.
+ */
+function riskView(view: CardView, risk: LinkRisk | undefined): void {
+  if (!risk) return;
+  const warnable = risk.level === 'suspicious' || risk.level === 'mismatch' || risk.level === 'known-threat';
+  if (risk.site) view.warningSite = risk.site;
+  if (warnable && !risk.overruled) {
+    view.warning = RISK_WARNING[risk.level];
+    view.warningDetail = risk.reason;
+    view.openLabel = MSG.openAnyway;
+    view.canOverrule = Boolean(risk.site);
+  }
+  // Demo cards show fixtures, not a real check, so they get no link check line.
+  if (view.isDemo) return;
+  if (warnable && risk.overruled && risk.site) {
+    view.linkCheck = { label: LINK_CHECK_LABEL[risk.level], notes: [MSG.overruled(risk.site)] };
+  } else if (!warnable) {
+    const notes = risk.level === 'no-known-warning' ? [LINK_NOT_A_GUARANTEE] : risk.reason ? [risk.reason] : [];
+    view.linkCheck = { label: LINK_CHECK_LABEL[risk.level], notes };
+  }
+  if (risk.note && view.linkCheck) view.linkCheck.notes.push(risk.note);
+  if (risk.site) view.canCheckWhere = true;
+}
+
 function addVerdict(view: CardView, r: LinkResult): void {
   const { verdict, reason, notChecked, rewrite, revealsWithheld } = r.headlineCheck;
   if (notChecked) return;
   view.status = { verdict, label: VERDICT_LABEL[verdict] };
+  view.canDisagree = verdict !== 'unknown';
   view.reason = reason ?? (verdict === 'unknown' && r.evidence !== 'full' ? MSG.insufficient : undefined);
   view.showDefinitions = true;
   if (rewrite) {

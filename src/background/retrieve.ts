@@ -20,6 +20,7 @@ import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
 import { getInstallId } from '../core/storage/install-id';
 import { getSettings } from '../core/storage/settings';
+import { adapterFor } from '../adapters';
 import { OFFSCREEN_TARGET, type OffscreenRequest, type OffscreenResponse } from '../offscreen/messages';
 
 export interface RetrieveRequest {
@@ -28,6 +29,8 @@ export interface RetrieveRequest {
   headline: string;
   /** What the page fetched or read itself, when it did. */
   fromPage?: FetchOutcome;
+  /** Reading mode (Part 12): also return the article's paragraphs. Reads the page again; nothing is cached.*/
+  readable?: boolean;
 }
 
 export type RetrieveResponse = { kind: 'result'; result: LinkResult } | { kind: 'fetch-from-page' };
@@ -38,7 +41,7 @@ export async function retrieve(req: RetrieveRequest, pageUrl: string | undefined
   const key = cacheKey(req.url);
   // Shared between simultaneous requests for the same article from the same
   // site (whether the page may fetch it depends on which site it's on).
-  const flightKey = `${key}|${pageUrl ? new URL(pageUrl).origin : ''}`;
+  const flightKey = `${key}|${pageUrl ? new URL(pageUrl).origin : ''}|${req.readable ? 'readable' : ''}`;
   let pending = inFlight.get(flightKey);
   if (!pending || req.fromPage) {
     pending = work(req, key, pageUrl);
@@ -51,7 +54,14 @@ export async function retrieve(req: RetrieveRequest, pageUrl: string | undefined
 }
 
 async function work(req: RetrieveRequest, key: string, pageUrl: string | undefined): Promise<Assessment | 'fetch-from-page'> {
-  if (!req.fromPage) {
+  // A platform adapter (Part 13) may answer first. None is registered yet, so the general reader runs.
+  const adapter = adapterFor(new URL(req.url));
+  if (adapter && !req.readable) {
+    const answer = await adapter.read({ url: new URL(req.url), headline: req.headline }).catch(() => undefined);
+    if (answer) return answer;
+  }
+  // Reading mode always reads the page: the cache holds no article text, so it can't answer.
+  if (!req.fromPage && !req.readable) {
     const cached = await getCached(key);
     if (cached) return cached;
   }
@@ -67,8 +77,13 @@ async function work(req: RetrieveRequest, key: string, pageUrl: string | undefin
     return { evidence: 'unavailable', failure: 'permission-denied' };
   }
 
-  const assessment = outcome.ok ? await assessRaw(outcome.raw, req.headline) : assessFetchError(outcome.error);
-  if (cacheable(assessment)) await setCached(key, assessment);
+  const assessment = outcome.ok ? await assessRaw(outcome.raw, req.headline, req.readable) : assessFetchError(outcome.error);
+  if (cacheable(assessment)) {
+    // The article's text (reading mode) is handed on, but never kept.
+    const storable: Assessment = { ...assessment };
+    delete storable.readable;
+    await setCached(key, storable);
+  }
   return assessment;
 }
 
@@ -85,6 +100,7 @@ function toResult(req: RetrieveRequest, key: string, a: Assessment): LinkResult 
     ...(a.unsupported ? { unsupported: true } : {}),
     ...(a.finalUrl ? { finalUrl: a.finalUrl } : {}),
     ...(a.summary ? { summary: a.summary } : {}),
+    ...(a.readable ? { readable: a.readable } : {}),
     ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(req.url) } : {}),
     // Run per request, not cached: the same article can be linked with different wording.
     headlineCheck: checkHeadline({
@@ -141,7 +157,7 @@ async function ensureOffscreen(): Promise<void> {
   await creating;
 }
 
-async function assessRaw(raw: RawFetch, headline: string): Promise<Assessment> {
+async function assessRaw(raw: RawFetch, headline: string, readable?: boolean): Promise<Assessment> {
   await ensureOffscreen();
   clearTimeout(idleTimer);
   try {
@@ -149,7 +165,15 @@ async function assessRaw(raw: RawFetch, headline: string): Promise<Assessment> {
     // AI summaries from LinkPeek's backend only when switched on and this build has one.
     const engine = summaryEngine === 'remote' && !__API_URL__ ? 'extractive' : summaryEngine;
     const remote = engine === 'remote' ? { url: __API_URL__, installId: await getInstallId() } : undefined;
-    const msg: OffscreenRequest = { target: OFFSCREEN_TARGET, type: 'assess', raw, headline, engine, ...(remote ? { remote } : {}) };
+    const msg: OffscreenRequest = {
+      target: OFFSCREEN_TARGET,
+      type: 'assess',
+      raw,
+      headline,
+      engine,
+      ...(remote ? { remote } : {}),
+      ...(readable ? { readable: true } : {}),
+    };
     const res = (await chrome.runtime.sendMessage(msg)) as OffscreenResponse | undefined;
     if (!res?.ok) return { evidence: 'unavailable', failure: 'extraction-failed' };
     const a = res.assessment;

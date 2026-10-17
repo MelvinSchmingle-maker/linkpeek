@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FAILURE_MESSAGE, MSG, SUMMARY_BY } from '../core/messages';
-import type { LinkResult } from '../core/types';
+import type { LinkResult, LinkRisk } from '../core/types';
 import { DEMO_FIXTURES, demoResult, type DemoKey } from './fixtures';
 import { toCardView } from './view-model';
 
@@ -217,5 +217,37 @@ describe('summaries (Part 05)', () => {
     expect(v.message).toBe(MSG.partialIntro);
     expect(v.preview).toBe('A short preview.');
   });
-});
 
+  it('offers "Disagree with this rating?" under a tick or a cross, never under "no verdict"', () => {
+    expect(view('full').canDisagree).toBe(true);
+    expect(view('clickbait').canDisagree).toBe(true);
+    expect(view('partial').canDisagree).toBeFalsy();
+    expect(view('insufficient').canDisagree).toBeFalsy();
+  });
+
+  it('a link check shows its outcome in words, and never "safe"', () => {
+    // A real link, not a demo: demo cards show no link check line.
+    const risk = (level: LinkRisk['level'], extra: Partial<LinkRisk> = {}) => ({ ...result('full'), isDemo: false, linkRisk: { level, ...extra } }) as LinkResult;
+    const line = (level: LinkRisk['level'], extra?: Partial<LinkRisk>) =>
+      toCardView({ kind: 'result', result: risk(level, extra) }).linkCheck;
+    expect(line('no-known-warning')).toEqual({ label: 'No known warning', notes: ["This isn't a guarantee of safety."] });
+    expect(line('not-checked', { reason: 'This is a link shortener.' })).toEqual({ label: 'Not checked', notes: ['This is a link shortener.'] });
+    expect(JSON.stringify(line('no-known-warning'))).not.toMatch(/\bsafe\b/);
+  });
+
+  it('a warning gets a red row and the "Don\'t warn me" button, but an overruled one only a quiet line', () => {
+    const r = (linkRisk: LinkRisk) => ({ ...result('full'), isDemo: false, linkRisk }) as LinkResult;
+    const open = toCardView({ kind: 'result', result: r({ level: 'suspicious', reason: 'Looks like PayPal.', site: 'paypa1.com' }) });
+    expect(open).toMatchObject({ warning: 'Suspicious destination', warningDetail: 'Looks like PayPal.', canOverrule: true, openLabel: 'Open link anyway' });
+    const off = toCardView({ kind: 'result', result: r({ level: 'suspicious', reason: 'Looks like PayPal.', site: 'paypa1.com', overruled: true }) });
+    expect(off.warning).toBeUndefined();
+    expect(off.canOverrule).toBeUndefined();
+    expect(off.linkCheck?.notes).toEqual([MSG.overruled('paypa1.com')]);
+  });
+
+  it('a redirect check note is shown under the outcome, and the check can be offered', () => {
+    const v = toCardView({ kind: 'result', result: { ...result('full'), isDemo: false, linkRisk: { level: 'not-checked', reason: 'Shortener.', site: 'bit.ly', note: 'It goes to example.test.' } } as LinkResult });
+    expect(v.linkCheck?.notes).toEqual(['Shortener.', 'It goes to example.test.']);
+    expect(v.canCheckWhere).toBe(true);
+  });
+});

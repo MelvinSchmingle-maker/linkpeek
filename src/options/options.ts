@@ -5,6 +5,10 @@ import type { SummaryEngine } from '../core/summary/provider';
 import { renderModePicker } from '../ui/mode-picker';
 import { MSG } from '../core/messages';
 import { applyBrand } from '../ui/theme';
+import { deleteAllFeedback, listFeedback, type FeedbackEntry } from '../core/feedback/store';
+import { countReasons, countVotes, exportFeedback } from '../core/feedback/report';
+import { FEEDBACK_REASON_LABEL } from '../core/messages';
+import { ANNOYANCE_LABEL, ANNOYANCE_ORDER } from '../content/annoyance/labels';
 
 applyBrand();
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -141,7 +145,16 @@ async function render(): Promise<void> {
         )
       : [empty('None yet. Turn LinkPeek on for a site from its toolbar button.')]),
   );
-  const { disabledSites } = await getSettings();
+  const { disabledSites, overruledWarnings } = await getSettings();
+  $('#overruled-list').replaceChildren(
+    ...(overruledWarnings.length
+      ? overruledWarnings.map((site) =>
+          item(site, 'Show warnings again', () =>
+            void updateSettings({ overruledWarnings: overruledWarnings.filter((s) => s !== site) }),
+          ),
+        )
+      : [empty('None.')]),
+  );
   const hasAccess = new Set(
     await Promise.all(
       disabledSites.map(async (h) => ((await hasSiteAccess(h)) ? h : '')),
@@ -194,3 +207,115 @@ for (const [term, meaning] of MSG.verdictDefinitions) {
   line.append(name, ` ${meaning}`);
   $('#verdict-definitions').append(line);
 }
+
+// Your feedback (Part 09): what's stored here, a file to export, and delete-all.
+// Delete takes two presses, so nothing is lost by a stray click and no dialog is needed.
+const feedbackCounts = $('#feedback-counts');
+const feedbackStatus = $('#feedback-status');
+const feedbackDelete = $<HTMLButtonElement>('#feedback-delete');
+const DELETE_LABEL = 'Delete all feedback';
+let deleteArmed = false;
+
+async function renderFeedback(): Promise<FeedbackEntry[]> {
+  const entries = await listFeedback();
+  const votes = countVotes(entries);
+  const up = votes['summary-usefulness']?.up ?? 0;
+  const down = votes['summary-usefulness']?.down ?? 0;
+  const disagree = votes.clickbait?.disagree ?? 0;
+  const lines: string[] = [
+    `Summaries: ${up} thumbs up, ${down} thumbs down.`,
+    `Headline checks: ${disagree} "disagree" votes.`,
+  ];
+  const reasons = countReasons(entries).filter((r) => r.count > 0);
+  const reasonItems = reasons.map(({ reason, count }) =>
+    reason === 'none' ? `No reason given: ${count}` : `${FEEDBACK_REASON_LABEL[reason]}: ${count}`,
+  );
+  feedbackCounts.replaceChildren(
+    ...[...lines, ...(reasonItems.length ? ['Thumbs-down reasons:', ...reasonItems] : [])].map((text) => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      return li;
+    }),
+  );
+  feedbackDelete.disabled = entries.length === 0;
+  return entries;
+}
+
+$('#feedback-export').addEventListener('click', async () => {
+  const entries = await listFeedback();
+  const blob = new Blob([exportFeedback(entries, Date.now())], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'linkpeek-feedback.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  feedbackStatus.textContent = `Exported ${entries.length} ${entries.length === 1 ? 'vote' : 'votes'}.`;
+});
+
+feedbackDelete.addEventListener('click', async () => {
+  if (!deleteArmed) {
+    deleteArmed = true;
+    feedbackDelete.textContent = 'Press again to delete every vote';
+    feedbackStatus.textContent = 'Nothing is deleted until you press it a second time.';
+    return;
+  }
+  await deleteAllFeedback();
+  deleteArmed = false;
+  feedbackDelete.textContent = DELETE_LABEL;
+  feedbackStatus.textContent = 'All feedback deleted.';
+  await renderFeedback();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.feedback) void renderFeedback();
+});
+await renderFeedback();
+
+// Annoyance tools (Part 12): the global choices, and each site's own choices.
+function renderAnnoyanceOptions(settings: Awaited<ReturnType<typeof getSettings>>): void {
+  $('#annoyance-global').replaceChildren(
+    ...ANNOYANCE_ORDER.map((tool) => {
+      const label = document.createElement('label');
+      label.className = 'toggle';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = settings.annoyance[tool];
+      box.addEventListener('change', () =>
+        void (async () => {
+          const latest = await getSettings();
+          await updateSettings({ annoyance: { ...latest.annoyance, [tool]: box.checked } });
+        })(),
+      );
+      const text = document.createElement('span');
+      text.textContent = ANNOYANCE_LABEL[tool].name;
+      const hint = document.createElement('span');
+      hint.className = 'muted';
+      hint.textContent = ANNOYANCE_LABEL[tool].hint;
+      text.append(document.createElement('br'), hint);
+      label.append(box, text);
+      return label;
+    }),
+  );
+  const sites = Object.entries(settings.annoyanceSites);
+  $('#annoyance-sites').replaceChildren(
+    ...(sites.length
+      ? sites.map(([site, choices]) => {
+          const on = ANNOYANCE_ORDER.filter((t) => choices[t] !== undefined).map((t) => `${ANNOYANCE_LABEL[t].name}: ${choices[t] ? 'on' : 'off'}`);
+          return item(`${site} (${on.join(', ')})`, 'Remove', () => {
+            void (async () => {
+              const latest = await getSettings();
+              const next = { ...latest.annoyanceSites };
+              delete next[site];
+              await updateSettings({ annoyanceSites: next });
+            })();
+          });
+        })
+      : [empty('None. The popup sets these for one site at a time.')]),
+  );
+}
+onSettingsChanged((next) => renderAnnoyanceOptions(next));
+renderAnnoyanceOptions(await getSettings());
+

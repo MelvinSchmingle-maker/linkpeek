@@ -33,5 +33,20 @@ Official documentation relied on for decisions. Checked 13 Oct 2026.
 | pdfjs-dist | Apache-2.0 | Reads text from PDFs (shipped in the extension, worker included as a file) |
 | @anthropic-ai/sdk | MIT | Backend only (`server/`): calls Claude. Not in the extension |
 | @vercel/firewall | Apache-2.0 | Backend only (`server/`): rate limits. Not in the extension |
+| tldts (7.4.18, pinned) | MIT | Shipped in the extension: works out a web address's registrable site from the public suffix list (Part 11) |
 
 Readability and pdf.js are the only code in the shipped extension that isn't ours. Both are bundled at build time; nothing is loaded from the internet.
+
+## Part 11 and the threat-lookup research (17 Oct 2026)
+
+Read on 17 Oct 2026 for `docs/security-services.md`. Pages that came back truncated are marked, and no figure from them is used.
+
+| Topic | Source | What we used it for |
+|---|---|---|
+| Google Safe Browsing terms | https://developers.google.com/safe-browsing/v4/terms (last modified 24 Jul 2019) | Commercial use needs a separate agreement; attribution and notice; 30-minute freshness |
+| Google Web Risk pricing | https://cloud.google.com/security/products/web-risk and https://cloud.google.com/web-risk/pricing | **Truncated: prices not verified** |
+| URLhaus API | https://urlhaus.abuse.ch/api/ | Free Auth-Key; fair use; commercial use may need a paid subscription |
+| VirusTotal public vs premium API | https://docs.virustotal.com/reference/public-vs-premium-api | Public API: 500 a day, 4 a minute, no commercial use |
+| PhishTank API | https://phishtank.org/api_info.php | Key recommended; descriptive User Agent; no commercial-use wording on the page |
+| Chrome: manual redirects in an extension | Tested in Chromium 141 (not a documentation page): `redirect: 'manual'` returns an opaque redirect with no Location | Why the redirect check reports only the final address |
+

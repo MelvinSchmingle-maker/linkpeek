@@ -1,0 +1,419 @@
+{
+ "about": "Labelled addresses for the link checks (src/core/security/assess.ts). expect is the outcome the check must give. Clean popular sites must never be flagged; that rate is tracked.",
+ "cases": [
+  {
+   "href": "https://www.bbc.co.uk/news/articles/c3qjn45pepx1o",
+   "text": "BBC News article",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.theguardian.com/uk-news",
+   "text": "Guardian",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://en.wikipedia.org/wiki/Dachshund",
+   "text": "Dachshund",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://en.wikipedia.org/wiki/PayPal",
+   "text": "PayPal",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://github.com/owner/repo",
+   "text": "owner/repo",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.paypal.com/uk/home",
+   "text": "PayPal",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.paypal.com/signin",
+   "text": "Sign in to PayPal",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://accounts.google.com/signin",
+   "text": "Sign in with Google",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.amazon.co.uk/dp/B0EXAMPLE",
+   "text": "Amazon.co.uk",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.amazon.com/s?k=kettle",
+   "text": "Amazon",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.apple.com/iphone/",
+   "text": "Apple iPhone",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://support.apple.com/en-gb/HT201",
+   "text": "Apple support",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.microsoft.com/en-gb/windows",
+   "text": "Windows 11",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://outlook.live.com/mail/",
+   "text": "Outlook",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.netflix.com/title/80000001",
+   "text": "Netflix",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.ebay.co.uk/itm/123456789",
+   "text": "eBay",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.reddit.com/r/UKPersonalFinance/",
+   "text": "r/UKPersonalFinance",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+   "text": "Rick Astley video",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.gov.uk/government/news/new-action-on-self-employment",
+   "text": "New action on self-employment",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.ons.gov.uk/economy/inflationandpriceindices",
+   "text": "Inflation",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.nhs.uk/conditions/dachshund/",
+   "text": "NHS",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.independent.co.uk/news/uk/politics/x-123.html",
+   "text": "Headline about politics",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://news.ycombinator.com/item?id=50087328",
+   "text": "discussion, 120 comments",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.dailymail.co.uk/news/article-1/x.html",
+   "text": "Apple",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.bbc.co.uk/news/technology-1",
+   "text": "Sign in to watch the Apple keynote live",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.theguardian.com/technology/2026/oct/16/x",
+   "text": "Google's new chip",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.bbc.co.uk/news/business-2",
+   "text": "Banks warn about account scams",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.barclays.co.uk/",
+   "text": "Barclays",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.hsbc.com/",
+   "text": "HSBC",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.lloydsbank.com/",
+   "text": "Lloyds Bank",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.steampowered.com/app/570",
+   "text": "Dota 2",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://store.steampowered.com/",
+   "text": "Steam store",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.applesfarm.org/",
+   "text": "Apple's farm",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://arstechnica.com/ai/2026/10/youtube-music-begins-labeling-ai-songs/",
+   "text": "YouTube Music begins labeling AI songs",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.theverge.com/ai-artificial-intelligence/1010962/jpmorgan",
+   "text": "JPMorgan Chase is keeping AI agents out",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://apnews.com/article/x-123",
+   "text": "Officials say",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://www.bbc.co.uk/",
+   "text": "bbc.co.uk",
+   "expect": "no-known-warning",
+   "group": "clean"
+  },
+  {
+   "href": "https://paypa1.com/login",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://paypaI.com/",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://arnazon.co.uk/",
+   "text": "Amazon",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://amaz0n.com/deals",
+   "text": "Amazon deals",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://app1e.com/",
+   "text": "Apple",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://netfIix.com/login",
+   "text": "Netflix",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://paypall.com/",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "lookalike"
+  },
+  {
+   "href": "https://secure-paypal-login.xyz/",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "brand-in-address"
+  },
+  {
+   "href": "https://microsoft-support.example/help",
+   "text": "Microsoft support",
+   "expect": "suspicious",
+   "group": "brand-in-address"
+  },
+  {
+   "href": "https://paypal.com.secure-login.xyz/",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "brand-in-address"
+  },
+  {
+   "href": "https://login.paypal.com.evil.net/",
+   "text": "Log in",
+   "expect": "suspicious",
+   "group": "brand-in-address"
+  },
+  {
+   "href": "https://apple-id.example/signin",
+   "text": "Apple ID",
+   "expect": "suspicious",
+   "group": "sign-in-imitation"
+  },
+  {
+   "href": "https://netflix-billing.example/payment",
+   "text": "Netflix",
+   "expect": "suspicious",
+   "group": "sign-in-imitation"
+  },
+  {
+   "href": "http://192.168.1.10/paypal/login",
+   "text": "Sign in",
+   "expect": "suspicious",
+   "group": "ip-address"
+  },
+  {
+   "href": "http://[2001:db8::1]/",
+   "text": "Open the file",
+   "expect": "suspicious",
+   "group": "ip-address"
+  },
+  {
+   "href": "https://paypal.com@evil.example/pay",
+   "text": "PayPal",
+   "expect": "suspicious",
+   "group": "at-sign"
+  },
+  {
+   "href": "https://a.b.c.d.e.f.g.example.org/",
+   "text": "Read more",
+   "expect": "suspicious",
+   "group": "long-address"
+  },
+  {
+   "href": "https://xn--pple-43d.com/",
+   "text": "Apple",
+   "expect": "suspicious",
+   "group": "mixed-script"
+  },
+  {
+   "href": "https://example-files.net/setup.exe",
+   "text": "Download the installer",
+   "expect": "suspicious",
+   "group": "download"
+  },
+  {
+   "href": "https://example.org/tools/tool.zip",
+   "text": "Download",
+   "expect": "suspicious",
+   "group": "download"
+  },
+  {
+   "href": "https://evil.example/",
+   "text": "www.bbc.co.uk",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://news-site.example/",
+   "text": "Sign in to PayPal",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://example-shop.xyz/",
+   "text": "Log in with Google",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://wiki-mirror.example/",
+   "text": "Amazon.co.uk",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://www.bbc.com/",
+   "text": "bbc.co.uk",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://bit.ly/3shortened",
+   "text": "paypal.com",
+   "expect": "mismatch",
+   "group": "text-mismatch"
+  },
+  {
+   "href": "https://bit.ly/3abc",
+   "text": "Read more",
+   "expect": "not-checked",
+   "group": "shortener"
+  },
+  {
+   "href": "https://tinyurl.com/yx7z",
+   "text": "tinyurl link",
+   "expect": "not-checked",
+   "group": "shortener"
+  },
+  {
+   "href": "https://t.co/abcdef",
+   "text": "https://t.co/abcdef",
+   "expect": "not-checked",
+   "group": "shortener"
+  },
+  {
+   "href": "mailto:someone@example.com",
+   "text": "Email us",
+   "expect": "not-checked",
+   "group": "not-web"
+  },
+  {
+   "href": "ftp://files.example.com/a.txt",
+   "text": "Files",
+   "expect": "not-checked",
+   "group": "not-web"
+  },
+  {
+   "href": "https://localhost:4173/articles/x.html",
+   "text": "Local page",
+   "expect": "not-checked",
+   "group": "no-site-name"
+  }
+ ]
+}

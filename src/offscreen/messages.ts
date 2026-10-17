@@ -15,6 +15,8 @@ export interface OffscreenRequest {
   engine: SummaryEngine;
   /** Only when the engine is "remote": where the backend is, and this install's random ID. */
   remote?: RemoteConfig;
+  /** Reading mode (Part 12) asked for the article's paragraphs. */
+  readable?: boolean;
 }
 
 export type OffscreenResponse = { ok: true; assessment: Assessment } | { ok: false; error: string };

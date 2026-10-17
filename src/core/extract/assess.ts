@@ -41,6 +41,12 @@ export interface Assessment {
   summary?: Summary;
   /** Added for full articles, for the headline check (Part 07). Derived facts, never article text. */
   facts?: ContentFacts;
+  /**
+   * The article's paragraphs, for reading mode (Part 12). Only when the reader
+   * was asked for them, only for full articles, and never stored: the cache
+   * keeps the assessment without them.
+   */
+  readable?: string[];
 }
 
 export interface FetchedMeta {

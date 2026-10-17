@@ -2,6 +2,7 @@
  * Every user-facing sentence in one place. Short, plain, no blame, no jargon.
  * Never imply a page was read when it wasn't.
  */
+import type { FeedbackReason } from './feedback/store';
 import type {
   ArticleKind,
   EvidenceLevel,
@@ -58,8 +59,32 @@ export const MSG = {
   feedbackDown: 'No, not useful',
   feedbackThanks: 'Thanks for the feedback.',
   feedbackFailed: "Couldn't save your feedback.",
+  feedbackWrongQuestion: 'What was wrong? (optional)',
+  feedbackSkip: 'Skip',
+  feedbackDisagree: 'Disagree with this rating?',
+  feedbackDisagreeThanks: 'Thanks. Noted on this device only.',
+  linkCheckHeading: 'Link check:',
+  overruleButton: "Don't warn me on this site",
+  overruled: (site: string) => `Warnings are off for links to ${site}. You can turn them back on in Settings.`,
+  checkWhere: 'Check where this link goes',
+  checkingWhere: 'Checking...',
+  checkedWhere: (site: string) => `It goes to ${site}, after any redirects. Chrome doesn't show each redirect to LinkPeek, so only the final address is known.`,
+  checkWhereFailed: "Couldn't check where this link goes right now.",
+  readHere: 'Read here',
+  readHereFailed: "Couldn't open the article for reading.",
+  checkWhereNeedsAccess: (site: string) => `LinkPeek needs your permission to check where this link goes on ${site}.`,
   noKnownWarningNote: "This isn't a guarantee of safety.",
 } as const;
+
+/** The reasons for a thumbs-down, in the order the card shows them. Keys match FEEDBACK_REASONS. */
+export const FEEDBACK_REASON_LABEL: Record<FeedbackReason, string> = {
+  'missed-main-point': 'Missed the main point',
+  'factually-inaccurate': 'Factually inaccurate',
+  'too-vague': 'Too vague',
+  'not-article-match': "Didn't match the article",
+  inaccessible: 'Article inaccessible',
+  other: 'Other',
+};
 
 /** Shown when LinkPeek may not fetch pages from the link's site yet. */
 export function permissionNeeded(host: string): string {
@@ -83,12 +108,24 @@ export const EVIDENCE_TAG: Partial<Record<EvidenceLevel, string>> = {
   'headline-only': 'Headline only',
 };
 
-/** Link warnings shown in the compact card. "no-known-warning" and "not-checked" stay quiet there. */
+/** Link warnings shown in the compact card, in a red row with the reason. */
 export const RISK_WARNING: Partial<Record<LinkRiskLevel, string>> = {
   'known-threat': 'Known threat detected',
   suspicious: 'Suspicious destination',
   mismatch: 'Goes somewhere different from what it shows',
 };
+
+/** The five link outcomes, in the exact words the card uses (Part 11). */
+export const LINK_CHECK_LABEL: Record<LinkRiskLevel, string> = {
+  'known-threat': 'Known threat detected',
+  suspicious: 'Suspicious destination',
+  mismatch: 'Goes somewhere different from what it shows',
+  'no-known-warning': 'No known warning',
+  'not-checked': 'Not checked',
+};
+
+/** Never "safe". Shown after "No known warning". */
+export const LINK_NOT_A_GUARANTEE = "This isn't a guarantee of safety.";
 
 const SITE_BLOCKED = "Couldn't open this article.";
 

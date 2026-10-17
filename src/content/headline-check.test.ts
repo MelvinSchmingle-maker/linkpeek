@@ -20,7 +20,7 @@ function result(headlineCheck: LinkResult['headlineCheck'], evidence: LinkResult
 }
 
 function card(r: LinkResult) {
-  return renderCard(toCardView({ kind: 'result', result: r }), link.href, { onClose: vi.fn(), onFeedback: vi.fn() });
+  return renderCard(toCardView({ kind: 'result', result: r }), link.href, { onClose: vi.fn(), onFeedback: vi.fn(), onFeedbackReason: vi.fn(), onDisagree: vi.fn() });
 }
 
 describe('the headline check on the card (Part 07)', () => {

@@ -239,3 +239,54 @@ The check is the one thing in the source card that makes requests to the site, s
 
 ## D52. Pages that build their text in the browser show their description (Part 04 follow-up)
 A page that needs JavaScript to show its text is reported as "The page needs to run in a browser tab to show its text" (`js-rendered-empty`). When the page has a description of its own (meta tags or structured data), the card shows that description as a preview, labelled "Preview only". That's the whole handling for now. LinkPeek doesn't open the page in a hidden tab and doesn't run page scripts. A hidden tab needs a new permission, so it stays an owner decision (`todo.md` section 3). The rule itself (`looksJsRendered`) is unchanged: on 12 live news pages it fired on none (`docs/compat/part-04-live.md`). It fired on YouTube, which is built in the browser, and LinkPeek showed that page's description as expected.
+
+## D53. Feedback: reasons, a separate headline signal, and nothing sent (Part 09)
+- **Thumbs down opens an optional reason list** (missed the main point, factually inaccurate, too vague, didn't match the article, article inaccessible, other). Skipping is fine. Focus moves to the first reason, so the keyboard can pick one straight away. A reason belongs to the same vote as the thumbs-down; there is still one record per result and signal.
+- **"Disagree with this rating?" is its own signal (`clickbait`).** It only appears under a tick or cross, never under "no verdict". It's never mixed with summary votes, and no vote changes any result.
+- **One vote per result and signal.** Voting again replaces the old vote and drops its reason. The same vote twice, such as a double press, is stored once. The buttons also switch off after the first press.
+- **Delete all takes two presses**, on the options page, so a stray click loses nothing and no browser dialog is needed.
+- **Export leaves out the result id.** That id is a hash of the page address, so a file that carried it could be used to check whether a known page had been voted on.
+- **Sending to a server is not built.** The setting exists, is off and hidden, and the code sends nothing whatever it says. `docs/privacy.md` says what would be sent if Part 14 ever turns it on.
+- **Unused signals stay in the type.** `summary-accuracy` and `security` are in the stored type as the plan lists them, but the card doesn't offer them yet.
+
+## D54. The link check, stage 1: warn, never block, never "safe" (Part 11)
+- **Warns, never blocks.** Every warning has "Open link anyway". Nothing is stopped.
+- **Five outcomes, in the words the plan gives.** "Known threat detected" needs a threat list, which stage 1 doesn't have, so stage 1 never gives it. It's kept in the wording so stage 2 can use it.
+- **"No known warning" is always followed by "This isn't a guarantee of safety."** The word "safe" doesn't appear in the outcomes. A test checks the card text.
+- **Rules, not scores.** Each rule has a name, and the strongest one that fires gives the reason. The rules are in `src/core/security/assess.ts`, with their lists in `lists.ts`.
+- **Shorteners are "Not checked", not a warning.** The destination is hidden, and that's stated plainly. A shortener is not a suspicious destination: most shortened links are fine.
+- **Loopback addresses (127.x, ::1) aren't warned about.** They're this computer. Other number addresses are.
+- **Downloads of programs and archives are "Suspicious destination".** That includes some legitimate zips. The reason says what the link downloads, so it can be judged.
+- **Brands:** only the brand's name part counts, so paypal.de is PayPal. Lookalike checks: a swapped digit or letter pattern (paypa1), or one letter away on a name of six letters or more. Short names don't get the one-letter rule, to avoid false alarms on words like "apples".
+- **Link text is checked in two cases only:** text that is itself a web address, and short text (five words or fewer) with a brand name and a sign-in or payment word. A news headline that names Apple is not a mismatch.
+- **Labelled set:** `eval/urls.json`, 69 addresses, written together with the rules, so the results are a first check and not a proof. Exact match 69 of 69; 26 of 26 flagged addresses flagged; no false alarms on the 37 clean addresses (popular sites and ordinary headlines that name a brand). An independently written set is the next step.
+- **"Don't warn me on this site" switches off warnings for the link's site (its registrable domain, e.g. paypa1.com), not for the page the link sits on.** The check still runs and the card says warnings are off. Settings lists these sites, with a way to show their warnings again. Scope chosen: the destination, because that is what the warning is about.
+- **"Check where this link goes" is asked of the link's site, once, only when pressed, and only with access to that site.** The redirect checks the plan asked for can't be done in an extension: Chrome gives no per-hop information to an extension (tested: manual redirects return an opaque response with no Location), and Chrome sets its own limit on redirects (up to 20), so LinkPeek can't enforce five. The card says that only the final address is known.
+- **Stage 2 (a threat lookup) isn't built.** `docs/security-services.md` compares Google Safe Browsing (commercial use needs an agreement), Google Web Risk (paid; prices not verified), URLhaus (free key, fair use), VirusTotal (no commercial use on the public API) and PhishTank (registration status unclear). None is integrated, pending the owner's choice.
+- **No new permission.** The redirect check uses the access the user has already given the site.
+
+## D55. Annoyance tools: each one separate, undoable, and never near a login or a consent notice (Part 12)
+- **Six tools, each a switch:** reading mode, sign-up boxes, floating videos, large sticky bars, urgency labels, autoplay with sound. Off by default. Set globally in Settings, or for one site in the popup. A site's own choice wins over the global one, tool by tool.
+- **Hiding is undoable.** Each hidden element gets `display: none !important`, and the old inline value is recorded and put back. Nothing is removed from the page. "Undo on this page" puts everything back; the tools stay on in settings until the page reloads.
+- **Never hidden:** anything with a password field, anything with consent or cookie wording, and LinkPeek's own elements. A sign-up box is hidden only if it covers at least 40% of the screen, has an email field and sign-up wording, and has no password field or consent wording. If it locked the page's scrolling, the scrolling is unlocked (recorded, and undone with the rest).
+- **Urgency labels add a note; they never hide.** The note says "LinkPeek can't verify this", not that the claim is false.
+- **Autoplay: pause only sound-on media.** Muted autoplay is left alone. Undo puts the autoplay setting back, but doesn't start the media.
+- **The tools work where LinkPeek runs on the page.** On a site that's off, or in Manual mode before a click, nothing changes. This follows the permission model: LinkPeek doesn't run on sites it can't reach.
+- **Not built, as the plan says:** a collapse button on large bars (they're hidden, and undo brings them back), and cookie-banner handling, which the plan leaves for a later decision.
+- **Ten real sites (`docs/compat/annoyance.md`):** automated measures only. Eight pages started the page script, and two didn't. One element hidden on the Guardian and three on the Mirror, of which the sticky one is unidentified. A person still needs to browse those sites with the tools on.
+
+## D56. Reading mode: the article again, in LinkPeek's panel, never kept (Part 12)
+- **"Read here"** appears on a card for a full article, when reading mode is on for the site. It doesn't appear for previews, paywalled pages, or demo results.
+- **It reads the page again.** The cache keeps no article text, so reading mode always fetches the page (one more request). The text goes to the card and to the panel, and nowhere else.
+- **The panel is drawn by LinkPeek, in its own shadow root.** The text goes in as text, never as markup. "Close" and Escape close it, and closing it forgets the text.
+- **Paywalls stay closed.** The panel only ever shows what the reader was allowed to read, which is never a paywalled body (D27).
+
+## D57. Social adapters: research first, and only the shared hook built (Part 13)
+- **Five platforms researched, none built.** Reddit: the terms couldn't be read. YouTube: its developer policies prohibit scraping, and LinkPeek currently fetches YouTube pages, which is a conflict for the owner to decide (`docs/adapters/youtube.md`). X: a paid API, and the pricing page errored. Facebook and Instagram: behind a login.
+- **The shared hook exists:** `src/adapters/index.ts` defines the `Adapter` interface, and the service worker asks the registry before the general reader. With nothing registered, nothing changes.
+- **Honest limit:** no captions, transcripts or platform-specific data are read.
+
+## D58. Part 10's matrix and Part 14 (built as far as they can be)
+- **The matrix is run, not read from code.** Twenty scenarios: the live rows from the 17 Oct run, four extra live runs, and fixture tests. Rows that were not run are said so.
+- **Part 14 is mostly not built, on purpose.** Usage counts need a backend and real users, and a partner and billing need decisions the owner hasn't made. The schema for counts exists, refuses URLs and article text, and nothing sends it (`docs/measurement.md`).
+
