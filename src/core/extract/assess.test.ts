@@ -32,7 +32,11 @@ describe('reading real article layouts', () => {
 
   it('reads the publisher, dates and title from the page metadata', () => {
     const a = judge('cycle-lanes.html');
-    expect(a.source).toMatchObject({ publisher: 'The Millbrook Gazette', published: '2026-10-13T09:00:00Z', modified: '2026-10-13T11:30:00Z' });
+    expect(a.source).toMatchObject({
+      publisher: { value: 'The Millbrook Gazette', from: 'meta-tags' },
+      published: { value: '2026-10-13T09:00:00Z', from: 'meta-tags' },
+      modified: { value: '2026-10-13T11:30:00Z', from: 'structured-data' },
+    });
     expect(a.extract?.title).toBe('Council approves protected cycle lanes for High Street');
     expect(a.extract?.firstSentence).toMatch(/^Millbrook council has approved two kilometres/);
   });

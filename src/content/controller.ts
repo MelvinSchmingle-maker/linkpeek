@@ -24,6 +24,7 @@ import type { LinkResult } from '../core/types';
 import { attachIcon, CardController, HOST_ATTR, isOurHost, isWebUrl } from './card';
 import { demoResult, isDemoKey } from './fixtures';
 import type { ContentMessage, ContentResponse, SiteStatus, WorkerMessage } from './messages';
+import type { CorrectionsResult } from '../core/source/corrections';
 import { htmlLinksIn, LinkScanner } from './scanner';
 
 const DEMO_ATTR = 'data-linkpeek-demo';
@@ -239,6 +240,7 @@ export class PageController {
       onFeedback: (value: FeedbackValue) => this.feedback(this.shown, value),
       onClosed,
       onAction: () => this.askForAccess(link),
+      onCorrections: () => this.checkCorrections(link),
     };
     if (result === 'loading') {
       this.cards.open(link, button, { kind: 'loading', isDemo: true }, callbacks);
@@ -276,6 +278,18 @@ export class PageController {
       res = await this.askWorker({ ...req, fromPage: await fetchLimited(link.href, { via: 'page' }) });
     }
     show(res?.kind === 'result' ? res.result : unreachable(link.href, headline));
+  }
+
+  /** Asks the service worker for the site's corrections page. Only when the user presses the card's button. */
+  private async checkCorrections(link: HTMLAnchorElement): Promise<CorrectionsResult> {
+    try {
+      const res = (await chrome.runtime.sendMessage({ type: 'corrections', url: link.href } satisfies WorkerMessage)) as
+        | CorrectionsResult
+        | undefined;
+      return res ?? { kind: 'error' };
+    } catch {
+      return { kind: 'error' };
+    }
   }
 
   /** Message the service worker, trying once more if it was restarted mid-request. */

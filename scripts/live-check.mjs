@@ -20,6 +20,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionPath = resolve(root, 'dist-live');
 const outFile = resolve(root, 'docs/compat/part-04-live.md');
 
+/** Counts of each primary-source kind, in words, for one table cell. */
+const primaryShort = (c) => `gov ${c.government}, court ${c.court}, research ${c.research}, PDF ${c.pdf}`;
+
 /** [label, address, what we expect a person to see] */
 const PAGES = [
   ['BBC News article', 'https://www.bbc.co.uk/news/articles/c3qjn45pepx1o', 'full'],
@@ -66,6 +69,12 @@ try {
       summary: r?.summary ? `${r.summary.text} (${r.summary.wordCount})` : '',
       // Just where it ended up: query strings on robot-check pages are one-off tokens.
       finalUrl: r?.finalUrl ? new URL(r.finalUrl).origin + new URL(r.finalUrl).pathname : '',
+      // The source card's facts (Part 08), as the card would show them.
+      publisher: r?.source?.publisher?.value ?? '',
+      published: r?.source?.published?.value ?? '',
+      articleType: r?.source?.articleType?.value ?? '',
+      author: r?.source?.author?.value ?? '',
+      primary: r?.source?.primarySources ? primaryShort(r.source.primarySources.value) : '',
       seconds: (ms / 1000).toFixed(1),
     });
     console.log(`${label}: ${r?.evidence ?? res.kind}${r?.failure ? ` (${r.failure})` : ''} in ${(ms / 1000).toFixed(1)}s`);
@@ -84,12 +93,12 @@ const date = new Date().toISOString().slice(0, 10);
 const table = `${START}
 Run on ${date}. **${full} of ${rows.length}** pages came back \`full\`.
 
-| Page | Expected | Evidence | Reason | Read by | Words | Opening or preview | Summary (words) | Time |
+| Page | Expected | Evidence | Reason | Read by | Words | Opening or preview | Summary (words) | Publisher | Published | Article type | Author | Primary-source links | Time |
 |---|---|---|---|---|---|---|---|---|
 ${rows
   .map(
     (r) =>
-      `| [${cell(r.label)}](${r.url}) | ${cell(r.expected)} | ${r.evidence} | ${cell(r.failure)} | ${r.method} | ${r.words} | ${cell(r.shown)} | ${cell(r.summary)} | ${r.seconds}s |`,
+      `| [${cell(r.label)}](${r.url}) | ${cell(r.expected)} | ${r.evidence} | ${cell(r.failure)} | ${r.method} | ${r.words} | ${cell(r.shown)} | ${cell(r.summary)} | ${cell(r.publisher)} | ${cell(r.published)} | ${r.articleType} | ${cell(r.author)} | ${cell(r.primary)} | ${r.seconds}s |`,
   )
   .join('\n')}
 

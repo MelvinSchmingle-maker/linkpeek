@@ -18,6 +18,7 @@ import {
 } from '../retrieve/diagnose';
 import type { FetchError } from '../retrieve/fetcher';
 import { siteOf } from '../retrieve/url';
+import { sourceInfo } from '../source/facts';
 import type { ArticleExtract, ContentFacts, EvidenceLevel, FailureReason, SourceInfo, Summary } from '../types';
 import type { HtmlExtraction } from './html';
 import { firstSentence, limitWords } from './sentences';
@@ -60,7 +61,7 @@ export function assessHtml(meta: FetchedMeta, html: string, ex: HtmlExtraction):
   const md = ex.metadata;
   const base: Assessment = {
     evidence: 'unavailable',
-    source: compact({ publisher: md.siteName, published: md.published, modified: md.modified }),
+    source: sourceInfo({ url: meta.finalUrl, metadata: md, links: ex.links, labels: ex.labels }),
     ...finalUrlOf(meta),
   };
   const fail = (failure: FailureReason, preview?: string): Assessment => ({
@@ -148,7 +149,8 @@ export interface PdfExtraction {
 }
 
 export function assessPdf(meta: FetchedMeta, pdf: PdfExtraction): Assessment {
-  const base: Assessment = { evidence: 'unavailable', ...finalUrlOf(meta) };
+  // A PDF has no page metadata: only what the address says (its host, and a path such as /opinion/).
+  const base: Assessment = { evidence: 'unavailable', source: sourceInfo({ url: meta.finalUrl, metadata: {}, labels: [] }), ...finalUrlOf(meta) };
   const statusFailure = failureFromStatus(meta.status);
   if (statusFailure) return { ...base, failure: statusFailure };
   const truncated = pdf.pagesRead < pdf.totalPages;
@@ -178,9 +180,4 @@ function samePath(a: string, b: string): boolean {
   } catch {
     return a === b;
   }
-}
-
-function compact<T extends object>(o: T): T | undefined {
-  const entries = Object.entries(o).filter(([, v]) => v !== undefined && v !== '');
-  return entries.length ? (Object.fromEntries(entries) as T) : undefined;
 }

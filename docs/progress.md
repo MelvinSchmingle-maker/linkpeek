@@ -256,3 +256,27 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - One browser test (infinite feed, icon count) failed once in a full run from a scroll race in the test page. It passes alone, three times out of three. Not caused by this part, not fixed.
 
 **Your check:** read the crosses that went wrong in `docs/eval/part-07.md`. The held-out set had no false crosses. The first run's one false cross was a timeline headline, and the rule now lets it through. Would those publishers have a fair complaint?
+
+## Part 08. Source card: "About this source" (17 Oct 2026, built; not checked on your five sites yet)
+
+**Built:**
+- `src/core/source/`: the facts (`facts.ts`), the article type (`article-type.ts`), primary-source links (`primary.ts`), and the corrections check (`corrections.ts`). D46 to D50.
+- The reader records where each fact came from, and reads the article's links and its labels ("Sponsored", "Press release", "Opinion"), inside the article only (`src/core/extract/html.ts`). Every value has an origin, so "from the page's meta tags" is accurate, not a guess.
+- The card: "About this source" sits on the same line as "What does this mean?". It opens a note, one line per fact with its origin, and a button that looks for a corrections page (D51).
+- The corrections check runs in the service worker, when the card's button is pressed only (`src/background/corrections.ts`).
+- `scripts/live-check.mjs` records the source fields for its ten URLs, and `docs/compat/part-04-live.md` has the table (run on 17 Oct 2026, real sites).
+- Test pages: `test-pages/source.html`, `test-pages/articles/source-story.html` (with a PDF link and a government link), `test-pages/articles/sponsored-guide.html`, and `test-pages/corrections.html` (served at `/corrections`).
+
+**Tested (actual results):**
+- Unit tests: fixture pages for each source case (news with structured data, opinion, sponsored, press release, analysis, a bare page), article type precedence, primary-source addresses, corrections outcomes (found, not found, error, a soft "page not found", a non-page). Sponsored and opinion detection are tested on fixtures, as the plan asks.
+- Browser tests (`e2e/source-card.spec.ts`): the facts and their origins on a real article, the sponsored label, and the corrections check finding `/corrections` when asked.
+- `npm run check` and the full browser suite: see the commit message for the final numbers.
+
+**Not done or not verified:**
+- Checking the card on five sites you know well (the plan's "Your check"). Only the test pages and the live table so far.
+- Ownership and independent coverage: not built (see D46).
+- The corrections check needs LinkPeek's access to the site. On a site with no access, it asks for it, and it doesn't check anything until then.
+- Article type and primary sources rely on rough rules and on what sites put in their pages. Expect some wrong or missing facts on sites with unusual layouts. The card shows where each fact came from, so these can be spotted.
+- Pages that aren't articles still get link counts when their text is long enough (the Hacker News thread shows zero). The paywall page gets no counts, because only its public description was read.
+
+**Your check:** open the source card on five sites you know well. Is anything wrong or misleading? Wrong facts hurt more than missing ones.

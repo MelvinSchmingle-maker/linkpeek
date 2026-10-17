@@ -34,9 +34,11 @@ export type WorkerMessage =
   /** Open LinkPeek's small window that asks for access to a link's site. */
   | { type: 'open-permission'; url: string }
   /** Sent by that window once access is granted. */
-  | { type: 'permission-granted'; tabId: number };
+  | { type: 'permission-granted'; tabId: number }
+  /** The user asked for the site's corrections page (Part 08). */
+  | { type: 'corrections'; url: string };
 
-const WORKER_TYPES = new Set(['site-status', 'retrieve', 'open-permission', 'permission-granted']);
+const WORKER_TYPES = new Set(['site-status', 'retrieve', 'open-permission', 'permission-granted', 'corrections']);
 
 export function isWorkerMessage(msg: unknown): msg is WorkerMessage {
   return typeof msg === 'object' && msg !== null && WORKER_TYPES.has((msg as { type?: unknown }).type as string);

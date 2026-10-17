@@ -72,6 +72,8 @@ const routes = {
   // A members-only story that sends you to a login page.
   '/redirect-login': (res) => res.writeHead(302, { location: '/accounts/login?next=%2Fmembers%2Fstory' }).end(),
   '/accounts/login': async (res) => res.writeHead(200, { 'content-type': html }).end(await readFile(join(root, 'articles/login.html'))),
+  // A corrections page at the address most sites use (Part 08).
+  '/corrections': async (res) => res.writeHead(200, { 'content-type': html }).end(await readFile(join(root, 'corrections.html'))),
   // Too slow: answers after LinkPeek has given up.
   '/slow': async (res) => {
     await wait(10_000);

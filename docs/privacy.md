@@ -12,6 +12,8 @@ When you open a card for a link, LinkPeek fetches that one page from the website
 
 The page is read on your device and the result stays on your device. Nothing is sent onward.
 
+If you press **Look for a corrections page** in a card's "About this source", LinkPeek asks that site for up to six usual addresses, such as `/corrections` and `/editorial-standards`. It does this only when you press the button, only where LinkPeek already has access to the site, and with the same rules as above: no cookies, no referrer. The result for each site is remembered for 24 hours in session storage, which Chrome clears when it closes.
+
 Summaries are made on your computer. By default LinkPeek picks a sentence from the article itself. If you switch on "Let Chrome's built-in AI write summaries" in Settings, Chrome's own on-device model writes them instead: the article text goes to that model on your computer and nowhere else. Chrome downloads the model from Google once, when you press the download button; that download is between Chrome and Google, and LinkPeek sends nothing with it.
 
 ### If you choose "LinkPeek's AI" for summaries
@@ -40,6 +42,7 @@ A link to the page you're already on is read from that page in your browser, not
 | "Turn on" note (hostname and time) | `chrome.storage.local` | Lets LinkPeek finish turning a site on if the popup closes while Chrome asks for access. Deleted once used, or ignored and deleted after 2 minutes. |
 | Results for links you opened a card for (address, what was read, the opening sentence or preview, the summary of 20 words or fewer, and a few facts for the headline check: which study limits the article states, and its money and percentage figures; never its words) | `chrome.storage.session` | So opening the same link again doesn't fetch it again. Memory only: Chrome clears it when the browser closes. At most 60 results, each kept at most 24 hours. Not written to disk. |
 | Install ID (random, only if you choose "LinkPeek's AI") | `chrome.storage.local` | Lets LinkPeek's server limit requests per install. 128 random bits, replaced every 30 days, deleted when you switch AI summaries off. |
+| Corrections-page results (the site's address and whether a page was found, only for sites you asked about) | `chrome.storage.session` | So asking about the same site again doesn't repeat the requests. Memory only, kept at most 24 hours. Not written to disk. |
 | Feedback votes (thumbs up/down) | `chrome.storage.local` | Find out which summaries help. Keeps the website's hostname (e.g. `news.example.com`), never the full address or any article text. One vote per result, at most 500 kept. |
 
 ## Rules for every future change

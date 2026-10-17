@@ -217,3 +217,22 @@ A neutral result shows "No headline verdict" and no reason when the full article
 
 Demo results already showed "No headline verdict" for neutral, so this makes real results match. Two e2e checks that assumed no verdict mark on real articles now assert that a plain article is never a cross, which is the rule that matters.
 
+## D46. What the source card shows, and what it leaves out (Part 08)
+"About this source" shows six facts: the publisher, when it was published, when it was last updated, the author, the kind of article, and how many links in the article go to primary sources. Each is one line, with where it came from in brackets. A fact the page doesn't give says "Not stated". Nothing is scored, and nothing turns a gap into a negative. A note says it shows what the page discloses and isn't a rating of accuracy.
+
+Ownership and independent coverage of the same claim are in the plan too. They aren't built, and they aren't shown as stubs to users. `src/core/source/facts.ts` says so, so they can be added later as new fields with their own evidence.
+
+## D47. Where each fact came from is shown (Part 08)
+Every fact carries its origin, from a fixed list: the page's structured data, its meta tags, its byline, the page text, a label on the page, the web address, or a count from the links in the article. The reader records the origin when it reads each value (`src/core/extract/html.ts`), so the card doesn't guess. For the publisher, the site's own name (og:site_name) comes before the company that owns it (the structured data's publisher), because readers know the site's name. The web address's host is the last resort.
+
+## D48. Article type: only when the page says so clearly (Part 08)
+A sponsored label or address comes first, then a press-release label or address, then opinion, analysis and news. Each is looked for in the page's own labels, its structured data, and its address, in that order. Labels are read only inside the article, never from the menu, header or footer, so a site's navigation bar with an "Opinion" link doesn't make every page an opinion piece. A page that doesn't say clearly gets no type. The addresses are rules of thumb (`/news/`, `/comment/`, `/sponsored/`). The card shows where the type came from, so a wrong guess can be seen and corrected.
+
+## D49. Primary sources: a count, not a judgement (Part 08)
+Links in the article text are counted in four groups: government sites (`.gov`, `.gov.uk`, `europa.eu` and similar), court sites, research sites (DOI, arXiv, PubMed and a few major journals), and PDFs. The card says how many, not whether they support the article. The list is short and rough, and it's in `src/core/source/primary.ts`. It's the first place to look if a count looks wrong. Links are counted only in article text of at least 50 words, so a fragment never says "no links".
+
+## D50. The corrections check runs only when asked (Part 08)
+The check is the one thing in the source card that makes requests to the site, so it's a button and never automatic. It tries up to six usual addresses (`/corrections`, `/editorial-standards` and so on). It sends no cookies and no referrer, and it runs only where LinkPeek already has access to the site. A page that answers 200 but says "page not found" doesn't count, and a redirect counts only if it lands on something still called corrections, editorial or ethics. A result for a site is kept for 24 hours in session storage. Errors are not kept, so trying again later can work. "Not found at the usual addresses" is worded so it doesn't say the site has no corrections policy.
+
+## D51. The card's explainer line (Part 08)
+"What does this mean?" and "About this source" share one line under the reason. The card's height doesn't change when it's closed, which the 200%-zoom browser test depends on. Each panel is built the first time it's opened, and it stays hidden until then. The Close button still comes first in reading order.

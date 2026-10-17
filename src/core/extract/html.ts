@@ -8,6 +8,7 @@
  */
 import { Readability } from '@mozilla/readability';
 import { wordCount } from '../detect/classify';
+import type { FactOrigin } from '../types';
 
 export interface PageMetadata {
   title?: string;
@@ -21,7 +22,12 @@ export interface PageMetadata {
   author?: string;
   /** The publisher's own statement (schema.org) that the page isn't free to read. */
   isAccessibleForFree?: boolean;
+  /** Where the publisher, dates, author and type came from (for the source card). */
+  origin?: Partial<Record<'siteName' | 'published' | 'modified' | 'author' | 'type', FactOrigin>>;
 }
+
+/** Labels the article itself carries. Found only in the article's own area, never in menus or footers. */
+export type PageLabel = 'sponsored' | 'press-release' | 'opinion';
 
 export interface HtmlExtraction {
   metadata: PageMetadata;
@@ -36,6 +42,10 @@ export interface HtmlExtraction {
   paragraphs: string[];
   /** The page's declared language (<html lang>), if any. */
   language?: string;
+  /** Absolute web links from the article text, for counting primary sources. Undefined when no article text was read. */
+  links?: string[];
+  /** Labels such as "Sponsored" or "Press release" found in the article's own area. */
+  labels: PageLabel[];
   /** All visible-ish body text (scripts and styles removed), for words and phrase checks. */
   bodyWords: number;
   bodySample: string;
@@ -59,7 +69,24 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
   doc.head?.prepend(base);
 
   const metadata = readMetadata(doc);
+  const origin = (metadata.origin ??= {});
   const title = (doc.querySelector('title')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  // Author from the byline link, when the page has no author in its tags or structured data.
+  if (!metadata.author) {
+    const byline = personName(doc.querySelector('[rel~="author" i]')?.textContent?.replace(/\s+/g, ' ').trim());
+    if (byline) {
+      metadata.author = byline;
+      origin.author = 'byline';
+    }
+  }
+  // Published date from a <time> in the article, when nothing else gave one.
+  if (!metadata.published) {
+    const time = doc.querySelector('article time[datetime], time[itemprop="datePublished" i][datetime]')?.getAttribute('datetime')?.trim();
+    if (time) {
+      metadata.published = time;
+      origin.published = 'page-text';
+    }
+  }
   const signals = {
     hasPasswordField: Boolean(doc.querySelector('input[type="password" i]')),
     hasPaywallElement: Boolean(
@@ -81,6 +108,7 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
 
   let articleText = '';
   let paras: string[] = [];
+  let links: string[] | undefined;
   try {
     // Readability changes the document it reads, so give it a copy.
     const parsed = new Readability(doc.cloneNode(true) as Document, { charThreshold: 400 }).parse();
@@ -88,12 +116,23 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
       const readable = new DOMParser().parseFromString(parsed.content, 'text/html');
       paras = articleParagraphs(doc, readable);
       articleText = blockText(readable.body);
+      // A fragment isn't an article: counting its links would say "none" about a page we barely read.
+      if (wordCount(articleText) >= MIN_WORDS_FOR_LINKS) links = linksIn(readable, url);
     } else {
       articleText = (parsed?.textContent ?? '').replace(/\s+/g, ' ').trim();
     }
-    if (!metadata.siteName && parsed?.siteName) metadata.siteName = parsed.siteName;
-    if (!metadata.published && parsed?.publishedTime) metadata.published = parsed.publishedTime;
-    if (!metadata.author && parsed?.byline) metadata.author = parsed.byline;
+    if (!metadata.siteName && parsed?.siteName) {
+      metadata.siteName = parsed.siteName;
+      origin.siteName = 'page-text';
+    }
+    if (!metadata.published && parsed?.publishedTime) {
+      metadata.published = parsed.publishedTime;
+      origin.published = 'page-text';
+    }
+    if (!metadata.author && personName(parsed?.byline)) {
+      metadata.author = personName(parsed?.byline);
+      origin.author = 'byline';
+    }
   } catch {
     // Readability gave up on this page: treat it as having no article text.
   }
@@ -106,6 +145,8 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
     lead: paras[0] ?? '',
     paragraphs: paras,
     language: doc.documentElement?.getAttribute('lang')?.trim() || undefined,
+    links,
+    labels: pageLabels(doc),
     bodyWords,
     bodySample: bodyText.slice(0, 20_000),
     signals,
@@ -191,14 +232,21 @@ function meta(doc: Document, ...names: string[]): string | undefined {
 }
 
 function readMetadata(doc: Document): PageMetadata {
+  const origin: NonNullable<PageMetadata['origin']> = {};
+  const fromTags = <K extends keyof NonNullable<PageMetadata['origin']>>(key: K, value: string | undefined) => {
+    if (value) origin[key] = 'meta-tags';
+    return value;
+  };
   const md: PageMetadata = {
     title: meta(doc, 'og:title', 'twitter:title'),
     description: meta(doc, 'og:description', 'description', 'twitter:description', 'citation_abstract', 'dc.description'),
-    siteName: meta(doc, 'og:site_name', 'application-name'),
+    siteName: fromTags('siteName', meta(doc, 'og:site_name', 'application-name')),
     type: meta(doc, 'og:type'),
-    published: meta(doc, 'article:published_time', 'citation_publication_date', 'dc.date', 'date'),
-    modified: meta(doc, 'article:modified_time', 'og:updated_time'),
-    author: meta(doc, 'author', 'article:author', 'citation_author'),
+    published: fromTags('published', meta(doc, 'article:published_time', 'citation_publication_date', 'dc.date', 'date')),
+    modified: fromTags('modified', meta(doc, 'article:modified_time', 'og:updated_time')),
+    // article:author is often a profile link, not a name.
+    author: fromTags('author', personName(meta(doc, 'author', 'citation_author') ?? meta(doc, 'article:author'))),
+    origin,
   };
   const canonical = doc.querySelector('link[rel="canonical" i]')?.getAttribute('href');
   if (canonical) {
@@ -213,13 +261,32 @@ function readMetadata(doc: Document): PageMetadata {
     const type = ([] as unknown[]).concat(node['@type'] ?? []).map(String);
     if (!type.some((t) => ARTICLE_TYPES.test(t))) continue;
     const t = type.find((x) => x !== 'WebPage') ?? type[0];
-    if (t && (!md.type || md.type === 'article' || md.type === 'website')) md.type = t;
+    if (t && (!md.type || md.type === 'article' || md.type === 'website')) {
+      md.type = t;
+      origin.type = 'structured-data';
+    }
     md.title ??= str(node.headline) ?? str(node.name);
     md.description ??= str(node.description) ?? str(node.abstract);
-    md.published ??= str(node.datePublished);
-    md.modified ??= str(node.dateModified);
+    if (!md.published && str(node.datePublished)) {
+      md.published = str(node.datePublished);
+      origin.published = 'structured-data';
+    }
+    if (!md.modified && str(node.dateModified)) {
+      md.modified = str(node.dateModified);
+      origin.modified = 'structured-data';
+    }
     const publisher = node.publisher as Record<string, unknown> | undefined;
-    md.siteName ??= str(publisher?.name);
+    if (!md.siteName && str(publisher?.name)) {
+      md.siteName = str(publisher?.name);
+      origin.siteName = 'structured-data';
+    }
+    if (!md.author) {
+      const author = personName(jsonLdName(node.author));
+      if (author) {
+        md.author = author;
+        origin.author = 'structured-data';
+      }
+    }
     const free = node.isAccessibleForFree;
     if (free === false || (typeof free === 'string' && free.toLowerCase() === 'false')) md.isAccessibleForFree = false;
     else if (free === true || (typeof free === 'string' && free.toLowerCase() === 'true')) md.isAccessibleForFree ??= true;
@@ -230,6 +297,76 @@ function readMetadata(doc: Document): PageMetadata {
     }
   }
   return md;
+}
+
+/** A plausible author name: short, and not a profile link. */
+function personName(v: string | null | undefined): string | undefined {
+  if (!v || /^https?:\/\//i.test(v) || v.length > 100) return undefined;
+  return v;
+}
+
+/** schema.org author: a name, a person or organisation object, or a list of them. */
+function jsonLdName(v: unknown): string | undefined {
+  if (typeof v === 'string') return str(v);
+  if (Array.isArray(v)) return v.map(jsonLdName).filter(Boolean).join(', ') || undefined;
+  if (v && typeof v === 'object') return str((v as Record<string, unknown>).name);
+  return undefined;
+}
+
+const MAX_LINKS = 400;
+/** Fewest words of article text before its links are counted. */
+const MIN_WORDS_FOR_LINKS = 50;
+
+/** Web links in the article text, resolved against the page's address. */
+function linksIn(root: Document, pageUrl: string): string[] {
+  const out = new Set<string>();
+  for (const a of root.querySelectorAll('a[href]')) {
+    if (out.size >= MAX_LINKS) break;
+    try {
+      const u = new URL(a.getAttribute('href') ?? '', pageUrl);
+      if (u.protocol === 'http:' || u.protocol === 'https:') {
+        u.hash = '';
+        out.add(u.href);
+      }
+    } catch {
+      // A link that isn't a valid address. Skip it.
+    }
+  }
+  return [...out];
+}
+
+/** Navigation, headers and footers never carry an article's own labels. */
+const LABEL_ZONE = 'nav, header, footer, aside, form, script, style, noscript, [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]';
+
+const LABEL_TEXT: [PageLabel, RegExp][] = [
+  ['sponsored', /^(sponsored( content)?|paid content|paid for by\b.*|partner content|promoted)\s*:?$/i],
+  ['press-release', /^(press release|news release)\s*:?$/i],
+  ['opinion', /^(opinion|comment)\s*:?$/i],
+];
+
+/**
+ * Labels the article carries in its own area: a short line that reads
+ * exactly "Sponsored", "Press release" or "Opinion", or a block whose class
+ * says it's sponsored. Only the article (or main content) is searched, and
+ * never its navigation, header or footer.
+ */
+function pageLabels(doc: Document): PageLabel[] {
+  const zone = doc.querySelector('article') ?? doc.querySelector('main, [role="main"]') ?? doc.body;
+  if (!zone) return [];
+  const found = new Set<PageLabel>();
+  for (const el of zone.querySelectorAll('span, p, div, small, strong, em, h1, h2, h3, h4, h5, h6, a, li, label')) {
+    if (el.closest(LABEL_ZONE)) continue;
+    const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (text.length > 40) continue;
+    for (const [label, re] of LABEL_TEXT) if (re.test(text)) found.add(label);
+  }
+  for (const el of zone.querySelectorAll('[class*="sponsored" i], [class*="paid-content" i]')) {
+    if (!el.closest(LABEL_ZONE)) {
+      found.add('sponsored');
+      break;
+    }
+  }
+  return [...found];
 }
 
 function str(v: unknown): string | undefined {

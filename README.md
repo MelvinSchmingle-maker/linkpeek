@@ -17,7 +17,8 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 05 Summary engine (no AI) | Done. Summaries of 20 words or fewer: the article's own most informative sentence, or Chrome's on-device AI if you switch it on |
 | 06 AI summaries | Done. Deployed at `linkpeek-api.vercel.app`, Claude Haiku 5.5 by default. Measured in `docs/eval/part-06.md` |
 | 07 Clickbait tick, cross or neutral | Built. Headline checks with one reason each, from the headline alone or with the article. Measured on a labelled set and a held-out set (`docs/eval/part-07.md`); the held-out numbers are small, so read them as a first check, not a guarantee |
-| 08 onward | Not started |
+| 08 Source card ("About this source") | Built. Publisher, dates, author, article type and links to primary sources, each with where it came from, plus a corrections-page check on request. Measured on the test pages and five real sites (`docs/compat/part-04-live.md`) |
+| 09 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
 
@@ -48,7 +49,25 @@ Then open http://127.0.0.1:4173/news-front.html in Chrome, click the LinkPeek to
 
 http://127.0.0.1:4173/retrieval.html has one link for each thing that can happen when LinkPeek reads a real page: a full article, a short item, a login wall, a paywall, a robot check, error codes, a slow site, a huge page, PDFs and more. These are read for real, not demo data.
 
+http://127.0.0.1:4173/clickbait.html has headlines to check against their articles (Part 07), and http://127.0.0.1:4173/source.html has links to articles with source facts, and "About this source" on each card (Part 08).
+
 To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
+
+## Where to change things
+
+The app is small enough to change by hand. Each of these is one place:
+
+| To change | Edit |
+|---|---|
+| Any sentence the user reads (labels, reasons, notes, definitions) | `src/core/messages.ts` |
+| How the card looks (colours, spacing, type) | `src/content/styles.css` (colours are variables in `src/ui/theme.ts`) |
+| Layout of the card: what comes first, what is a line, what is a panel | `src/content/card.ts` (`renderCard`) |
+| What the card shows for each result, in which states | `src/content/view-model.ts` |
+| The headline check's patterns and thresholds | `src/core/clickbait/rules.ts` (wording) and `check.ts` (combining) |
+| Which pages count as primary sources, or what counts as sponsored or opinion | `src/core/source/primary.ts` and `article-type.ts` |
+| The addresses the corrections check tries | `src/core/source/corrections.ts` (`CORRECTIONS_PATHS`) |
+
+After any change, `npm run build` again, then reload LinkPeek at `chrome://extensions` and try the test pages.
 
 ## Commands
 

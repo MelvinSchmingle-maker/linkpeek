@@ -2,13 +2,32 @@
  * Every user-facing sentence in one place. Short, plain, no blame, no jargon.
  * Never imply a page was read when it wasn't.
  */
-import type { EvidenceLevel, FailureReason, HeadlineVerdict, LinkRiskLevel, SummaryProviderName } from './types';
+import type {
+  ArticleKind,
+  EvidenceLevel,
+  FactOrigin,
+  FailureReason,
+  HeadlineVerdict,
+  LinkRiskLevel,
+  SummaryProviderName,
+} from './types';
 
 export const MSG = {
   iconLabel: 'Preview this link with LinkPeek',
   cardLabel: 'LinkPeek preview',
   close: 'Close preview',
   whatDoesThisMean: 'What does this mean?',
+  aboutSource: 'About this source',
+  sourceNote: "This shows what the page discloses. It isn't a rating of accuracy.",
+  notStated: 'Not stated',
+  correctionsLabel: 'Corrections page',
+  lookForCorrections: 'Look for a corrections page',
+  lookingForCorrections: 'Looking...',
+  correctionsNotChecked: 'Not checked yet.',
+  correctionsFound: 'Found:',
+  correctionsNotFound: "Not found at the usual addresses. That doesn't mean the site has no corrections policy.",
+  correctionsNeedAccess: 'LinkPeek needs access to this site to look for its corrections page.',
+  correctionsError: "Couldn't check right now. Try again later.",
   definitionsIntro: "A headline check judges the headline, not the story.",
   rewriteLabel: "LinkPeek's plainer headline, from the article:",
   revealNote: 'This rewrite states the result the headline holds back.',
@@ -101,4 +120,24 @@ export const SUMMARY_BY: Record<SummaryProviderName, string | undefined> = {
   'chrome-on-device': "Summary by Chrome's AI, on this computer:",
   remote: 'Summary by AI (Claude):',
   demo: undefined,
+};
+
+/** Where a source fact came from, in words. Shown beside the fact. */
+export const SOURCE_FROM: Record<FactOrigin, string> = {
+  'structured-data': "from the page's structured data",
+  'meta-tags': "from the page's meta tags",
+  byline: 'from the byline',
+  'page-text': 'from the page',
+  'page-label': 'from a label on the page',
+  address: 'from the web address',
+  'article-links': 'counted from the links in the article',
+};
+
+export const ARTICLE_KIND_LABEL: Record<ArticleKind, string> = {
+  news: 'News',
+  opinion: 'Opinion',
+  analysis: 'Analysis',
+  sponsored: 'Sponsored content',
+  'press-release': 'Press release',
+  other: 'Another kind of article',
 };

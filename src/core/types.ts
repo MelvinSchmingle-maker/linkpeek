@@ -107,10 +107,47 @@ export interface LinkRisk {
   reason?: string;
 }
 
+/** What kind of piece it is. "other" is a clear type we don't sort further; unclear pages get no kind at all. */
+export type ArticleKind = 'news' | 'opinion' | 'analysis' | 'sponsored' | 'press-release' | 'other';
+
+/**
+ * Where a fact came from. Shown next to the fact, so nobody has to take it on
+ * trust: "from the page's structured data", "from the web address", and so on.
+ */
+export type FactOrigin =
+  | 'structured-data'
+  | 'meta-tags'
+  | 'byline'
+  | 'page-text'
+  | 'page-label'
+  | 'address'
+  | 'article-links';
+
+export interface SourceFact<T> {
+  value: T;
+  from: FactOrigin;
+}
+
+/** How many links in the article text go to each kind of primary source. A count, never a judgement. */
+export interface PrimaryCounts {
+  government: number;
+  court: number;
+  research: number;
+  pdf: number;
+}
+
+/**
+ * What the page discloses about itself. A field that's missing is "Not stated"
+ * in the card, never a negative. Ownership and independent coverage come later
+ * and are deliberately absent (see src/core/source/facts.ts).
+ */
 export interface SourceInfo {
-  publisher?: string;
-  published?: string;
-  modified?: string;
+  publisher?: SourceFact<string>;
+  published?: SourceFact<string>;
+  modified?: SourceFact<string>;
+  author?: SourceFact<string>;
+  articleType?: SourceFact<ArticleKind>;
+  primarySources?: SourceFact<PrimaryCounts>;
 }
 
 /** How the text was obtained. */

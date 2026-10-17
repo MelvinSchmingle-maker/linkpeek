@@ -11,6 +11,8 @@ import { brandCss } from '../ui/theme';
 import { icon } from './svg';
 import { toCardView, type CardInput, type CardView } from './view-model';
 import css from './styles.css?inline';
+import type { CorrectionsResult } from '../core/source/corrections';
+import type { SourceLine } from './view-model';
 
 /** Closed in the shipped build so page scripts can't reach into our UI. Open for automated tests. */
 const SHADOW_MODE: ShadowRootMode = __E2E__ ? 'open' : 'closed';
@@ -125,6 +127,8 @@ export interface CardHandlers {
   onClose: () => void;
   onFeedback: (value: FeedbackValue) => void;
   onAction?: () => void;
+  /** Looks for the site's corrections page. Only ever asked for by the user's button. */
+  onCorrections?: () => Promise<CorrectionsResult>;
 }
 
 /** What the card's owner wants to hear about. */
@@ -134,6 +138,8 @@ export interface CardCallbacks {
   onClosed?: () => void;
   /** The card's button (e.g. "Allow access…") was pressed. */
   onAction?: () => void;
+  /** The user asked for the site's corrections page. */
+  onCorrections?: () => Promise<CorrectionsResult>;
 }
 
 /** Builds the card's DOM from a view. Pure DOM building, no positioning. */
@@ -153,6 +159,7 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     top.append(status);
   }
   const definitions = view.showDefinitions ? definitionsBlock() : undefined;
+  const source = view.sourceLines ? sourceBlock(view.sourceLines, handlers) : undefined;
   if (view.evidenceTag) top.append(el('span', 'tag', view.evidenceTag));
   if (view.isDemo) {
     const demo = el('span', 'tag demo', MSG.demoTag);
@@ -212,10 +219,16 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
       body.append(action);
     }
   }
-  // The toggle comes after the close button in reading order, so Tab reaches Close first.
-  if (definitions) body.append(definitions.toggle);
+  // Both explainers share one line, after the close button in reading order, so Tab reaches Close first.
+  if (definitions || source) {
+    const row = el('div', 'explainers');
+    if (definitions) row.append(definitions.toggle);
+    if (source) row.append(source.toggle);
+    body.append(row);
+  }
   card.append(body);
   if (definitions) card.append(definitions.panel);
+  if (source) card.append(source.panel);
 
   // Footer: open link and feedback.
   if (!view.loading && (isWebUrl(href) || view.showFeedback)) {
@@ -258,34 +271,105 @@ function feedbackControls(onFeedback: (v: FeedbackValue) => void): HTMLElement {
   return wrap;
 }
 
-/**
- * "What does this mean?": a small button in the top row, and a panel under the
- * body that stays shut (and empty) until it's opened. Closed, it costs no
- * height, so the card still fits small and zoomed-in windows.
- */
-function definitionsBlock(): { toggle: HTMLElement; panel: HTMLElement } {
+/** A toggle that opens a panel under the card. The panel is built the first time it's opened, so a shut panel costs nothing. */
+function explainerToggle(
+  label: string,
+  toggleClass: string,
+  panelClass: string,
+  fill: (panel: HTMLElement) => void,
+): { toggle: HTMLElement; panel: HTMLElement } {
   const toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.className = 'definitions-toggle';
-  toggle.textContent = MSG.whatDoesThisMean;
+  toggle.className = toggleClass;
+  toggle.textContent = label;
   toggle.setAttribute('aria-expanded', 'false');
-  const panel = el('div', 'definitions');
+  const panel = el('div', panelClass);
   panel.hidden = true;
   let filled = false;
   toggle.addEventListener('click', () => {
     if (!filled) {
       filled = true;
-      panel.append(el('p', 'definitions-intro', MSG.definitionsIntro));
-      for (const [term, meaning] of MSG.verdictDefinitions) {
-        const line = el('p', 'definition');
-        line.append(el('strong', '', term), text(` ${meaning}`));
-        panel.append(line);
-      }
+      fill(panel);
     }
     panel.hidden = !panel.hidden;
     toggle.setAttribute('aria-expanded', String(!panel.hidden));
   });
   return { toggle, panel };
+}
+
+/** "What does this mean?": the three outcomes. */
+function definitionsBlock(): { toggle: HTMLElement; panel: HTMLElement } {
+  return explainerToggle(MSG.whatDoesThisMean, 'definitions-toggle', 'definitions', (panel) => {
+    panel.append(el('p', 'definitions-intro', MSG.definitionsIntro));
+    for (const [term, meaning] of MSG.verdictDefinitions) {
+      const line = el('p', 'definition');
+      line.append(el('strong', '', term), text(` ${meaning}`));
+      panel.append(line);
+    }
+  });
+}
+
+/** "About this source": what the page discloses, each fact with where it came from, and the corrections check. */
+function sourceBlock(lines: SourceLine[], handlers: CardHandlers): { toggle: HTMLElement; panel: HTMLElement } {
+  return explainerToggle(MSG.aboutSource, 'source-toggle', 'source', (panel) => {
+    panel.append(el('p', 'source-note', MSG.sourceNote));
+    for (const l of lines) {
+      const row = el('p', 'source-line');
+      row.append(el('strong', 'source-label', l.label), text(' '), el('span', 'source-value', l.value));
+      if (l.from) row.append(el('span', 'source-from', ` (${l.from})`));
+      panel.append(row);
+    }
+    panel.append(correctionsRow(handlers));
+  });
+}
+
+/** The corrections check: asked for by a button, never run on its own. */
+function correctionsRow(handlers: CardHandlers): HTMLElement {
+  const row = el('div', 'corrections');
+  const label = el('strong', 'source-label', MSG.correctionsLabel);
+  const status = el('p', 'corrections-status', MSG.correctionsNotChecked);
+  const look = document.createElement('button');
+  look.type = 'button';
+  look.className = 'corrections-look';
+  look.textContent = MSG.lookForCorrections;
+  look.addEventListener('click', async () => {
+    look.disabled = true;
+    status.textContent = MSG.lookingForCorrections;
+    const result: CorrectionsResult = (await handlers.onCorrections?.().catch(() => undefined)) ?? { kind: 'error' };
+    look.disabled = false;
+    status.replaceChildren(...correctionsNodes(result, handlers));
+  });
+  row.append(label, status, look);
+  return row;
+}
+
+function correctionsNodes(result: CorrectionsResult, handlers: CardHandlers): Node[] {
+  switch (result.kind) {
+    case 'found': {
+      const link = document.createElement('a');
+      link.href = result.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = new URL(result.url).pathname;
+      return [text(`${MSG.correctionsFound} `), link];
+    }
+    case 'not-found':
+      return [text(MSG.correctionsNotFound)];
+    case 'needs-access': {
+      const nodes: Node[] = [text(MSG.correctionsNeedAccess)];
+      if (handlers.onAction) {
+        const allow = document.createElement('button');
+        allow.type = 'button';
+        allow.className = 'action';
+        allow.textContent = MSG.allow;
+        allow.addEventListener('click', handlers.onAction);
+        nodes.push(allow);
+      }
+      return nodes;
+    }
+    case 'error':
+      return [text(MSG.correctionsError)];
+  }
 }
 
 function el(tag: string, className: string, content?: string): HTMLElement {
@@ -391,6 +475,7 @@ export class CardController {
       onClose: () => this.close({ restoreFocus: true }),
       onFeedback: (value) => void this.giveFeedback(value),
       onAction: () => this.callbacks?.onAction?.(),
+      onCorrections: () => this.callbacks?.onCorrections?.() ?? Promise.resolve({ kind: 'error' }),
     });
     this.root.append(card);
     this.position();
