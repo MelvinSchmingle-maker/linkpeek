@@ -15,6 +15,7 @@ import type { Assessment } from '../core/extract/assess';
 import { checkHeadline } from '../core/clickbait/check';
 import { assessFetchError } from '../core/extract/assess';
 import { cacheable, getCached, setCached } from '../core/retrieve/cache';
+import { forget } from './in-flight';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
 import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
@@ -46,7 +47,7 @@ export async function retrieve(req: RetrieveRequest, pageUrl: string | undefined
   if (!pending || req.fromPage) {
     pending = work(req, key, pageUrl);
     inFlight.set(flightKey, pending);
-    void pending.finally(() => inFlight.delete(flightKey));
+    forget(inFlight, flightKey, pending);
   }
   const outcome = await pending;
   if (outcome === 'fetch-from-page') return { kind: 'fetch-from-page' };

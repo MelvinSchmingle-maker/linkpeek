@@ -64,4 +64,6 @@ The owner asked for every part to be built to a first stage, with bugs and the c
 - [ ] Cards at 200% zoom with long real reasons or summaries haven't been tested.
 - [x] Mirror's opening was a timestamp (fixed, D29).
 - [x] Link check line made cards too tall at 200% zoom (fixed: one compact row; disagree moved into the panel).
+- [x] Bot challenges, 403 and 5xx results were kept for 24 hours, so a temporary block could look permanent (fixed 17 Oct: not remembered, as timeouts already were; `cacheable` in `src/core/retrieve/cache.ts`).
+- [x] The in-flight request map's cleanup could leave an unhandled rejection after a failed request (fixed 17 Oct: `forget` in `src/background/in-flight.ts`, with tests).
 

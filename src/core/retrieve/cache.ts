@@ -41,12 +41,15 @@ export async function setCached(key: string, assessment: Assessment, now = Date.
 }
 
 /**
- * Whether a result is worth remembering. Passing problems (a timeout, a
- * dropped connection, "too many requests") and missing permission are not:
- * trying again later may work.
+ * Problems that may pass on a later try, so they are not remembered: a
+ * timeout, a dropped connection, "too many requests", a server error, a
+ * refused request, a robot check, and missing permission.
  */
+const NOT_REMEMBERED = ['timeout', 'network', 'http-429', 'http-403', 'http-5xx', 'bot-challenge', 'permission-denied'];
+
+/** Whether a result is worth remembering. Trying again later may work for the problems listed above. */
 export function cacheable(a: Assessment): boolean {
-  return !a.failure || !['timeout', 'network', 'http-429', 'permission-denied'].includes(a.failure);
+  return !a.failure || !NOT_REMEMBERED.includes(a.failure);
 }
 
 /** Forget every remembered result (for example when the summary engine changes). */

@@ -104,7 +104,11 @@ describe('result cache (memory only, 24 hours)', () => {
     expect(cacheable({ evidence: 'unavailable', failure: 'timeout' })).toBe(false);
     expect(cacheable({ evidence: 'unavailable', failure: 'http-429' })).toBe(false);
     expect(cacheable({ evidence: 'unavailable', failure: 'permission-denied' })).toBe(false);
+    expect(cacheable({ evidence: 'unavailable', failure: 'bot-challenge' })).toBe(false);
+    expect(cacheable({ evidence: 'unavailable', failure: 'http-403' })).toBe(false);
+    expect(cacheable({ evidence: 'unavailable', failure: 'http-5xx' })).toBe(false);
     expect(cacheable({ evidence: 'unavailable', failure: 'http-4xx' })).toBe(true);
+    expect(cacheable({ evidence: 'unavailable', failure: 'login-wall' })).toBe(true);
     expect(cacheable({ evidence: 'full' })).toBe(true);
   });
 });
