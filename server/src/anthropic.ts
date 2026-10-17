@@ -5,6 +5,10 @@
  *   decision (docs/cost/part-06-estimate.md), so it's one setting.
  * - Effort "low": a 20-word sentence doesn't need long reasoning, and effort
  *   is what bounds the thinking tokens billed as output.
+ * - SUMMARY_THINKING=off switches thinking off where the model allows it:
+ *   Haiku 5.5 takes `disabled`, Sonnet 5.5 takes `between_tools` (both only
+ *   at effort high or below). Opus 5.5 always thinks; effort is its only
+ *   control, so the setting does nothing there.
  * - max_tokens 1024: room for brief thinking plus one sentence. Hitting it
  *   counts as a failure, never a cut-off summary.
  * - The fixed system prompt carries a cache marker (see prompt.ts).
@@ -42,13 +46,28 @@ export function supportsFallback(model: string): boolean {
   return !/haiku/i.test(model);
 }
 
-export function buildParams(req: SummariseRequest, model: string): Anthropic.Beta.Messages.MessageCreateParamsNonStreaming {
+export type Thinking = 'adaptive' | 'off';
+
+/** How to switch thinking off on this model, or undefined where it can't be. */
+export function thinkingOff(model: string): Anthropic.Beta.Messages.BetaThinkingConfigParam | undefined {
+  if (/haiku/i.test(model)) return { type: 'disabled' };
+  if (/sonnet/i.test(model)) return { type: 'between_tools' };
+  return undefined;
+}
+
+export function buildParams(
+  req: SummariseRequest,
+  model: string,
+  thinking: Thinking = 'adaptive',
+): Anthropic.Beta.Messages.MessageCreateParamsNonStreaming {
+  const off = thinking === 'off' ? thinkingOff(model) : undefined;
   return {
     model,
     max_tokens: MAX_TOKENS,
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: userMessage(req) }],
     output_config: { effort: 'low' },
+    ...(off ? { thinking: off } : {}),
     ...(supportsFallback(model) ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
   };
 }
@@ -60,6 +79,7 @@ export class AnthropicSummaryModel implements SummaryModel {
   constructor(
     client?: MessagesClient,
     private readonly model = process.env.SUMMARY_MODEL?.trim() || DEFAULT_MODEL,
+    private readonly thinking: Thinking = process.env.SUMMARY_THINKING?.trim() === 'off' ? 'off' : 'adaptive',
   ) {
     this.client = client;
   }
@@ -70,7 +90,7 @@ export class AnthropicSummaryModel implements SummaryModel {
     let res: Anthropic.Beta.Messages.BetaMessage;
     try {
       this.client ??= new Anthropic({ timeout: TIMEOUT_MS, maxRetries: 1 });
-      res = await this.client.beta.messages.create(buildParams(req, this.model));
+      res = await this.client.beta.messages.create(buildParams(req, this.model, this.thinking));
     } catch (e) {
       // Most specific first. Never pass the SDK's message on: it isn't for the extension.
       if (e instanceof Anthropic.APIConnectionTimeoutError) return { ok: false, code: 'timeout' };

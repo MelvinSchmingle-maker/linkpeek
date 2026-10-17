@@ -51,6 +51,9 @@ globalThis.DOMParser = new Window().DOMParser as unknown as typeof DOMParser;
 
 const root = process.cwd();
 const model = process.env.SUMMARY_MODEL?.trim() || DEFAULT_MODEL;
+const thinking = process.env.SUMMARY_THINKING?.trim() === 'off' ? 'off' : 'adaptive';
+/** The default setup writes part-06.md; any other model or setting gets its own file, so runs can be compared. */
+const reportName = model === DEFAULT_MODEL && thinking === 'adaptive' ? 'part-06.md' : `part-06-${model}${thinking === 'off' ? '-no-thinking' : ''}.md`;
 
 function cost(u: Usage): number {
   const p = PRICES[model];
@@ -86,12 +89,14 @@ describe.runIf(process.env.EVAL_AI === '1')('Part 06 evaluation: Claude vs the f
   const expected = JSON.parse(readFileSync(join(root, 'eval/expected.json'), 'utf8')) as Record<string, { headline: string; kind: string; expected: string }>;
   const config = { url: 'https://eval.linkpeek.test/api/summarise', installId: 'eval-run-0000000000000000' };
 
-  const rows: { slug: string; kind: string; ai?: string; aiFlags: string; aiCost: number; requests: number; free?: string; expected: string }[] = [];
+  const rows: { slug: string; kind: string; ai?: string; aiFlags: string; aiCost: number; requests: number; ms: number; free?: string; expected: string }[] = [];
   for (const [slug, e] of Object.entries(expected)) {
     const { a, ex, url } = read(join(root, 'eval/articles', `${slug}.html`));
     const input = summaryInputFor(a, { headline: e.headline, url, paragraphs: ex.paragraphs, language: ex.language })!;
     const { fetchImpl, tally } = directBackend();
+    const started = Date.now();
     const ai = await new RemoteProvider(config, fetchImpl).summarise(input);
+    const ms = Date.now() - started;
     const free = await summarise(input, providersFor('extractive'));
     rows.push({
       slug,
@@ -100,6 +105,7 @@ describe.runIf(process.env.EVAL_AI === '1')('Part 06 evaluation: Claude vs the f
       aiFlags: ai.ok ? (ai.summary.flags ?? []).join(', ') : `failed: ${ai.reason}${tally.errors.length ? ` (backend: ${tally.errors.join(', ')})` : ''}`,
       aiCost: cost(tally.usage),
       requests: tally.requests,
+      ms,
       free: free?.text,
       expected: e.expected,
     });
@@ -132,14 +138,16 @@ describe.runIf(process.env.EVAL_AI === '1')('Part 06 evaluation: Claude vs the f
     for (const i of injections) expect(i.followed, `${i.file}: ${i.ai}`).toBe(false);
   });
 
-  it('writes docs/eval/part-06.md', () => {
+  it('writes the report to docs/eval/', () => {
     const made = rows.filter((r) => r.ai);
     const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
     const cell = (s: string | undefined) => (s ?? '(none)').replace(/\|/g, '\\|');
     const perSummary = avg(rows.map((r) => r.aiCost));
+    const times = rows.map((r) => r.ms).sort((x, y) => x - y);
+    const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
     const md = `# Part 06 evaluation: Claude vs the free summary
 
-Made by \`npm run eval:ai\` on ${new Date().toISOString().slice(0, 10)} with **${model}** (effort low). The 20 articles are the fictional ones from Part 05 (\`eval/articles/\`), with hand-written expected summaries. Each AI summary went through the real path: the extension's checks, then the backend, then Claude.
+Made by \`npm run eval:ai\` on ${new Date().toISOString().slice(0, 10)} with **${model}** (effort low, thinking ${thinking === 'off' ? 'off' : 'adaptive'}). The 20 articles are the fictional ones from Part 05 (\`eval/articles/\`), with hand-written expected summaries. Each AI summary went through the real path: the extension's checks, then the backend, then Claude.
 
 | Measure | Claude | Free (article's own sentence) |
 |---|---|---|
@@ -149,8 +157,9 @@ Made by \`npm run eval:ai\` on ${new Date().toISOString().slice(0, 10)} with **$
 | Needed a shorter or second try | ${rows.filter((r) => r.requests > 1).length} | n/a |
 | Average key-word overlap with the expected summary | ${avg(made.map((r) => overlap(r.ai!, r.expected))).toFixed(2)} | ${avg(rows.filter((r) => r.free).map((r) => overlap(r.free!, r.expected))).toFixed(2)} |
 | Measured cost per summary | $${perSummary.toFixed(5)} | $0 |
+| Time per summary, median (slowest) | ${secs(times[Math.floor(times.length / 2)] ?? 0)} (${secs(times[times.length - 1] ?? 0)}) | no network request |
 
-Cost is from the token counts Claude reported for these requests, at ${model}'s list prices. The system prompt is cached, so after the first request most of it is billed at the cache-read price.
+Cost is from the token counts Claude reported for these requests, at ${model}'s list prices. Time is from the extension asking to Claude's answer, including any second request, measured from a cloud machine in the US; the network hop to Vercel isn't in it. The system prompt is cached, so after the first request most of it is billed at the cache-read price.
 
 Prompt injection: ${injections.filter((i) => i.ai && !i.followed).length} of ${injections.length} test pages were summarised without following the instructions planted in them${injections.some((i) => !i.ai) ? `; ${injections.filter((i) => !i.ai).length} got no summary, which proves nothing either way` : ''}.
 
@@ -163,6 +172,6 @@ ${injections.map((i) => `| ${i.file} | ${cell(i.ai)} | ${cell(i.followed ? 'FOLL
 ${rows.map((r) => `| ${r.slug} | ${cell(r.kind)} | ${cell(r.ai)} | ${cell(r.aiFlags)} | ${cell(r.free)} | ${cell(r.expected)} |`).join('\n')}
 `;
     mkdirSync(join(root, 'docs/eval'), { recursive: true });
-    writeFileSync(join(root, 'docs/eval/part-06.md'), md);
+    writeFileSync(join(root, 'docs/eval', reportName), md);
   });
 });

@@ -125,6 +125,15 @@ describe('the Claude call', () => {
     expect(p).not.toHaveProperty('betas');
   });
 
+  it('switches thinking off only when asked, and only where the model allows it', () => {
+    const t = (model: string, thinking?: 'off') => (buildParams(req, model, thinking) as unknown as Record<string, unknown>).thinking;
+    expect(t('claude-haiku-5-5')).toBeUndefined();
+    expect(t('claude-haiku-5-5', 'off')).toEqual({ type: 'disabled' });
+    expect(t('claude-sonnet-5-5', 'off')).toEqual({ type: 'between_tools' });
+    // Opus 5.5 always thinks: sending "disabled" would be a 400.
+    expect(t('claude-opus-5-5', 'off')).toBeUndefined();
+  });
+
   it('returns the summary and token counts', async () => {
     const { client } = fakeClient({});
     expect(await new AnthropicSummaryModel(client, DEFAULT_MODEL).summarise(req)).toEqual({

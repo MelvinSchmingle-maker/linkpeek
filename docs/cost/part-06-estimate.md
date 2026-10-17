@@ -11,6 +11,27 @@ Prices are Anthropic's first-party list prices, checked 17 Oct 2026.
 
 So the reply length, mostly thinking, varies more than the article does. Expect 0.4 to 1.5 cents a summary on Opus 5.5 until there are real usage numbers. The fixed instructions measured 945 tokens, not the 725 guessed below.
 
+## Which model: measured on the 20 evaluation articles (17 Oct 2026)
+
+Same articles, same prompt, effort low, through the real extension-to-backend path. Reports: `docs/eval/part-06*.md`. Time runs from the extension asking to Claude's answer, including any second request, from a cloud machine in the US.
+
+| Setup | Per summary | At 1,000 a day | Time, median (slowest) | Needed a second request | Notes |
+|---|---|---|---|---|---|
+| Opus 5.5, thinking on | $0.0043 | about $129 a month | 1.7 s (10.3 s) | 2 of 20 | Most specific details. Dropped "may" from the science story. |
+| Sonnet 5.5, thinking off | $0.0021 | about $63 a month | 2.5 s (5.8 s) | 14 of 20 | Slower and no better than Haiku here. |
+| **Haiku 5.5, thinking on (low effort)** | **$0.0001** | **about $3 a month** | **1.5 s (1.9 s)** | 13 of 20 | Close to Opus. Kept "may" and "small study" on the science story. |
+| Haiku 5.5, thinking off | $0.0001 | about $3 a month | 1.5 s (2.5 s) | 12 of 20 | Two weak sentences, e.g. the A&E story became "the four-hour target was missed", losing that waits improved. |
+
+The evaluation articles are short. A real 6,000-character article sends more text, so expect roughly two to three times these per-summary figures on every model; the ranking doesn't change. On Haiku 5.5 that's still around $0.25 per 1,000 summaries.
+
+Haiku's second requests are the extension asking it to shorten a first try of 21 to 25 words. They cost almost nothing and the median time already includes them. A prompt that asks Haiku for a shorter first sentence could cut them; that needs its own evaluation.
+
+What else was considered:
+- **Sending less article text** (3,000 characters instead of 6,000) roughly halves the input cost. Untested for quality.
+- **A shared cache on the server**, so a popular link is summarised once for everyone, is the biggest saving at scale. It means the server would have to know which link was summarised, which it deliberately doesn't today (D36). Not now.
+- **The Batch API** halves the price but answers in minutes to hours, so it's no use for a card on hover. **Fast mode** on Opus doubles the price.
+- **Other companies' models** weren't tested. At Haiku 5.5's price the model bill is no longer the main cost: even a free model would save at most about $3 to $8 a month at 1,000 summaries a day, against a new integration, new privacy wording and a new evaluation. The free options in the extension (the article's own sentence, and Chrome's on-device AI) cost nothing already.
+
 ## The estimate (made before any real request)
 
 ## What one summary uses

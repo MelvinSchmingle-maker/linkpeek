@@ -38,7 +38,7 @@ In a Claude Code cloud environment, add the key under the environment's **Enviro
 1. In Vercel, create a new project from this repository and set its **Root Directory** to `server`.
 2. Under **Settings > Environment Variables**, add:
    - `ANTHROPIC_API_KEY` (required, from https://console.anthropic.com)
-   - `SUMMARY_MODEL` (optional: `claude-opus-5-5` by default, or `claude-sonnet-5-5` / `claude-haiku-5-5`)
+   - `SUMMARY_MODEL` (optional: `claude-opus-5-5` by default, or `claude-sonnet-5-5` / `claude-haiku-5-5`; measured comparison in `docs/cost/part-06-estimate.md`)
    - `SUMMARIES_ENABLED` (optional: set to `false` to switch summaries off)
 3. Under **Firewall**, add one rate-limit rule. If: `@vercel/firewall`, Rate limit ID `summarise`. Then: Rate Limit, Fixed Window, for example 30 requests per 600 seconds (10 minutes is the most the Hobby plan allows), default 429 action. Publish it.
 
