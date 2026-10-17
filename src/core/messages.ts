@@ -89,6 +89,6 @@ export const FAILURE_MESSAGE: Record<FailureReason, string> = {
 export const SUMMARY_BY: Record<SummaryProviderName, string | undefined> = {
   extractive: "In the article's own words:",
   'chrome-on-device': "Summary by Chrome's AI, on this computer:",
-  remote: 'Summary by LinkPeek:',
+  remote: 'Summary by AI (Claude):',
   demo: undefined,
 };

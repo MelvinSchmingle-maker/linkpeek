@@ -1,0 +1,24 @@
+{
+  "name": "linkpeek-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LinkPeek's summary backend (Part 06). One endpoint: POST /api/summarise.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --reporter=verbose",
+    "dev": "node --experimental-strip-types src/local.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@vercel/firewall": "^1.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "5.0.4"
+  }
+}

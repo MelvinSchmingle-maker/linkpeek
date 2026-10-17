@@ -30,4 +30,4 @@ export interface SummaryProvider {
 }
 
 /** Which engine the user chose in Settings. The extractive one is always the fallback. */
-export type SummaryEngine = 'extractive' | 'chrome-on-device';
+export type SummaryEngine = 'extractive' | 'chrome-on-device' | 'remote';

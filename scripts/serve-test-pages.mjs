@@ -21,7 +21,46 @@ const html = 'text/html; charset=utf-8';
 const hits = new Map();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** What the stand-in AI backend was sent, newest last (for checking what LinkPeek sends). */
+const aiBodies = [];
+const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+const readBody = (req) =>
+  new Promise((resolve) => {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    req.on('end', () => resolve(data));
+  });
+
+/**
+ * A stand-in for LinkPeek's summary backend (server/), with the same
+ * request and reply shapes. It never calls an AI. Test builds point here.
+ */
+async function standInAi(res, _url, req) {
+  if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
+  const body = JSON.parse((await readBody(req)) || '{}');
+  aiBodies.push(body);
+  const reply = (status, obj) => res.writeHead(status, { 'content-type': 'application/json', ...cors }).end(JSON.stringify(obj));
+  const text = String(body.text ?? '');
+  // The library article: the backend is having a bad day.
+  if (text.includes("library service")) return reply(502, { error: 'upstream' });
+  // The tomato blog: too long at first, so LinkPeek must ask for a shorter one.
+  if (body.task === 'shorten') return reply(200, { summary: 'A balcony gardener shares three summers of lessons from growing tomatoes.', model: 'stand-in', usage: {} });
+  if (text.includes('tomatoes')) {
+    return reply(200, {
+      summary: 'A gardener who has grown tomatoes on a small south-facing balcony for three summers explains in detail what went wrong in the first two years.',
+      model: 'stand-in',
+      usage: {},
+    });
+  }
+  if (text.includes('Millbrook council has approved')) {
+    return reply(200, { summary: 'Councillors approved protected cycle lanes on High Street by seven votes to five.', model: 'stand-in', usage: {} });
+  }
+  return reply(200, { summary: 'A summary from the stand-in AI backend for this test page.', model: 'stand-in', usage: {} });
+}
+
 const routes = {
+  '/api/summarise': standInAi,
+  '/api/summarise/sent': (res) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(aiBodies)),
   '/status/403': (res) => res.writeHead(403, { 'content-type': html }).end('<h1>Forbidden</h1>'),
   '/status/404': (res) => res.writeHead(404, { 'content-type': html }).end('<h1>Page not found</h1>'),
   '/status/429': (res) => res.writeHead(429, { 'content-type': html, 'retry-after': '120' }).end('<h1>Too many requests</h1>'),
@@ -65,6 +104,7 @@ const routes = {
     res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ count: hits.get(url.searchParams.get('path')) ?? 0 })),
   '/hits/reset': (res) => {
     hits.clear();
+    aiBodies.length = 0;
     res.writeHead(200).end('ok');
   },
 };
@@ -81,7 +121,7 @@ createServer(async (req, res) => {
   }
   const route = routes[path];
   if (route) {
-    await route(res, url);
+    await route(res, url, req);
     return;
   }
   const file = join(root, path === '/' ? 'index.html' : path);

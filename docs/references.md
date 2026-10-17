@@ -7,6 +7,9 @@ Official documentation relied on for decisions. Checked 13 Oct 2026.
 | Declaring permissions, optional host permissions | https://developer.chrome.com/docs/extensions/develop/concepts/declare-permissions | Permission plan; host permissions and content-script matches trigger install warnings, optional ones are granted at runtime |
 | `chrome.scripting` | https://developer.chrome.com/docs/extensions/reference/api/scripting | `executeScript` with `activeTab` for on-demand use; `registerContentScripts` (Chrome 96+) for per-site Smart mode, persists across sessions by default |
 | The activeTab permission | https://developer.chrome.com/docs/extensions/develop/concepts/activeTab | Toolbar click, right-click menu item and keyboard shortcut each grant access to the current tab until the user leaves the page; no install warning |
+| Claude API (Messages, SDK, models and prices) | https://platform.claude.com/docs and the claude-api skill reference (cached 6 Oct 2026) | Part 06: `claude-opus-5-5` default, effort, `max_tokens`, prompt caching (512-token minimum, cache reads $0.20/MTok on Opus 5.5), refusal handling and `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`; none on Haiku 5.5), typed SDK errors, SDK timeouts in milliseconds |
+| Vercel Functions | https://vercel.com/docs/functions/functions-api-reference | Web-standard `POST(request)` handlers in `api/`, `maxDuration` |
+| Vercel Firewall rate limiting from code | https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting-sdk | `checkRateLimit(id, { request, rateLimitKey })`, returns `{ rateLimited, error }` |
 | Chrome Summarizer API | https://developer.chrome.com/docs/ai/summarizer-api | On-device summaries (Part 05): stable since Chrome 138, not in workers, English/Japanese/Spanish/German/French, hardware needs, "headline" type of 12/17/22 words, download needs a user click. Checked 17 Oct 2026 |
 | `chrome.offscreen` | https://developer.chrome.com/docs/extensions/reference/api/offscreen | A hidden document with a DOM for the service worker; reasons `DOM_PARSER` and `WORKERS`; only one at a time, checked with `runtime.getContexts` |
 | Cross-origin requests in extensions | https://developer.chrome.com/docs/extensions/develop/concepts/network-requests | Service-worker fetches need host permission; content scripts fetch with the page's origin |
@@ -28,5 +31,7 @@ Official documentation relied on for decisions. Checked 13 Oct 2026.
 | eslint, typescript-eslint | MIT | Lint |
 | @mozilla/readability | Apache-2.0 | Finds the article text in a page (shipped in the extension) |
 | pdfjs-dist | Apache-2.0 | Reads text from PDFs (shipped in the extension, worker included as a file) |
+| @anthropic-ai/sdk | MIT | Backend only (`server/`): calls Claude. Not in the extension |
+| @vercel/firewall | Apache-2.0 | Backend only (`server/`): rate limits. Not in the extension |
 
 Readability and pdf.js are the only code in the shipped extension that isn't ours. Both are bundled at build time; nothing is loaded from the internet.

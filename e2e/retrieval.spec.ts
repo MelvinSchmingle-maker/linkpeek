@@ -98,7 +98,9 @@ test('a paywalled page never shows text from its paid body, and gets no summary'
 test('Settings: the on-device AI option says plainly when this computer cannot run it', async ({ context, extensionId }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/options/index.html`);
-  await expect(page.locator('#ondevice-toggle')).not.toBeChecked();
+  // The free sentence pick is the default; Chrome's AI isn't chosen.
+  await expect(page.locator('input[name="engine"][value="extractive"]')).toBeChecked();
+  await expect(page.locator('input[name="engine"][value="chrome-on-device"]')).not.toBeChecked();
   // Playwright's Chromium has no on-device model: the page must say so, not pretend.
   await expect(page.locator('#ondevice-status')).toHaveText(/can't run|doesn't offer|needs to download/);
 });

@@ -13,9 +13,11 @@
     "test": "vitest run --reporter=verbose",
     "test:watch": "vitest",
     "test:e2e": "npm run build:e2e && playwright test",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm --prefix server run typecheck && npm --prefix server test",
     "screenshots": "npm run build:e2e && SCREENSHOTS=1 playwright test screenshots",
-    "eval": "node scripts/run-eval.mjs"
+    "eval": "node scripts/run-eval.mjs",
+    "eval:ai": "node scripts/run-eval-ai.mjs",
+    "test:server": "npm --prefix server test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

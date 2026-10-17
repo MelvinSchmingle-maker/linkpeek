@@ -11,18 +11,19 @@ import { fromBase64, type RawFetch } from '../core/retrieve/fetcher';
 import { summarise, providersFor } from '../core/summary/engine';
 import { summaryInputFor, type ReadText } from '../core/summary/input';
 import type { SummaryEngine } from '../core/summary/provider';
+import type { RemoteConfig } from '../core/summary/remote';
 import { isOffscreenRequest, type OffscreenResponse } from './messages';
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse: (r: OffscreenResponse) => void) => {
   if (!isOffscreenRequest(msg)) return false;
-  assess(msg.raw, msg.headline, msg.engine).then(
+  assess(msg.raw, msg.headline, msg.engine, msg.remote).then(
     (assessment) => sendResponse({ ok: true, assessment }),
     (e: unknown) => sendResponse({ ok: false, error: String(e) }),
   );
   return true;
 });
 
-async function assess(raw: RawFetch, headline: string, engine: SummaryEngine): Promise<Assessment> {
+async function assess(raw: RawFetch, headline: string, engine: SummaryEngine, remote?: RemoteConfig): Promise<Assessment> {
   const meta = { requestedUrl: raw.requestedUrl, finalUrl: raw.finalUrl, status: raw.status };
   const kind = contentKind(raw.contentType, raw.finalUrl);
   if (kind === 'pdf' && raw.base64) {
@@ -33,12 +34,12 @@ async function assess(raw: RawFetch, headline: string, engine: SummaryEngine): P
       return { evidence: 'unavailable', failure: 'extraction-failed' };
     }
     const paragraphs = pdf.text ? [withoutLeadingTitle(pdf.text, pdf.title).slice(0, 20_000)] : [];
-    return withSummary(assessPdf(meta, pdf), { headline, url: raw.finalUrl, paragraphs }, engine);
+    return withSummary(assessPdf(meta, pdf), { headline, url: raw.finalUrl, paragraphs }, engine, remote);
   }
   if (kind === 'html' && raw.text !== undefined) {
     const ex = extractHtml(raw.text, raw.finalUrl);
     const a = assessHtml(meta, raw.text, ex);
-    return withSummary(a, { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine);
+    return withSummary(a, { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine, remote);
   }
   // An error page served as something other than HTML still counts as the error.
   if (raw.status >= 400) return assessHtml(meta, '', extractHtml('', raw.finalUrl));
@@ -46,10 +47,10 @@ async function assess(raw: RawFetch, headline: string, engine: SummaryEngine): P
 }
 
 /** Adds a summary when there's something honest to summarise (see core/summary/input.ts). */
-async function withSummary(a: Assessment, read: ReadText, engine: SummaryEngine): Promise<Assessment> {
+async function withSummary(a: Assessment, read: ReadText, engine: SummaryEngine, remote?: RemoteConfig): Promise<Assessment> {
   const input = summaryInputFor(a, read);
   if (!input) return a;
-  const summary = await summarise(input, providersFor(engine));
+  const summary = await summarise(input, providersFor(engine, remote));
   return summary ? { ...a, summary } : a;
 }
 

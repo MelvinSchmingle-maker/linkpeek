@@ -12,11 +12,14 @@ import { MAX_SUMMARY_WORDS } from './enforce';
 import { ExtractiveProvider } from './extractive';
 import type { SummaryEngine, SummaryInput, SummaryProvider } from './provider';
 import { qualityProblem } from './quality';
+import { RemoteProvider, type RemoteConfig } from './remote';
 import { countWords } from './wordcount';
 
-export function providersFor(engine: SummaryEngine): SummaryProvider[] {
+export function providersFor(engine: SummaryEngine, remote?: RemoteConfig): SummaryProvider[] {
   const extractive = new ExtractiveProvider();
-  return engine === 'chrome-on-device' ? [new ChromeBuiltInProvider(), extractive] : [extractive];
+  if (engine === 'chrome-on-device') return [new ChromeBuiltInProvider(), extractive];
+  if (engine === 'remote') return [new RemoteProvider(remote), extractive];
+  return [extractive];
 }
 
 export async function summarise(input: SummaryInput, providers: SummaryProvider[]): Promise<Summary | undefined> {

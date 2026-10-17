@@ -159,3 +159,48 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The model download button (needs a capable computer and a real click).
 - Your check from the build plan: using it on 10 real articles for a day to judge whether the free summary is good enough.
 
+## Part 06. AI summaries (17 Oct 2026, built; not yet deployed)
+
+**Built:**
+- A backend in `server/`: one Vercel function, `POST /api/summarise`, which asks Claude through the official Anthropic SDK (D35 to D39). It has:
+  - strict request checks (no page address accepted)
+  - a size limit
+  - a switch (`SUMMARIES_ENABLED`)
+  - rate limits per install and overall (Vercel Firewall rules; it refuses to run without them)
+  - a prompt that treats article text as data, with our own tags stripped from it
+  - a cached system prompt and low effort
+  - refusal handling with `fallbacks: "default"`
+  - 15-second timeouts
+  - logs of counts and timings only
+- `docs/cost/part-06-estimate.md`: about 1 to 1.5 cents a summary on Claude Opus 5.5 (the default), 0.4 to 0.7 cents on Sonnet 5.5, 0.02 to 0.03 cents on Haiku 5.5, with monthly figures at 100, 1,000 and 10,000 summaries a day.
+- In the extension:
+  - a third choice in Settings, "LinkPeek's AI (Claude, by Anthropic)", off by default and saying exactly what it sends
+  - a provider that sends only full articles (first 6,000 characters), asks once to shorten, once to rewrite filler, and otherwise uses the free summary
+  - a random install ID, replaced monthly and deleted when AI summaries are switched off
+  - the card label "Summary by AI (Claude):"
+  - builds without a backend address show the option greyed out
+- An AI evaluation, `npm run eval:ai`: the 20 Part 05 articles plus three prompt-injection pages, through the real extension-to-backend code path, writing `docs/eval/part-06.md` with the measured cost.
+
+**Tested (actual results):**
+- typecheck, lint, production build: pass. The production build has no backend address unless `LINKPEEK_API_URL` is set.
+- Backend: 38 tests pass, with a stand-in for Claude. They cover:
+  - request rules, including that a page address is refused
+  - the prompt (long enough to cache, injection tags can't break out)
+  - request settings: Opus 5.5 default, effort low, cache marker, fallbacks, and no fallbacks on Haiku
+  - stop reasons checked before reading
+  - SDK errors mapped to short codes
+  - CORS, method, size, JSON, the switch, both rate limits, and refusing to run when the limit rules are missing
+  - logs never containing text, headline or install ID
+  - a missing key reported as "misconfigured" with no request made
+  - the Firewall limiter trusted only on Vercel
+
+  A smoke test also compiled the backend as Vercel's Node runtime would, loaded it as an ES module and called it: the preflight answered 204, a bad request 400, and with no key 500 "misconfigured". That smoke test is what showed `@vercel/firewall` letting everything through outside Vercel, which is now refused.
+- Extension: unit tests for the provider cover what's sent (never the address), the 6,000-character cap, shorten once, rewrite once, no third try, fallback when the backend is down, erroring, rate-limited or refusing, and the install ID rotating.
+- Browser tests: 113 pass (3 screenshot-only skipped). Seven are new for AI summaries, against a stand-in backend on the test server: the label and summary, the exact fields sent, shorten once, falling back when the backend fails, a paywalled page never sent, switching off stopping requests and deleting the install ID, and the Settings choice.
+
+**Not done or not verified:**
+- **No real Claude request has been made.** This environment has no Anthropic key, so `npm run eval:ai` (about 25 requests, roughly 25 to 35 cents on Opus 5.5) hasn't run. The measured cost per summary, the AI-against-free comparison and the prompt-injection results are therefore still missing. The build plan's "Done when" needs them.
+- Not deployed. The steps are in `server/README.md`: a Vercel project with root `server`, the key as an environment variable, two Firewall rate-limit rules, and a spend limit in the Anthropic Console.
+- Whether your Vercel plan includes Firewall rate-limit rules, and Vercel's terms for commercial use on the free plan.
+- The extension calling a real deployed backend (CORS from an extension origin was not tested against a real Vercel deployment; the test build has site access to the stand-in anyway).
+

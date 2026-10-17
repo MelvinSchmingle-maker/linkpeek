@@ -13,7 +13,8 @@ export interface Settings {
   /**
    * Who writes summaries. "extractive" (the default) picks the article's most
    * informative sentence. "chrome-on-device" uses Chrome's built-in AI when
-   * this computer has it, and falls back to extractive when it doesn't.
+   * this computer has it. "remote" sends the article text to LinkPeek's own
+   * backend, which asks Claude (Part 06). Both fall back to extractive.
    */
   summaryEngine: SummaryEngine;
 }

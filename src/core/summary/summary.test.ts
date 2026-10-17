@@ -316,7 +316,7 @@ describe('the engine', () => {
   const input = article(['The Old Mill footbridge reopened on Tuesday after fourteen weeks of repairs costing 410,000 pounds.']);
 
   it('falls back to the extractive summary when the AI is unavailable', async () => {
-    const s = await summarise(input, [new ChromeBuiltInProvider(undefined), new RemoteProvider(), new ExtractiveProvider()]);
+    const s = await summarise(input, [new ChromeBuiltInProvider(undefined), new RemoteProvider(undefined), new ExtractiveProvider()]);
     expect(s?.provider).toBe('extractive');
   });
 

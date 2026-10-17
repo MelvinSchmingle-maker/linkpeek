@@ -1,1 +1,21 @@
 .wrap { max-width: 640px; margin: 24px auto; border: 1px solid var(--lp-border); border-radius: 10px; }
+
+/* Summaries: a choice of three (Part 06). */
+fieldset.plain {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.indent {
+  margin-left: 26px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

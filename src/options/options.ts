@@ -1,6 +1,7 @@
 import { ALL_SITES, grantedSiteOrigins, hasSiteAccess, hostFromPattern, sitePatterns } from '../core/sites';
 import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
 import { chromeSummarizer, summarizerOptions, type Availability } from '../core/summary/chrome-builtin';
+import type { SummaryEngine } from '../core/summary/provider';
 import { renderModePicker } from '../ui/mode-picker';
 import { applyBrand } from '../ui/theme';
 
@@ -17,17 +18,32 @@ const demo = $<HTMLInputElement>('#demo-toggle');
 demo.checked = (await getSettings()).showDemoResults;
 demo.addEventListener('change', () => void updateSettings({ showDemoResults: demo.checked }));
 
-// Summaries: Chrome's on-device AI, if this computer has it (see src/core/summary/chrome-builtin.ts).
-const onDevice = $<HTMLInputElement>('#ondevice-toggle');
+// Summaries: who writes them (src/core/summary). The choice is saved at once.
+const engineInputs = [...document.querySelectorAll<HTMLInputElement>('input[name="engine"]')];
 const onDeviceStatus = $<HTMLElement>('#ondevice-status');
 const onDeviceDownload = $<HTMLButtonElement>('#ondevice-download');
-onDevice.checked = (await getSettings()).summaryEngine === 'chrome-on-device';
-onDevice.addEventListener('change', () => {
-  void updateSettings({ summaryEngine: onDevice.checked ? 'chrome-on-device' : 'extractive' });
-  void showOnDeviceStatus();
-});
+const remoteInput = engineInputs.find((i) => i.value === 'remote')!;
+let engine = (await getSettings()).summaryEngine;
+if (!__API_URL__) {
+  // This build has no backend: the option can't be chosen, and says why.
+  remoteInput.disabled = true;
+  $<HTMLElement>('#remote-status').textContent = "Not set up in this version of LinkPeek.";
+  if (engine === 'remote') engine = 'extractive';
+}
+for (const input of engineInputs) {
+  input.checked = input.value === engine;
+  input.addEventListener('change', () => {
+    if (!input.checked) return;
+    void updateSettings({ summaryEngine: input.value as SummaryEngine });
+    void showOnDeviceStatus();
+  });
+}
 onDeviceDownload.addEventListener('click', () => void downloadModel());
 void showOnDeviceStatus();
+
+function onDeviceChosen(): boolean {
+  return engineInputs.some((i) => i.value === 'chrome-on-device' && i.checked);
+}
 
 async function showOnDeviceStatus(): Promise<void> {
   const api = chromeSummarizer();
@@ -43,7 +59,7 @@ async function showOnDeviceStatus(): Promise<void> {
     // Treated as unavailable.
   }
   onDeviceStatus.textContent = ON_DEVICE_STATUS[state];
-  onDeviceDownload.hidden = state !== 'downloadable' || !onDevice.checked;
+  onDeviceDownload.hidden = state !== 'downloadable' || !onDeviceChosen();
 }
 
 async function downloadModel(): Promise<void> {

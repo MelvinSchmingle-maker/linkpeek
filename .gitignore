@@ -9,3 +9,6 @@ playwright-report/
 .env.*
 !.env.example
 *.log
+server/node_modules/
+server/.env
+server/.vercel/

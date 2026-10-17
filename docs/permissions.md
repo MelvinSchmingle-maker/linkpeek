@@ -28,6 +28,10 @@ Limits worth knowing: Chrome never lets extensions run on its own pages or the C
 
 `npm run test:e2e` builds a separate test version (`dist-e2e/`, named "LinkPeek (test build)") with access to `http://127.0.0.1` only, so automated tests can run on the local test pages without a permission prompt nobody can click. It is never the version you install or publish.
 
+## AI summaries (Part 06)
+
+No new permission. LinkPeek's server allows requests from any origin without cookies (CORS), so the extension can call it without site access, and Chrome shows no new warning. Like everything else, the request goes out without cookies or a referrer.
+
 ## Reading articles (decided in Part 04)
 
 Reading an article means fetching it, and an extension can only fetch from sites it has access to. See `docs/decisions.md` D24 for the full reasoning. In short:

@@ -226,6 +226,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
   const before = (change.oldValue as { summaryEngine?: string } | undefined)?.summaryEngine;
   const after = (change.newValue as { summaryEngine?: string } | undefined)?.summaryEngine;
   if (before !== after) void clearCached();
+  // The install ID only exists for AI summaries: switching them off deletes it.
+  if (before === 'remote' && after !== 'remote') void chrome.storage.local.remove('installId');
 });
 
 // Test builds only: lets scripts/live-check.mjs run the real reading pipeline

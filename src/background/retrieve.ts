@@ -17,6 +17,7 @@ import { cacheable, getCached, setCached } from '../core/retrieve/cache';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
 import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
+import { getInstallId } from '../core/storage/install-id';
 import { getSettings } from '../core/storage/settings';
 import { OFFSCREEN_TARGET, type OffscreenRequest, type OffscreenResponse } from '../offscreen/messages';
 
@@ -137,7 +138,10 @@ async function assessRaw(raw: RawFetch, headline: string): Promise<Assessment> {
   clearTimeout(idleTimer);
   try {
     const { summaryEngine } = await getSettings();
-    const msg: OffscreenRequest = { target: OFFSCREEN_TARGET, type: 'assess', raw, headline, engine: summaryEngine };
+    // AI summaries from LinkPeek's backend only when switched on and this build has one.
+    const engine = summaryEngine === 'remote' && !__API_URL__ ? 'extractive' : summaryEngine;
+    const remote = engine === 'remote' ? { url: __API_URL__, installId: await getInstallId() } : undefined;
+    const msg: OffscreenRequest = { target: OFFSCREEN_TARGET, type: 'assess', raw, headline, engine, ...(remote ? { remote } : {}) };
     const res = (await chrome.runtime.sendMessage(msg)) as OffscreenResponse | undefined;
     if (!res?.ok) return { evidence: 'unavailable', failure: 'extraction-failed' };
     const a = res.assessment;

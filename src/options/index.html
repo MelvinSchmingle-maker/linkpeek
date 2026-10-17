@@ -33,13 +33,25 @@
 
         <section aria-labelledby="summary-heading">
           <h2 id="summary-heading">Summaries</h2>
-          <p class="muted">LinkPeek's summaries are always 20 words or fewer. By default it picks the article's most informative sentence, and the card says "In the article's own words".</p>
-          <label class="toggle">
-            <input type="checkbox" id="ondevice-toggle" />
-            <span>Let Chrome's built-in AI write summaries on this computer<br /><span class="muted">Free, and the article text stays on this computer. Chrome downloads its AI model once (it needs at least 22 GB of free disk space and a fairly powerful computer). When it isn't available, LinkPeek picks a sentence instead.</span></span>
-          </label>
-          <p class="muted" id="ondevice-status" role="status"></p>
-          <button type="button" class="secondary" id="ondevice-download" hidden>Download Chrome's AI model</button>
+          <p class="muted">Summaries are always 20 words or fewer, and the card always says who wrote them. If the one you choose can't, LinkPeek picks a sentence from the article instead.</p>
+          <fieldset class="plain" id="engine">
+            <legend class="sr-only">Who writes summaries</legend>
+            <label class="toggle">
+              <input type="radio" name="engine" value="extractive" />
+              <span>Pick the article's most informative sentence<br /><span class="muted">Free. Everything stays on this computer.</span></span>
+            </label>
+            <label class="toggle">
+              <input type="radio" name="engine" value="chrome-on-device" />
+              <span>Chrome's built-in AI, on this computer<br /><span class="muted">Free, and the article text stays on this computer. Chrome downloads its AI model once (it needs at least 22 GB of free disk space and a fairly powerful computer).</span></span>
+            </label>
+            <p class="muted indent" id="ondevice-status" role="status"></p>
+            <button type="button" class="secondary indent" id="ondevice-download" hidden>Download Chrome's AI model</button>
+            <label class="toggle" id="remote-option">
+              <input type="radio" name="engine" value="remote" />
+              <span>LinkPeek's AI (Claude, by Anthropic)<br /><span class="muted">Sends the article's text and the link's text to LinkPeek's server, which passes them to Anthropic to write the summary. Not the page's address, your cookies or anything about you. Nothing is stored.</span></span>
+            </label>
+            <p class="muted indent" id="remote-status"></p>
+          </fieldset>
         </section>
 
         <section aria-labelledby="shortcut-heading">

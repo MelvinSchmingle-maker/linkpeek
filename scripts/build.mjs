@@ -28,7 +28,13 @@ const outDir = resolve(root, live ? 'dist-live' : onDemand ? 'dist-e2e-on-demand
 const shared = {
   configFile: false,
   logLevel: 'warn',
-  define: { __E2E__: JSON.stringify(e2e), __LIVE__: JSON.stringify(live) },
+  define: {
+    __E2E__: JSON.stringify(e2e),
+    __LIVE__: JSON.stringify(live),
+    // Where LinkPeek's own summary backend lives (Part 06). Empty means "not set up": the option is hidden.
+    // Test builds use the local test server's stand-in, so no test ever reaches the real one.
+    __API_URL__: JSON.stringify(e2e && !live ? 'http://127.0.0.1:4173/api/summarise' : (process.env.LINKPEEK_API_URL ?? '')),
+  },
 };
 
 // 1. Popup and options pages. Also copies public/ (icons).

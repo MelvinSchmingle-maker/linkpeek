@@ -163,3 +163,30 @@ There are 20 fictional, self-written articles in `eval/articles/` (two of them i
 ## D34. Chrome's on-device AI is opt-in (Part 05)
 Chrome's Summarizer API (stable since Chrome 138) writes summaries on the computer with Gemini Nano, for free, without sending the text anywhere. It needs a desktop with at least 22 GB of free disk space and a capable GPU or 16 GB of RAM, so many computers can't run it. It's off by default, and switched on in Settings, which says whether this computer can run it and offers the one-time model download (Chrome only downloads after a click). It runs in the offscreen document, because the API isn't available in workers. It only runs when the model is already there, asks for a "headline" summary of about 17 words, and asks once for a shorter one if needed. The result passes the same limit and quality checks, and if anything fails the free sentence pick is used instead. The card labels it "Summary by Chrome's AI, on this computer:". It is unit-tested against a stand-in for the API only. The Playwright browser has no model, so it has not been tried with the real one (see `docs/progress.md`). Switching engine clears remembered results, so the next card uses the new engine.
 
+## D35. AI summaries through a small backend (Part 06)
+"LinkPeek's AI" sends the article text to LinkPeek's own backend (`server/`, one Vercel function), which asks Claude. The API key lives only on the backend: anyone can unpack an extension. It's off by default and chosen in Settings next to the two free options. The card says "Summary by AI (Claude):". The extension checks every reply like any other summary:
+- Over 20 words: it asks once for a shorter one, then trims at a clause or drops it.
+- Filler, a question or the headline repeated: it asks once for a rewrite and says what was wrong.
+- Down, slow, rate-limited or refused: it uses the free summary.
+
+## D36. What the backend gets, and what it keeps (Part 06)
+It gets the article's first 6,000 characters, the link text, the evidence level, the page's language and a random install ID. That's half the backend's 12,000 limit and half the cost; an article's point is near the top. It doesn't get the page's address: the summary doesn't need it, and addresses can carry tokens. The install ID is 128 random bits made on the device, used only for rate limits, replaced every 30 days and deleted when AI summaries are switched off. The backend validates strictly (unknown fields are a 400), stores no text and logs only status, timing and token counts. CORS allows any origin without cookies, so the extension needs no extra site permission. Nothing relies on who the caller is.
+
+## D37. Model and request settings (Part 06)
+- **Model:** `claude-opus-5-5` by default. Anthropic's guidance is to use the current default model unless the owner chooses otherwise, so a cheaper model (`SUMMARY_MODEL`) is the owner's call. `docs/cost/part-06-estimate.md` has the numbers: about 1 to 1.5 cents a summary on Opus 5.5, under a tenth of that on Haiku 5.5.
+- **Effort and length:** effort is "low" (thinking can't be switched off on Opus 5.5, and effort bounds it), and `max_tokens` is 1024. Hitting the limit counts as a failure, never a cut-off summary.
+- **Caching:** the fixed system prompt (about 725 tokens, over the 512-token minimum) carries a cache marker.
+- **Refusals:** the stop reason is checked before the reply is read. `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) lets the API retry a declined request on Anthropic's recommended model. Haiku 5.5 has no server-side fallback, so it isn't sent there.
+- **Timeouts:** 15 seconds with one retry, inside a 30-second function limit.
+
+## D38. Prompt injection (Part 06)
+Article text is data. It's wrapped in `<article>` tags, any of our own tag names inside it are stripped (so a page can't close the article early or add a task), and the instructions say plainly not to follow anything inside. The output is limited to one sentence of 20 words or fewer, re-checked by the extension and shown as plain text. Three test pages in `eval/injection/` plant instructions in the open, in hidden text and with fake closing tags; `npm run eval:ai` checks Claude doesn't follow them. Readability already drops hidden text, which defends against the second kind before Claude sees it.
+
+## D39. Rate limits and spend ceilings (Part 06)
+The endpoint is public and every request costs money. The defences, from outside in:
+- Vercel Firewall rate-limit rules: `summarise-install`, keyed by install ID, and `summarise-all`, one bucket for everyone. They're checked from code with `@vercel/firewall`, so no database is needed. If the rules are missing the backend refuses requests rather than run unguarded.
+- A switch: `SUMMARIES_ENABLED=false`.
+- The real ceiling: a monthly spend limit in the Anthropic Console.
+
+An install ID is easy to fake, which is why the shared limit exists. Outside Vercel, `@vercel/firewall` lets every request through and only logs a warning (seen in a smoke test, 17 Oct 2026). So the backend only uses it when Vercel's own `VERCEL=1` is set, uses an in-memory limiter only when `RATE_LIMITER=memory` is chosen for local runs, and otherwise refuses every request. Not verified: which Vercel plans include rate-limit rules. Check before deploying (`server/README.md`).
+
