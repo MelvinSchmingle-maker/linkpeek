@@ -29,6 +29,12 @@ A cross means "this headline is written to bait a click or overstates the articl
 - Expanded card shows: status, one-line reason, rewrite if available, and "What does this mean?" linking to the definitions.
 - **Test set** `eval/headlines.json`: at least 80 headlines labelled tick, cross or neutral, including tricky ones (emotional but honest, plain but misleading, questions that are fine). Report precision and recall for crosses. A false cross is worse than a missed one, so tune for precision.
 
+## From the competitor research
+- No product found gives a three-state verdict on a headline against its article without a server. This is the gap LinkPeek fills.
+- Judge, don't replace. Never change the headline on the page. The factual rewrite stays inside the expanded card, labelled as LinkPeek's. DeArrow, which replaces titles, gets one-star reviews for replacements that are "longer" and "much worse", and one for a spoiled race result.
+- A rewrite must not reveal an outcome the headline held back on purpose (a score, a result, an ending) without saying it does.
+- No outside accuracy figure for this kind of check survived fact-checking, so the labelled test set is the only number we have. Report it honestly.
+
 ## Don't
 - Never use popularity, publisher or partner status as an input.
 - Never produce a rewrite from the headline alone.

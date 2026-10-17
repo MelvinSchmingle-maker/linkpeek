@@ -1,0 +1,333 @@
+{
+ "question": "/deep-research Competitor research for LinkPeek, a Chrome extension that helps people decide whether a link is worth opening. It puts an icon next to article links, and the icon opens a card with a summary of 20 words or fewer, a clickbait check (tick, cross or neutral, comparing the headline to the article), a source card (publisher and dates), risky-link warnings and an annoyance filter. Site permissions are optional and requested per site. No cookies are sent and there is no server.\n\nFind the same or similar products in these groups: hover or click link previews and summaries, AI page and link summarisers, clickbait detection (for example DeArrow), link safety checkers, annoyance and cookie-banner blockers, and link previews built into browsers (Chrome, Edge, Arc, Safari, Brave). Check especially whether Chrome or Edge now has its own link preview.\n\nFor each product record: users, rating, review count, last updated, price, permissions requested, whether it needs an account or API key, what data it collects, which AI provider it uses, and its key features.\n\nFor the 5 to 8 most relevant products, mine public reviews from the Chrome Web Store, the Firefox Add-ons API, Reddit, Hacker News and Product Hunt. Use only word-for-word quotes, each with a link. Rank the themes, give more weight to low ratings and recent reviews, and mark any theme with fewer than 3 reviews or only one source as thin. Never make anything up, and state the sample sizes.\n\nOutput: a competitor table, a feature matrix (must, should or could, compared with LinkPeek's brief), ranked complaints and praise with linked quotes, and concrete recommendations for LinkPeek's next parts: summaries, AI summaries, the clickbait check, the source card, feedback, real-world testing, the link protector, the annoyance filter, social sites, and measurement and pricing. Save it to /home/user/linkpeek/docs/research/.",
+ "summary": "The products closest to LinkPeek are four tiny extensions: Link Summarizer AI, Smart Hover Reader, LinkLooker and Peeko. Each shows an AI or metadata summary when you hover over or click a link. None has more than 7 users or more than 1 rating, three have not been updated in 17 months or more, and none gives a tick/cross/neutral verdict comparing the headline to the article. The big products each cover only one part of LinkPeek's brief, and each is built differently. Merlin AI (900,000 users, 4.4 from 8.8K ratings) is a freemium assistant that needs an account and summarises pasted URLs or the current page, with no card next to each link. DeArrow (100,000 users, 4.2 from 318 ratings) crowdsources replacement titles on YouTube only. Norton Safe Web (4,000,000 users, 2.7 from 339 ratings) checks every page against a remote reputation server. Wherever the AI provider could be confirmed, it is OpenAI, either through the developer's key or the user's own key. The one clickbait detector that warns before a click, ClickGuard, is an unreleased research prototype that runs on a server and gives a probability score, not a three-state verdict. Several parts of the question have no verified answer: whether Chrome or Edge now has its own link preview (the only claim on this was refuted), browser built-ins in Arc, Safari and Brave, annoyance and cookie-banner blockers, and every word-for-word review quote. No ranked complaints or praise can be reported, and the sample of verified review quotes is zero.",
+ "findings": [
+  {
+   "claim": "Link Summarizer AI summarises links in two steps. Hovering over a link shows a small chip, and clicking the chip opens a tooltip with an AI summary of 2 to 12 sentences. Even the shortest setting is longer than LinkPeek's limit of 20 words. Traction is negligible: 7 users and 5.0 from 1 rating, version 1.0.1, updated May 5, 2026. Its AI provider and privacy model are unconfirmed. The listing says Gemini Nano runs on the device and that no API key, account or data collection is involved, but both verification claims on those points were refuted (0-3 and 1-2).",
+   "confidence": "medium",
+   "vote": "3-0 (mechanism); related on-device and privacy claims refuted 0-3 and 1-2",
+   "sources": [
+    "https://chromewebstore.google.com/detail/enlgnealkaolloegpfdmloikifmgbcab"
+   ],
+   "evidence": "Listing text, quoted exactly: \"Hover over a link \u2014 a small \u2728 chip appears beside it ... Click the chip \u2014 a tooltip opens with a 2\u201312 sentence AI summary\". The listing also offers short, medium and detailed lengths. A third-party snippet repeats the same 2\u201312 sentence wording but gives 3 users, which reflects a different snapshot date. The only primary source is the developer's own listing. Nobody has tested the product or reviewed it independently. This product is the closest to LinkPeek's click-to-open flow, but it is not proven to be local."
+  },
+  {
+   "claim": "Smart Hover Reader shows AI summaries of news links on hover, only on sites the user has whitelisted, and it asks for host access per origin, which is close to LinkPeek's model. It treats clickbait as a special case: it answers the implied question in one or two sentences and gives up to three bullets for other articles. It shows free text only, with no tick, cross, label or score. Despite the listing's claim that it 'runs entirely in your browser', the code sends up to 6,000 characters of article text to OpenAI gpt-4o-mini using the developer's own hardcoded API key. Traction: 6 users, 0 ratings, version 1.0.0, last updated 22 May 2025, so it is probably abandoned.",
+   "confidence": "high",
+   "vote": "3-0; 3-0",
+   "sources": [
+    "https://chromewebstore.google.com/detail/hondicdnejefklafalckkmmnpmkgkcne",
+    "https://rpavic3.github.io/smart-hover-reader/privacy.html"
+   ],
+   "evidence": "Listing text, quoted exactly: \"Smart Hover Reader brings you instant, on-hover summaries of news articles. No need to click through, no pop-ups, no clutter. ... Hover over a link on any whitelisted news site.\" and \"One-sentence answers for clickbait. Skip the fluff and get straight to the point. \u2022 Up to three concise bullet points for everything else\". A verifier unpacked the v1.0.0 package. In background.js, the prompt tells gpt-4o-mini (max_tokens 180) to answer the implied question when an article is click-bait. In content.js, only res.summary is rendered, with no verdict UI. The manifest uses optional_permissions <all_urls> with chrome.permissions.request, and fetches use credentials 'omit'. The privacy policy says extracted text is sent to OpenAI. This is the only competitor in the set whose behaviour was confirmed from its code rather than its marketing."
+  },
+  {
+   "claim": "LinkLooker (developer Tsuni, source available at github.com/TetraTsunami/linklooker) is triggered by hovering over a link and pressing Shift. By default it shows only page metadata: the title, the publisher's description and the cover image, read from HTML tags. AI summaries need the user's own paid OpenAI API key, and part of the page content is then sent to OpenAI. The Firefox build requests storage, https://*/* and <all_urls> up front, with no optional permissions. The listing says PDFs, anchor links and social media sites may not work.",
+   "confidence": "medium",
+   "vote": "3-0 (trigger and description); 2-1 (metadata default and API key)",
+   "sources": [
+    "https://chromewebstore.google.com/detail/madknadnoiflomiheamlcmfbnbmlccik",
+    "https://addons.mozilla.org/api/v5/addons/addon/linklooker/",
+    "https://github.com/TetraTsunami/linklooker"
+   ],
+   "evidence": "Listing text, quoted exactly: \"hover the cursor over a link and press shift! It'll pop up a handy little summary of whatever's on the other side of the link.\" and \"It grabs the title, publisher-provided description, and cover image using HTML tags on the targeted page ... If you configure an API key in the options menu, it can also send part of the page content to an OpenAI endpoint for further summary. Note that the AI endpoint is not free!\" The README names OpenAI as the only provider. No license file is visible, so 'source available' is more accurate than 'open source'. Verifiers saw roughly 4 users, 1 rating, Chrome v1.1.6 (Jul 2024) and Firefox v1.1.7 (Nov 2024). However, the standalone metrics claim was refuted 0-3, so treat those numbers as unconfirmed. The metadata-only default is a useful no-AI pattern for LinkPeek's source card."
+  },
+  {
+   "claim": "Peeko advertises AI summaries of linked pages on hover, with adjustable preview delay, summary length and theme, domain exclusion, caching and rate limiting. Its privacy policy describes an optional OpenAI integration that uses the user's own key. It has almost no traction and looks dormant: 6 users and 5.0 from 1 rating with no review text, version 1.0.2, updated April 23, 2025, 187KiB, offered by HarisN (non-trader), no price listed.",
+   "confidence": "medium",
+   "vote": "3-0; 3-0 (separate claim that its privacy claims contradict the store disclosure refuted 1-2)",
+   "sources": [
+    "https://chromewebstore.google.com/detail/filpmfnfnllknlgodhdmmopnfnfgbjii",
+    "https://harisnazir.github.io/Peeko/PRIVACY.html"
+   ],
+   "evidence": "Raw listing HTML (fetched 2026-10-14) contains these strings: \"5.0 ( 1 rating ) ... 6 users ... Version 1.0.2 Updated April 23, 2025 ... Offered by HarisN Size 187KiB ... Non-trader\". Feature text, quoted exactly: \"Fully Customizable: Adjust preview delay, summary length, themes, and more ... Intelligent caching for smooth, quick previews. Resource-efficient design with rate limiting to avoid overload. Customizable domain exclusion\". The extscope.org tracker agrees on the version and shows about 5 users. All feature details are developer marketing and have not been tested. The trigger is hover, where LinkPeek uses a click on an icon."
+  },
+  {
+   "claim": "Merlin AI (Foyer Tech) is by far the largest AI summariser in the set. On 2026-10-14 its listing showed 900,000 users, 4.4 out of 5 from 8.8K ratings, version 8.3.0, 4.17MiB and an update on October 5, 2026. It is freemium and needs an account. The store lists no price but says it offers in-app purchases, and an account is needed for the full feature set. One account works across Chrome, iOS, Android and Windows. LinkPeek needs no account and runs no server.",
+   "confidence": "high",
+   "vote": "3-0; 3-0",
+   "sources": [
+    "https://chrome.google.com/webstore/detail/merlin-1-click-access-to/camppjleccjaphfdbohjdohecfnoikec?hl=en"
+   ],
+   "evidence": "Raw listing HTML matched every figure: \"900,000 users\", \"8.8K ratings\", \"Average rating 4.4 out of 5 stars\", \"Updated October 5, 2026\", \"Offers in-app purchases\". Sign-up text, quoted exactly: \"Sign Up: Create an account to unlock the full feature set.\" Third-party pricing pages (eesel.ai, ai-toolbox.co, codaone) report a free tier of about 102 queries a day and Pro/Premium plans of roughly $19 to $29 a month. Merlin's own pricing page returned 403, so those prices are secondary. The fetched page showed no individual reviews. Merlin's AI provider is unconfirmed: the claim that it uses OpenAI, Anthropic and Google was refuted 0-3."
+  },
+  {
+   "claim": "Merlin summarises links only when the user pastes a URL (any site or a YouTube video) or opens a sidebar on the current page. The listing describes no summary card next to each article link. Its only hover feature shows definitions, related research and translations, not where a link goes. It also adds AI answers to Google, Bing, DuckDuckGo and Perplexity results. So it overlaps with LinkPeek's purpose but does not offer LinkPeek's per-link, pre-click card.",
+   "confidence": "medium",
+   "vote": "2-1",
+   "sources": [
+    "https://chrome.google.com/webstore/detail/merlin-1-click-access-to/camppjleccjaphfdbohjdohecfnoikec?hl=en"
+   ],
+   "evidence": "Quoted exactly: \"Paste a link to any site or YouTube video and get an actionable summary (with bilingual subtitles for videos).\" Also listed: \"Chat with Webpages: Open the extension as a sidebar on any website\", \"Smart Highlights: Hover to surface definitions, related research, and inline translations\" and \"AI-Powered Search Overlays: Concise, citation-rich answers on Google, Bing, DuckDuckGo, and Perplexity\". The 'no per-link card' part is a negative claim, inferred from a grep of the listing for link, URL, preview and card. Nobody tested the product hands-on, and the vote was split."
+  },
+  {
+   "claim": "DeArrow is the established clickbait product. On 2026-10-14 its Chrome listing showed about 100,000 users, 4.2 out of 5 from 318 ratings, version 2.3.10, updated July 14, 2026. Firefox shows about 32k users and about 389 ratings. It works on YouTube only and relies on crowdsourcing: users submit replacement titles and thumbnails and vote on them. It does not judge a headline against the content. When nobody has submitted anything, it falls back to a casing rule for the original title and a screenshot taken at a random timestamp. It requests host permissions for youtube.com and youtube-nocookie.com only.",
+   "confidence": "high",
+   "vote": "3-0; 3-0",
+   "sources": [
+    "https://chromewebstore.google.com/detail/enamippconapkdmgfgjchkhakpfinmaj",
+    "https://addons.mozilla.org/firefox/addon/dearrow",
+    "https://github.com/ajayyy/DeArrow"
+   ],
+   "evidence": "Listing figures: \"100,000 users ... 4.2 out of 5 ... 318 ratings ... Version 2.3.10 ... Updated July 14, 2026\", confirmed in the raw HTML. Description, quoted exactly: \"DeArrow is a browser extension for crowdsourcing better titles and thumbnails on YouTube.\" The README and the AMO listing say \"These are user submitted and voted on.\" A search found no AI or LLM title generation in DeArrow. Crowd voting needs a server, which LinkPeek does not have, so any LinkPeek feedback system would need a different design."
+  },
+  {
+   "claim": "ClickGuard (arXiv 2607.20463, Michaluk et al., v1 dated 18 May 2026) is a research prototype that warns about clickbait both before and after a click. Before a click, it puts coloured risk badges next to headlines on supported search and news pages, based on an XGBoost probability. After a click, it shows a percentage likelihood score explained by the metrics it analysed, plus a 1 to 2 sentence spoiler. It is graded, not three-state like LinkPeek's tick/cross/neutral. It needs a server (Flask on Google Cloud Run, OpenAI text-embedding-3-large and GPT-4o-mini). It is English-only and has no store listing.",
+   "confidence": "medium",
+   "vote": "3-0 (pre- and post-click warning); 2-1 (percentage output vs three-state)",
+   "sources": [
+    "https://papers.cool/arxiv/2607.20463",
+    "https://arxiv.org/abs/2607.20463",
+    "https://arxiv.org/html/2607.20463"
+   ],
+   "evidence": "Abstract, quoted exactly: \"This paper presents an AI-driven browser extension that identifies clickbait ... the tool can warn users before and after they access a clickbait article.\" and \"the user receives a percentage score indicating the likelihood that it is clickbait\". The full paper describes Content Script #2 (pre-click mode), which \"injects colored risk badges next to headlines before the user clicks.\" The only release is a demo video. The paper has not been peer reviewed, and the arXiv ID prefix does not match the date. The claim that its spoiler is the same idea as LinkPeek's 20-word summary was refuted 0-3."
+  },
+  {
+   "claim": "Norton Safe Web (Gen Digital) is the large link-safety incumbent, and it rates poorly. On 2026-10-17 its listing showed 4,000,000 users and 2.7 out of 5 from 339 ratings, version 3.25.0.13, updated August 20, 2026. It works from a server: every page the user loads is checked against Norton's Remote URL Reputation Service, and malicious pages and downloads are blocked automatically. It asks for access to all sites, browsing history, download management and webRequest/webRequestBlocking. It discloses that it collects web history and user activity, and it sends usage data to Google Analytics. This design is the opposite of LinkPeek's link protector, which has no server.",
+   "confidence": "high",
+   "vote": "3-0; 3-0",
+   "sources": [
+    "https://chromewebstore.google.com/detail/norton-safe-web/fnpbeacklnhmkkilekogeiekaglbmmka"
+   ],
+   "evidence": "Listing text, quoted exactly: \"2.7 ( 339 ratings ) Ratings are updated daily and may not reflect the most recent reviews. ... 4,000,000 users\" and \"Norton Safe Web provides safety information for every page you load by querying Norton's Remote URL Reputation Service ... automatically blocks malicious pages and downloads\". The permissions and privacy disclosures were read from the same listing. A third-party aggregator (firefox-stats.com) summarises reviews as saying it misses most malicious links. That is secondary, it is not a verified quote, and it was not part of any claim. The low rating is a signal, but the reasons behind it are not verified."
+  },
+  {
+   "claim": "Across the set, the clickbait approaches do not overlap with LinkPeek's design. Smart Hover Reader answers the implied question in free text. DeArrow crowdsources replacement titles, on YouTube only. ClickGuard gives a graded probability from a server. No confirmed product gives a three-state tick/cross/neutral verdict that compares the headline to the article text before the click, without a server. This is the clearest gap in the market that the evidence supports.",
+   "confidence": "medium",
+   "vote": "synthesis of claims voted 3-0, 3-0, 3-0, 2-1",
+   "sources": [
+    "https://chromewebstore.google.com/detail/hondicdnejefklafalckkmmnpmkgkcne",
+    "https://chromewebstore.google.com/detail/enamippconapkdmgfgjchkhakpfinmaj",
+    "https://papers.cool/arxiv/2607.20463"
+   ],
+   "evidence": "This finding is inferred from the per-product findings above. It is limited by sample size: only three clickbait-related products were verified, and the research did not cover browser built-ins or Firefox-only tools. Two claims from an LLM clickbait paper (arXiv 2306.09597) were refuted, so there is no verified evidence here on how accurate a headline-vs-article check can be."
+  },
+  {
+   "claim": "Wherever the AI provider could be confirmed, it is OpenAI, used either with the developer's key (Smart Hover Reader, gpt-4o-mini, hardcoded key) or the user's own paid key (LinkLooker, Peeko optional), plus ClickGuard's server, which runs GPT-4o-mini and OpenAI embeddings. The provider is unconfirmed for Merlin and Link Summarizer AI because the claims on both were refuted. Permission models range from per-origin optional host access (Smart Hover Reader, like LinkPeek) and narrow site lists (DeArrow) to <all_urls> granted at install (LinkLooker) and all sites plus history, downloads and webRequestBlocking (Norton).",
+   "confidence": "medium",
+   "vote": "built from verifier evidence on claims voted 3-0 and 2-1",
+   "sources": [
+    "https://chromewebstore.google.com/detail/hondicdnejefklafalckkmmnpmkgkcne",
+    "https://rpavic3.github.io/smart-hover-reader/privacy.html",
+    "https://addons.mozilla.org/api/v5/addons/addon/linklooker/",
+    "https://harisnazir.github.io/Peeko/PRIVACY.html",
+    "https://arxiv.org/html/2607.20463",
+    "https://chromewebstore.google.com/detail/norton-safe-web/fnpbeacklnhmkkilekogeiekaglbmmka",
+    "https://chromewebstore.google.com/detail/enamippconapkdmgfgjchkhakpfinmaj"
+   ],
+   "evidence": "The provider and permission details come mostly from verifier notes attached to confirmed claims, not from the headline claims themselves. Only Smart Hover Reader was checked against its code. For the others, the evidence is privacy policies, manifests or the Firefox API. The one confirmed mismatch between marketing and behaviour is Smart Hover Reader ('runs entirely in your browser' vs text sent to OpenAI). A similar mismatch claimed for Peeko was refuted."
+  },
+  {
+   "claim": "These recommendations for LinkPeek are inferences from the evidence. Summaries: keep the hard 20-word cap, because every summariser found writes more (2 to 12 sentences, up to 3 bullets). AI summaries: if LinkPeek adds them, run them on the device or with the user's own key, and say plainly where the text goes, because the one competitor confirmed to send text to a server hid it. Clickbait check: the three-state verdict before a click and without a server is the gap in the market, so build it, accept that its accuracy is still unproven, and test it. Source card: LinkLooker shows that a useful card can be built from title, description and image metadata with no AI. Feedback: crowd voting like DeArrow's needs a server, so keep LinkPeek's feedback local or explicitly opt-in. Real-world testing: no small competitor has independent reviews, and ClickGuard is English-only, so testing on a range of real publisher pages (paywalls, social sites, PDFs, anchors) is a chance to stand out. Link protector: Norton's server reputation lookup and 2.7 rating show there is room for a lighter local check, but its reasons for low ratings are unverified. Annoyance filter, social sites, measurement and pricing: the verified evidence is too thin to set targets. The pricing benchmarks are Merlin's third-party-reported $19 to $29 a month, while every small competitor is free with almost no users.",
+   "confidence": "low",
+   "vote": "inference; not separately voted",
+   "sources": [
+    "https://chromewebstore.google.com/detail/enlgnealkaolloegpfdmloikifmgbcab",
+    "https://chromewebstore.google.com/detail/hondicdnejefklafalckkmmnpmkgkcne",
+    "https://chromewebstore.google.com/detail/madknadnoiflomiheamlcmfbnbmlccik",
+    "https://chromewebstore.google.com/detail/filpmfnfnllknlgodhdmmopnfnfgbjii",
+    "https://chrome.google.com/webstore/detail/merlin-1-click-access-to/camppjleccjaphfdbohjdohecfnoikec?hl=en",
+    "https://chromewebstore.google.com/detail/enamippconapkdmgfgjchkhakpfinmaj",
+    "https://papers.cool/arxiv/2607.20463",
+    "https://chromewebstore.google.com/detail/norton-safe-web/fnpbeacklnhmkkilekogeiekaglbmmka"
+   ],
+   "evidence": "Each recommendation links to a confirmed finding above. None rests on user-review evidence, because no review quotes survived verification. The annoyance filter, cookie-banner handling, social-site behaviour and measurement have no supporting verified claims beyond LinkLooker's note that social media sites may not work."
+  }
+ ],
+ "caveats": "Review mining produced no verified word-for-word quotes from the Chrome Web Store, Firefox Add-ons, Reddit, Hacker News or Product Hunt. The sample of verified quotes is 0, so complaints and praise cannot be ranked, and any theme would count as thin. The only ratings data available is aggregate: Merlin 8.8K ratings, Norton 339, DeArrow 318 on Chrome (about 389 on Firefox), and the small competitors 0 or 1 each.\n\nLarge parts of the question have no verified answer:\n- Built-in browser link previews. The one claim on this (a Chrome 'Link Preview' component, from a Red Hat bug) was refuted 1-2, so it is still unknown whether Chrome or Edge has its own link preview. Arc, Safari and Brave were not covered.\n- Annoyance and cookie-banner blockers. No claims survived.\n- Link safety. Norton is the only product covered.\n\nMost product facts come from developers' own store listings and marketing copy. The exception is Smart Hover Reader, which was checked against its unpacked code.\n\nSeveral tempting claims were refuted and should not be reused:\n- Link Summarizer AI's on-device Gemini Nano and no-data claims\n- LinkLooker's standalone metrics\n- Peeko's privacy contradiction\n- Merlin using OpenAI, Anthropic and Google\n- ClickGuard's spoiler being equivalent to LinkPeek's summary\n- Both LLM-clickbait-accuracy claims from arXiv 2306.09597\n\nAll store figures are snapshots taken 2026-10-14 to 2026-10-17, and the store rounds user counts. Merlin's prices come from third-party pages because its own pricing page returned 403. ClickGuard is a preprint that has not been peer reviewed, its arXiv ID prefix does not match its May 2026 date, and two unrelated things share its name (another paper, arXiv 2604.07272, and a Google Ads click-fraud tool). Smart Hover Reader's hardcoded OpenAI key was deliberately not reproduced. The fields the brief asked for (users, rating, review count, permissions, data collected, AI provider) are incomplete for most products.",
+ "openQuestions": [
+  "Does Chrome or Edge now ship its own link preview or hover summary? If so, how is it triggered, is it on by default, and which versions have it? This needs Chrome release notes and flags, and Edge documentation, because the only claim was refuted.",
+  "What do the low-star and recent reviews of Norton Safe Web (2.7 from 339 ratings), DeArrow and Merlin say, word for word? This needs the Chrome Web Store review pages and the Firefox Add-ons reviews API, with sample sizes recorded.",
+  "How do annoyance and cookie-banner blockers (for example Consent-O-Matic, I still don't care about cookies, and uBlock Origin's annoyance lists) compare on permissions, data collection and ratings with LinkPeek's annoyance filter?",
+  "Can a headline-vs-article tick/cross/neutral check run without a server (for example with an on-device model) and be accurate enough? And what does Link Summarizer AI actually use, given that its on-device claim was refuted?"
+ ],
+ "refuted": [
+  {
+   "claim": "Google Chrome ships a built-in component named Link Preview that was present in Chrome builds before version 149.0.7827.53. This supports the view that Chrome has its own link preview feature. The page does not say what the feature does, how users trigger it, or whether it is on by default.",
+   "vote": "1-2",
+   "source": "https://bugzilla.redhat.com/show_bug.cgi?id=2485238"
+  },
+  {
+   "claim": "Summaries are made on the device by Chrome's built-in Gemini Nano model. It needs Chrome 127 or newer, and Gemini Nano must be available on the device.",
+   "vote": "0-3",
+   "source": "https://chromewebstore.google.com/detail/enlgnealkaolloegpfdmloikifmgbcab"
+  },
+  {
+   "claim": "The extension needs no API key and no account, and the developer says no data is collected or sent to an external server. It is a direct privacy match for LinkPeek's no-server design.",
+   "vote": "1-2",
+   "source": "https://chromewebstore.google.com/detail/enlgnealkaolloegpfdmloikifmgbcab"
+  },
+  {
+   "claim": "Chrome Web Store metrics as fetched on 2026-10-14: 4 users, a 5.0 rating from 1 rating with no written review shown, version 1.1.6, last updated July 16, 2024 (more than two years without an update). No price is listed, so it appears to be free.",
+   "vote": "0-3",
+   "source": "https://chromewebstore.google.com/detail/madknadnoiflomiheamlcmfbnbmlccik"
+  },
+  {
+   "claim": "The privacy claims in the description contradict the store's own data disclosure. The description says there is zero data collection, but the Chrome Web Store privacy section says the extension handles 'User activity' and 'Website content'. The disclosure section does not show which permissions the extension requests.",
+   "vote": "1-2",
+   "source": "https://chromewebstore.google.com/detail/filpmfnfnllknlgodhdmmopnfnfgbjii"
+  },
+  {
+   "claim": "Merlin uses several third-party AI providers (OpenAI, Anthropic and Google) and does not run a single in-house or on-device model.",
+   "vote": "0-3",
+   "source": "https://chrome.google.com/webstore/detail/merlin-1-click-access-to/camppjleccjaphfdbohjdohecfnoikec?hl=en"
+  },
+  {
+   "claim": "ClickGuard 'spoils' clickbait by giving a one- to two-sentence summary of the whole article. This is the same idea as LinkPeek's summary of 20 words or fewer.",
+   "vote": "0-3",
+   "source": "https://papers.cool/arxiv/2607.20463"
+  },
+  {
+   "claim": "Using headlines alone, general-purpose LLMs (GPT-3.5, GPT-4) do not reach satisfactory clickbait detection. That supports LinkPeek's design of checking the headline against the article text, not judging the headline in isolation. Note that the paper only tested headline inputs and never tested headline-plus-body pairs.",
+   "vote": "0-3",
+   "source": "https://arxiv.org/abs/2306.09597"
+  },
+  {
+   "claim": "Overall, prompted LLMs in few-shot settings scored below state-of-the-art deep neural networks and fine-tuned pretrained language models (such as BERT-based classifiers) on English and Chinese clickbait benchmarks.",
+   "vote": "1-2",
+   "source": "https://arxiv.org/abs/2306.09597"
+  }
+ ],
+ "unverified": [],
+ "sources": [
+  {
+   "url": "https://onmsft.com/news/google-is-killing-chromes-link-preview-feature-from-desktop/",
+   "quality": "unreliable",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 0
+  },
+  {
+   "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2485238",
+   "quality": "primary",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 4
+  },
+  {
+   "url": "https://www.ghacks.net/2024/03/13/first-look-at-google-chromes-upcoming-link-preview-feature/",
+   "quality": "secondary",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://www.techradar.com/computing/edge/watch-out-google-chrome-microsoft-edge-gets-a-super-drag-and-drop-feature-that-actually-lives-up-to-the-name-as-an-impressive-addition-to-the-browser",
+   "quality": "secondary",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 4
+  },
+  {
+   "url": "https://mjtsai.com/blog/2024/05/20/safari-hover-link-preview-keyboard-shortcut/",
+   "quality": "blog",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://orionfeedback.org/d/4610-open-different-domains-in-popup-similar-to-arcs-peek",
+   "quality": "forum",
+   "angle": "Built-in browser link previews (recent news)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/enlgnealkaolloegpfdmloikifmgbcab",
+   "quality": "primary",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/hondicdnejefklafalckkmmnpmkgkcne",
+   "quality": "primary",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/madknadnoiflomiheamlcmfbnbmlccik",
+   "quality": "primary",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/filpmfnfnllknlgodhdmmopnfnfgbjii",
+   "quality": "primary",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://www.producthunt.com/p/glance-ai-search-previews",
+   "quality": "forum",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chrome.google.com/webstore/detail/merlin-1-click-access-to/camppjleccjaphfdbohjdohecfnoikec?hl=en",
+   "quality": "primary",
+   "angle": "Hover link preview and AI summariser extensions (state of the art)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/enamippconapkdmgfgjchkhakpfinmaj",
+   "quality": "primary",
+   "angle": "Clickbait detection (technical and alternatives)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://papers.cool/arxiv/2607.20463",
+   "quality": "primary",
+   "angle": "Clickbait detection (technical and alternatives)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://arxiv.org/abs/2306.09597",
+   "quality": "primary",
+   "angle": "Clickbait detection (technical and alternatives)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/norton-safe-web/fnpbeacklnhmkkilekogeiekaglbmmka",
+   "quality": "primary",
+   "angle": "Link safety and annoyance blockers (protective tools)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/trafficlight/cfnpidifppmenkapgihekkeednfoenal",
+   "quality": "primary",
+   "angle": "Link safety and annoyance blockers (protective tools)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/guardio-protection-for-ch/gjfpmkejnolcfklaaddjnckanhhgegla",
+   "quality": "primary",
+   "angle": "Link safety and annoyance blockers (protective tools)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/i-still-dont-care-about-c/edibdbjcniadpccecjdfdjjppcpchdlm",
+   "quality": "primary",
+   "angle": "Link safety and annoyance blockers (protective tools)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://chromewebstore.google.com/detail/consent-o-matic/mdjildafknihdffpkfmmpnpoiajfjnjd",
+   "quality": "primary",
+   "angle": "Link safety and annoyance blockers (protective tools)",
+   "claimCount": 5
+  },
+  {
+   "url": "https://news.ycombinator.com/item?id=43831298",
+   "quality": "forum",
+   "angle": "User complaints and skepticism (practitioner reviews)",
+   "claimCount": 5
+  }
+ ],
+ "stats": {
+  "angles": 5,
+  "sourcesFetched": 21,
+  "claimsExtracted": 98,
+  "claimsVerified": 25,
+  "confirmed": 16,
+  "killed": 9,
+  "unverified": 0,
+  "afterSynthesis": 12,
+  "urlDupes": 5,
+  "budgetDropped": 4,
+  "agentCalls": 103
+ }
+}

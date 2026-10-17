@@ -23,6 +23,10 @@ Everything around the summary that doesn't need an AI model: the word-count rule
 - The card now shows real summaries with the right evidence label.
 - **Evaluation set**: `eval/articles/` with 20 saved article fixtures (licence-safe: public-domain or self-written text) and a hand-written expected summary for each. A script scores length compliance, filler phrases, and overlap with the expected summary. Results go to `docs/eval/part-05.md`.
 
+## From the competitor research (docs/research/competitors-2026-10.md)
+- Every link summariser found writes more than 20 words (2 to 12 sentences, or up to three bullets). The hard limit is LinkPeek's clearest difference. Don't relax it.
+- Check `ChromeBuiltInProvider` properly: if it's good enough, Part 06 may not need a backend at all.
+
 ## Don't
 - No server, no paid API.
 - A summary must never come from headline text alone and be labelled as an article summary.

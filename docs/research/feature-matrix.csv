@@ -1,0 +1,19 @@
+feature,area,priority,linkpeek,link_summarizer_ai,smart_hover_reader,linklooker,peeko,merlin,dearrow,clickguard,norton_safe_web,chrome_builtin,safari_builtin,notes
+Card for each link before you click,core,must,yes (Parts 02-04),yes (hover chip then click),yes (hover),yes (hover + Shift),yes (hover),no (paste a link or sidebar),no,partial (badges next to headlines),not checked,removed (whole page in a window; flag only),partial (shows the page shrunk),
+Summary of 20 words or fewer,summary,must,planned (Part 05),no (2-12 sentences),no (1 sentence or up to 3 bullets),no (page description),unknown (adjustable),no,n/a,no (1-2 sentence spoiler),n/a,n/a,n/a,Every summariser found writes more than 20 words
+Works with no AI key or server,summary,must,yes (extractive default planned),unknown (on-device claim refuted),no (developer's OpenAI key),yes (metadata default),unknown,no,no (crowd server),no,no (reputation server),n/a,n/a,
+No account needed,core,must,yes,unknown,yes (none mentioned),yes,unknown,no (full features need an account),unknown,n/a,not checked,n/a,n/a,
+Says how much was read (full / preview / headline only),honesty,must,yes (Part 04),not seen,not seen,not seen,not seen,not seen,n/a,not seen,n/a,n/a,n/a,
+Paywalled pages: description only,honesty,must,yes (Part 04),not seen,not seen,not seen,not seen,not seen,n/a,not seen,n/a,n/a,n/a,
+Clickbait verdict: tick / cross / neutral,clickbait,must,planned (Part 07),no,partial (answers the implied question in text),no,no,no,partial (replaces titles; YouTube only),partial (probability score; server),no,no,no,No product found gives a three-state verdict against the article without a server
+Never replaces the page's own headline,clickbait,should,yes (rewrite stays in the card),n/a,yes,n/a,n/a,n/a,no (replaces titles),yes,n/a,n/a,n/a,DeArrow's reviews: replacements worse and one spoiler
+Source card (publisher and dates),source,should,planned (Part 08),not seen,not seen,partial (title + description + image),not seen,not seen,n/a,not seen,partial (site rating),no,no,
+Risky-link warnings,security,should,planned (Part 11),no,no,no,no,no,no,no,yes (server lookup; blocks),no,no,
+Warning can be overruled per site,security,must,planned (Part 11),n/a,n/a,n/a,n/a,n/a,n/a,n/a,no (top complaint in reviews),n/a,n/a,Norton: 7 of 64 Firefox reviews
+Asks for site access one site at a time,privacy,should,yes (Part 03),not checked,yes (optional per site),no (all sites at install),not checked,not checked,narrow (YouTube only),n/a,no (all sites + history + downloads),n/a,n/a,
+Sends no cookies,privacy,must,yes (Part 04),not checked,yes (credentials omit),not checked,not checked,not checked,not checked,n/a,not checked,n/a,n/a,
+Article text stays on the device,privacy,should,yes (no server),unknown,no (to OpenAI),yes unless you add a key,yes unless you add a key,no,n/a,no,n/a,yes,yes,
+Annoyance filter,annoyance,could,planned (Part 12),no,no,no,no,no,no,no,no,no,no,Annoyance blockers not researched yet
+Feedback on results,feedback,should,yes on device (Part 09),not seen,not seen,not seen,not seen,not seen,crowd votes (server),not seen,not seen,n/a,n/a,
+Works on PDFs,coverage,should,yes (first 15 pages),not seen,not seen,no (says PDFs may not work),not seen,not seen,n/a,not seen,n/a,n/a,n/a,
+Free with no nag or trial timer,money,should,yes (no payments planned before Part 14),no price listed,no price listed,no price listed (AI costs your own key),no price listed,no (freemium; account),no (optional payment; 17 of 36 low-star reviews),n/a,not checked,n/a,n/a,

@@ -29,6 +29,11 @@ Only paste this once LinkPeek has real users beyond you and Part 10's results lo
 - Price to test: £3 to £5 a month. It's a hypothesis.
 - Only then pick a billing provider and build it, in its own session.
 
+## From the competitor research
+DeArrow's optional payment (a small fee, a short trial, and a free option some reviewers couldn't find) comes up in 17 of its 36 one- and two-star Firefox reviews. Even when it's optional, a payment step that feels like a hurdle costs ratings. So:
+- The core features stay free and complete: no trial timers, no reminders, no "activate" step.
+- A paid tier only adds extras, and the store listing says exactly what's free.
+
 ## Rules that don't bend
 - Nobody can pay for a better rating, a hidden warning, a nicer summary, removed feedback or a bigger popularity number. Add a test asserting that partner status isn't an input to clickbait, source or security modules.
 - Sponsored content, if any, is labelled and visually separate from results.

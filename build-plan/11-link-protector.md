@@ -10,6 +10,12 @@ Warn about links that look dangerous or misleading. Never claim a link is safe.
 - **No known warning** (with a small note: "This isn't a guarantee of safety.")
 - **Not checked**
 
+## From the competitor research
+Norton Safe Web (4 million users, rated 2.7) checks every page against a server and blocks. Its most common complaint in Firefox reviews is that you can't overrule it (7 of 64 written reviews), then false alarms on safe sites (6), then missing real threats (3). So:
+- LinkPeek warns. It never blocks a page or a download.
+- Every warning has "Open anyway" and "Don't warn me on this site". Sites you've overruled are listed in Settings, where you can remove them.
+- Keep "No known warning", never "safe": even a big reputation service misses things.
+
 ## Build, stage 1: free, on-device
 In `src/core/security/`:
 - **Text vs destination**: link text that looks like a URL or brand ("paypal.com", "Your bank") but points to a different registrable domain. Use the Public Suffix List to get registrable domains right (`bbc.co.uk`, not `co.uk`).
@@ -34,6 +40,7 @@ If redirect checks or any URL fetching move to the backend, implement SSRF prote
 - Unit tests with at least 50 labelled URLs (lookalike, mismatch, clean, shortener, IP, punycode).
 - Clean, popular domains don't get flagged (track the false positive rate).
 - No result anywhere says "safe".
+- "Open anyway" and "Don't warn me on this site" work on every warning (Playwright test), and the overruled sites can be removed in Settings.
 
 ## Your check
 Try it on a few phishing examples from public training sites (for example, the phishing quiz pages run by security companies). Then try it on 20 links you trust. Any false alarm there is a bug.

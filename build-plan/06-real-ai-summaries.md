@@ -9,6 +9,10 @@ The key can't go in the extension, because anyone can unpack an extension and re
 
 Ask Claude for a cost estimate before building: cost per summary, and cost at 100, 1,000 and 10,000 summaries a day.
 
+## First, from the competitor research
+- Use the Part 05 eval set to compare Chrome's built-in Summarizer with the extractive provider before building any backend. On-device costs nothing and sends nothing.
+- The one competitor whose code was checked says it "runs entirely in your browser" while sending article text to OpenAI with a key built into the extension. So the settings line saying what is sent must match what the code does, with a test that checks it. Never put a key in the extension.
+
 ## Goal
 `RemoteProvider` working through a small, locked-down backend, with the Part 05 rules still enforced on whatever comes back.
 

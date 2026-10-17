@@ -124,3 +124,9 @@
 - Whether 150 words is the right line between full and partial. It's a guess (D26).
 - Sites whose security policy blocks the in-page fetch for same-site links. The code reports it as "couldn't reach the site"; no live example found yet.
 
+
+## Competitor research (17 Oct 2026)
+
+A research run on similar products (browser built-ins, link summarisers, clickbait tools, link safety), plus 192 Firefox reviews of DeArrow and Norton Safe Web. Results: `docs/research/competitors-2026-10.md`, with a feature matrix and the ranked reviews. In short: no browser ships a link summary (Chrome deleted its experimental page preview in Chrome 149), the closest extensions have 7 users or fewer, all of them write more than 20 words, and none gives a tick, cross or neutral verdict without a server. The findings were added to build-plan Parts 05, 06, 07, 11 and 14.
+
+**Not covered:** annoyance and cookie-banner blockers, Brave, Edge's current state, and Chrome Web Store review text.
