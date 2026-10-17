@@ -18,7 +18,7 @@ import {
 } from '../retrieve/diagnose';
 import type { FetchError } from '../retrieve/fetcher';
 import { siteOf } from '../retrieve/url';
-import type { ArticleExtract, EvidenceLevel, FailureReason, SourceInfo } from '../types';
+import type { ArticleExtract, EvidenceLevel, FailureReason, SourceInfo, Summary } from '../types';
 import type { HtmlExtraction } from './html';
 import { firstSentence, limitWords } from './sentences';
 
@@ -36,6 +36,8 @@ export interface Assessment {
   unsupported?: boolean;
   /** Set when the link ended up on a different page than it pointed to. */
   finalUrl?: string;
+  /** Added after reading, by the summary engine (Part 05). 20 words or fewer. */
+  summary?: Summary;
 }
 
 export interface FetchedMeta {

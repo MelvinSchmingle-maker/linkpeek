@@ -130,3 +130,32 @@
 A research run on similar products (browser built-ins, link summarisers, clickbait tools, link safety), plus 192 Firefox reviews of DeArrow and Norton Safe Web. Results: `docs/research/competitors-2026-10.md`, with a feature matrix and the ranked reviews. In short: no browser ships a link summary (Chrome deleted its experimental page preview in Chrome 149), the closest extensions have 7 users or fewer, all of them write more than 20 words, and none gives a tick, cross or neutral verdict without a server. The findings were added to build-plan Parts 05, 06, 07, 11 and 14.
 
 **Not covered:** annoyance and cookie-banner blockers, Brave, Edge's current state, and Chrome Web Store review text.
+
+## Part 05. Summary engine, no AI (17 Oct 2026)
+
+**Built:**
+- A word-count rule (D30) and a hard 20-word limit (D31). Over-long text is cut at a clause boundary so it stays a whole sentence, or rejected. A summary over 20 words can't reach the card: the engine re-checks every provider's output.
+- Quality filters: filler openers ("This article discusses..."), the headline repeated back, questions and fragments are rejected.
+- A provider slot with three engines:
+  - Extractive (the default, D32): the article's most informative sentence, labelled "In the article's own words:".
+  - Chrome's on-device AI (opt-in in Settings, D34): labelled "Summary by Chrome's AI, on this computer:".
+  - Remote: a stub for Part 06.
+- Summaries run in the offscreen document straight after reading. Partial pages get a 20-word preview from their public description. Paywalled body text is never summarised (tested).
+- Settings has a "Summaries" section with the on-device switch, a status line saying whether this computer can run it, and the model download button.
+- An evaluation set (D33) of 20 fictional articles, including French and Spanish, with `npm run eval` writing `docs/eval/part-05.md`.
+- Fixes the evaluation found along the way:
+  - Readability's text ran paragraphs together ("pounds.Engineers"), which spoiled previews and word counts. Fixed for article and page text.
+  - The robot-check list now includes "Verifying Device" pages (found on The Times in the live check).
+
+**Tested (actual results):**
+- typecheck, lint, production build: pass.
+- Unit tests: 264 pass (1 skipped: the step that writes the evaluation report, which runs under `npm run eval`). They cover every word-count rule, exactly 20 and 21 words, numbers only, long hyphenated words, non-English text, the shorten-once rule, every refused cut (lead-ins, dangling words, open quotes, split clauses, ranges, list items, subject-and-aside, "so ... that"), filler and headline-repeat rejection, the on-device provider against a stand-in for Chrome's API (never starts a download, asks once for shorter, falls back), and the engine refusing over-long output from a misbehaving provider.
+- Evaluation: 20 of 20 articles get a summary, all 20 words or fewer, none with filler, average 15.1 words, average key-word overlap with the hand-written summaries 0.62. Three are true sentences but the wrong focus: the opinion piece, the review and the science story (D32).
+- Browser tests: 106 pass in Chromium 141 (3 screenshot-only tests skipped). Full articles show a labelled summary of 20 words or fewer, partial pages show their preview and no summary, a paywalled page shows no summary and no paid text, and Settings says plainly that this browser can't run Chrome's AI.
+- Live check (17 Oct 2026): the 7 readable sites all got whole-sentence summaries of 20 words or fewer except the Hacker News thread, which got none. See `docs/compat/part-04-live.md`.
+
+**Not verified:**
+- Chrome's on-device AI with the real model. The automated browser has no model, so only the stand-in was tested, plus the Settings page saying it's unavailable. Whether the API is exposed in an extension's offscreen document at all has not been seen working.
+- The model download button (needs a capable computer and a real click).
+- Your check from the build plan: using it on 10 real articles for a day to judge whether the free summary is good enough.
+

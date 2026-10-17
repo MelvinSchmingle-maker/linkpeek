@@ -17,6 +17,7 @@ import { cacheable, getCached, setCached } from '../core/retrieve/cache';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
 import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
+import { getSettings } from '../core/storage/settings';
 import { OFFSCREEN_TARGET, type OffscreenRequest, type OffscreenResponse } from '../offscreen/messages';
 
 export interface RetrieveRequest {
@@ -64,7 +65,7 @@ async function work(req: RetrieveRequest, key: string, pageUrl: string | undefin
     return { evidence: 'unavailable', failure: 'permission-denied' };
   }
 
-  const assessment = outcome.ok ? await assessRaw(outcome.raw) : assessFetchError(outcome.error);
+  const assessment = outcome.ok ? await assessRaw(outcome.raw, req.headline) : assessFetchError(outcome.error);
   if (cacheable(assessment)) await setCached(key, assessment);
   return assessment;
 }
@@ -81,6 +82,7 @@ function toResult(req: RetrieveRequest, key: string, a: Assessment): LinkResult 
     ...(a.source ? { source: a.source } : {}),
     ...(a.unsupported ? { unsupported: true } : {}),
     ...(a.finalUrl ? { finalUrl: a.finalUrl } : {}),
+    ...(a.summary ? { summary: a.summary } : {}),
     ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(req.url) } : {}),
     // No headline check yet (Part 07): the card shows no verdict mark rather than a vague one.
     headlineCheck: { verdict: 'unknown', notChecked: true },
@@ -130,11 +132,12 @@ async function ensureOffscreen(): Promise<void> {
   await creating;
 }
 
-async function assessRaw(raw: RawFetch): Promise<Assessment> {
+async function assessRaw(raw: RawFetch, headline: string): Promise<Assessment> {
   await ensureOffscreen();
   clearTimeout(idleTimer);
   try {
-    const msg: OffscreenRequest = { target: OFFSCREEN_TARGET, type: 'assess', raw };
+    const { summaryEngine } = await getSettings();
+    const msg: OffscreenRequest = { target: OFFSCREEN_TARGET, type: 'assess', raw, headline, engine: summaryEngine };
     const res = (await chrome.runtime.sendMessage(msg)) as OffscreenResponse | undefined;
     if (!res?.ok) return { evidence: 'unavailable', failure: 'extraction-failed' };
     const a = res.assessment;

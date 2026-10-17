@@ -63,6 +63,7 @@ try {
       method: r?.extract?.method ?? '',
       words: r?.extract?.wordCount ?? '',
       shown: r?.extract?.firstSentence ?? r?.preview ?? '',
+      summary: r?.summary ? `${r.summary.text} (${r.summary.wordCount})` : '',
       // Just where it ended up: query strings on robot-check pages are one-off tokens.
       finalUrl: r?.finalUrl ? new URL(r.finalUrl).origin + new URL(r.finalUrl).pathname : '',
       seconds: (ms / 1000).toFixed(1),
@@ -83,18 +84,19 @@ const date = new Date().toISOString().slice(0, 10);
 const table = `${START}
 Run on ${date}. **${full} of ${rows.length}** pages came back \`full\`.
 
-| Page | Expected | Evidence | Reason | Read by | Words | Shown on the card | Time |
-|---|---|---|---|---|---|---|---|
+| Page | Expected | Evidence | Reason | Read by | Words | Opening or preview | Summary (words) | Time |
+|---|---|---|---|---|---|---|---|---|
 ${rows
   .map(
     (r) =>
-      `| [${cell(r.label)}](${r.url}) | ${cell(r.expected)} | ${r.evidence} | ${cell(r.failure)} | ${r.method} | ${r.words} | ${cell(r.shown)} | ${r.seconds}s |`,
+      `| [${cell(r.label)}](${r.url}) | ${cell(r.expected)} | ${r.evidence} | ${cell(r.failure)} | ${r.method} | ${r.words} | ${cell(r.shown)} | ${cell(r.summary)} | ${r.seconds}s |`,
   )
   .join('\n')}
 
-"Shown on the card" is the first sentence of the article for a \`full\`
-result, or the page's own description for a preview. Text in this table comes
-from the websites, not from LinkPeek.
+"Opening or preview" is the first sentence of the article for a \`full\`
+result, or the page's own description for a preview. "Summary" is what the
+card shows (Part 05, extractive), with its word count. Text in this table
+comes from the websites; LinkPeek only chose and cut it.
 ${rows.some((r) => r.finalUrl) ? `\nRedirects: ${rows.filter((r) => r.finalUrl).map((r) => `${r.label} ended on ${r.finalUrl}`).join('; ')}.\n` : ''}${END}`;
 
 const INTRO = `# Part 04 live check

@@ -31,9 +31,10 @@ const STRONG_CHALLENGE = [
 ];
 /** Titles bot-check pages use. */
 const CHALLENGE_TITLE =
-  /^(just a moment\.*|attention required!? \| cloudflare|access denied|are you a robot\??|please verify you are a human|security check|ddos protection by .*|one more step|checking your browser.*|pardon our interruption)$/i;
+  /^(just a moment\.*|attention required!? \| cloudflare|access denied|are you a robot\??|please verify you are a human|security check|ddos protection by .*|one more step|checking your browser.*|pardon our interruption|verifying (?:your )?(?:device|browser|connection)|verifying you are (?:a )?human|human verification|bot (?:check|verification))$/i;
 /** Weaker hints: also used by ordinary pages (comment forms), so they only count when there's little text. */
-const WEAK_CHALLENGE = /g-recaptcha|h-captcha|hcaptcha\.com|recaptcha\/api|enable javascript and cookies to continue|verify you are human/i;
+const WEAK_CHALLENGE =
+  /g-recaptcha|h-captcha|hcaptcha\.com|recaptcha\/api|enable javascript and cookies to continue|verify you are human|verifying your (?:device|browser)|unusual traffic from your computer/i;
 
 export function looksLikeChallenge(html: string, title: string, articleWords: number): boolean {
   if (CHALLENGE_TITLE.test(title.trim())) return true;

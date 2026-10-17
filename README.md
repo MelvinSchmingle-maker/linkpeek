@@ -13,8 +13,9 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 01 Project setup | Done |
 | 02 Inline button and card (demo data) | Done |
 | 03 Link detection and modes | Done |
-| 04 Fetching and reading articles | Done. Cards show what was read and the opening sentence; no summaries yet |
-| 05 onward | Not started |
+| 04 Fetching and reading articles | Done |
+| 05 Summary engine (no AI) | Done. Summaries of 20 words or fewer: the article's own most informative sentence, or Chrome's on-device AI if you switch it on |
+| 06 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
 
@@ -58,6 +59,7 @@ To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 | `npm test` | Unit tests (fast, no browser, no internet) |
 | `npm run test:e2e` | Builds two test versions (`dist-e2e/` loads by itself on the test pages; `dist-e2e-on-demand/` only when asked, like any other site) and runs them in a real Chromium |
 | `npm run check` | typecheck + lint + unit tests + build, in one go |
+| `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md` |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once.

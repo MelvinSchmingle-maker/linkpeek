@@ -12,6 +12,8 @@ When you open a card for a link, LinkPeek fetches that one page from the website
 
 The page is read on your device and the result stays on your device. Nothing is sent onward.
 
+Summaries are made on your computer. By default LinkPeek picks a sentence from the article itself. If you switch on "Let Chrome's built-in AI write summaries" in Settings, Chrome's own on-device model writes them instead: the article text goes to that model on your computer and nowhere else. Chrome downloads the model from Google once, when you press the download button; that download is between Chrome and Google, and LinkPeek sends nothing with it.
+
 A link to the page you're already on is read from that page in your browser, not fetched again. That copy can include what you see while logged in. It is read on your device and goes nowhere else.
 
 ## What's stored on your device
@@ -20,7 +22,7 @@ A link to the page you're already on is read from that page in your browser, not
 |---|---|---|
 | Settings (mode, demo toggle, hostnames of sites you turned off) | `chrome.storage.local` | Remember your choices. A site you turn off stays listed (hostname only, e.g. `news.example.com`) until you turn it back on, so LinkPeek stays off there. |
 | "Turn on" note (hostname and time) | `chrome.storage.local` | Lets LinkPeek finish turning a site on if the popup closes while Chrome asks for access. Deleted once used, or ignored and deleted after 2 minutes. |
-| Results for links you opened a card for (address, what was read, the opening sentence or preview) | `chrome.storage.session` | So opening the same link again doesn't fetch it again. Memory only: Chrome clears it when the browser closes. At most 60 results, each kept at most 24 hours. Not written to disk. |
+| Results for links you opened a card for (address, what was read, the opening sentence or preview, and the summary of 20 words or fewer) | `chrome.storage.session` | So opening the same link again doesn't fetch it again. Memory only: Chrome clears it when the browser closes. At most 60 results, each kept at most 24 hours. Not written to disk. |
 | Feedback votes (thumbs up/down) | `chrome.storage.local` | Find out which summaries help. Keeps the website's hostname (e.g. `news.example.com`), never the full address or any article text. One vote per result, at most 500 kept. |
 
 ## Rules for every future change

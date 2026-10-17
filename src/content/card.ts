@@ -187,7 +187,10 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     loading.append(el('span', 'spinner'), el('p', 'message', view.message ?? MSG.loading));
     body.append(loading);
   } else {
-    if (view.summary) body.append(el('p', 'summary', view.summary));
+    if (view.summary) {
+      if (view.summaryLabel) body.append(el('p', 'summary-label', view.summaryLabel));
+      body.append(el('p', 'summary', view.summary));
+    }
     if (view.extract) {
       body.append(el('p', 'extract-label', view.extractLabel ?? ''), el('p', 'extract', view.extract));
     }

@@ -32,6 +32,10 @@ export interface HtmlExtraction {
   articleWords: number;
   /** The article's opening paragraph (tables, captions and labels skipped). Empty if none. */
   lead: string;
+  /** The article's paragraphs in reading order from the opening, at most MAX_PARAGRAPHS. For summaries. */
+  paragraphs: string[];
+  /** The page's declared language (<html lang>), if any. */
+  language?: string;
   /** All visible-ish body text (scripts and styles removed), for words and phrase checks. */
   bodyWords: number;
   bodySample: string;
@@ -76,12 +80,17 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
   const bodyWords = wordCount(bodyText);
 
   let articleText = '';
-  let lead = '';
+  let paras: string[] = [];
   try {
     // Readability changes the document it reads, so give it a copy.
     const parsed = new Readability(doc.cloneNode(true) as Document, { charThreshold: 400 }).parse();
-    articleText = (parsed?.textContent ?? '').replace(/\s+/g, ' ').trim();
-    if (parsed?.content) lead = findLead(doc, new DOMParser().parseFromString(parsed.content, 'text/html'));
+    if (parsed?.content) {
+      const readable = new DOMParser().parseFromString(parsed.content, 'text/html');
+      paras = articleParagraphs(doc, readable);
+      articleText = blockText(readable.body);
+    } else {
+      articleText = (parsed?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    }
     if (!metadata.siteName && parsed?.siteName) metadata.siteName = parsed.siteName;
     if (!metadata.published && parsed?.publishedTime) metadata.published = parsed.publishedTime;
     if (!metadata.author && parsed?.byline) metadata.author = parsed.byline;
@@ -94,7 +103,9 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
     title,
     articleText,
     articleWords: articleText ? wordCount(articleText) : 0,
-    lead,
+    lead: paras[0] ?? '',
+    paragraphs: paras,
+    language: doc.documentElement?.getAttribute('lang')?.trim() || undefined,
     bodyWords,
     bodySample: bodyText.slice(0, 20_000),
     signals,
@@ -104,6 +115,7 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
 /** Paragraphs that are part of the running text, not tables, captions, asides or hidden labels. */
 const NOT_RUNNING_TEXT = 'table, figure, figcaption, aside, nav, footer, noscript, form, [aria-hidden="true"], .visually-hidden, .sr-only';
 const MIN_LEAD_WORDS = 6;
+const MAX_PARAGRAPHS = 40;
 
 /** A paragraph's text, or undefined if it's too short to be running text or isn't running text at all. */
 function paragraphText(p: Element): string | undefined {
@@ -121,37 +133,52 @@ function paragraphs(root: ParentNode): string[] {
 }
 
 /**
- * The article's opening paragraph. Readability sometimes starts part-way in
- * on pages that split the story into several identical blocks (BBC News
- * does). So when the page's <article> has earlier paragraphs laid out exactly
- * like the one Readability started from (same classes, same kind of parent),
- * start from the first of those. A standfirst or caption is laid out
+ * The article's paragraphs, from its opening. Readability sometimes starts
+ * part-way in on pages that split the story into several identical blocks
+ * (BBC News does). So when the page's <article> has earlier paragraphs laid
+ * out exactly like the one Readability started from (same classes, same kind
+ * of parent), those come first. A standfirst or caption is laid out
  * differently, so it isn't mistaken for the opening.
  */
-function findLead(doc: Document, readable: Document): string {
-  const first = paragraphs(readable)[0];
-  if (!first) return '';
+function articleParagraphs(doc: Document, readable: Document): string[] {
+  const ours = paragraphs(readable);
+  const first = ours[0];
+  if (!first) return [];
   const original = [...doc.querySelectorAll('p')].find((p) => paragraphText(p) === first);
   const parent = original?.parentElement;
   const article = original?.closest('article, [itemprop="articleBody"], main');
-  if (!original || !parent || !article || !(original.className || parent.className)) return first;
-  for (const p of article.querySelectorAll('p')) {
-    if (p === original) break;
-    const sameShape =
-      p.className === original.className &&
-      p.parentElement?.tagName === parent.tagName &&
-      p.parentElement?.className === parent.className;
-    const text = sameShape ? paragraphText(p) : undefined;
-    if (text) return text;
+  const earlier: string[] = [];
+  if (original && parent && article && (original.className || parent.className)) {
+    for (const p of article.querySelectorAll('p')) {
+      if (p === original) break;
+      const sameShape =
+        p.className === original.className &&
+        p.parentElement?.tagName === parent.tagName &&
+        p.parentElement?.className === parent.className;
+      const text = sameShape ? paragraphText(p) : undefined;
+      if (text) earlier.push(text);
+    }
   }
-  return first;
+  return [...earlier, ...ours].slice(0, MAX_PARAGRAPHS);
 }
 
 function visibleBodyText(doc: Document): string {
   const body = doc.body?.cloneNode(true) as HTMLElement | undefined;
   if (!body) return '';
   for (const el of body.querySelectorAll('script, style, noscript, template, svg')) el.remove();
-  return (body.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return blockText(body);
+}
+
+const BLOCKS = 'p, div, li, dt, dd, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th, tr, figcaption, section, article, header, footer, aside, nav, br';
+
+/**
+ * Text with a space between blocks. `textContent` alone runs paragraphs
+ * together ("410,000 pounds.Engineers replaced"), which breaks sentences
+ * and word counts. Changes the element it's given.
+ */
+function blockText(root: Element): string {
+  for (const el of root.querySelectorAll(BLOCKS)) el.after(' ');
+  return (root.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
 function meta(doc: Document, ...names: string[]): string | undefined {

@@ -2,7 +2,7 @@
  * Every user-facing sentence in one place. Short, plain, no blame, no jargon.
  * Never imply a page was read when it wasn't.
  */
-import type { EvidenceLevel, FailureReason, HeadlineVerdict, LinkRiskLevel } from './types';
+import type { EvidenceLevel, FailureReason, HeadlineVerdict, LinkRiskLevel, SummaryProviderName } from './types';
 
 export const MSG = {
   iconLabel: 'Preview this link with LinkPeek',
@@ -21,7 +21,7 @@ export const MSG = {
   unsupported: "LinkPeek can't preview this type of link yet.",
   unavailable: 'No reliable summary is available for this link.',
   // "Text", not "article": a link may lead to a discussion or a reference page (Part 04 live check).
-  extractLabel: 'The text begins (LinkPeek writes summaries in a later version):',
+  extractLabel: "Couldn't fit a summary into 20 words. The text begins:",
   pdfPartial: 'Only the first pages of this PDF were read. It begins:',
   allow: 'Allow access…',
   feedbackQuestion: 'Was this useful?',
@@ -79,4 +79,16 @@ export const FAILURE_MESSAGE: Record<FailureReason, string> = {
   'unsupported-type': MSG.unsupported,
   'too-large': `${SITE_BLOCKED} It's too large to preview.`,
   'summary-failed': MSG.summaryFailed,
+};
+
+/**
+ * Says who wrote a summary, every time. The extractive engine chooses a
+ * sentence but doesn't write it, so it says so. Demo summaries carry the
+ * "Demo data" tag instead.
+ */
+export const SUMMARY_BY: Record<SummaryProviderName, string | undefined> = {
+  extractive: "In the article's own words:",
+  'chrome-on-device': "Summary by Chrome's AI, on this computer:",
+  remote: 'Summary by LinkPeek:',
+  demo: undefined,
 };

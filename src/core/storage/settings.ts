@@ -1,3 +1,4 @@
+import type { SummaryEngine } from '../summary/provider';
 import type { Mode } from '../types';
 
 export interface Settings {
@@ -9,12 +10,19 @@ export interface Settings {
    * permission there (for example after allowing all sites).
    */
   disabledSites: string[];
+  /**
+   * Who writes summaries. "extractive" (the default) picks the article's most
+   * informative sentence. "chrome-on-device" uses Chrome's built-in AI when
+   * this computer has it, and falls back to extractive when it doesn't.
+   */
+  summaryEngine: SummaryEngine;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   mode: 'smart',
   showDemoResults: true,
   disabledSites: [],
+  summaryEngine: 'extractive',
 };
 
 const KEY = 'settings';

@@ -13,7 +13,7 @@ describe('settings', () => {
   it('merges updates with what is stored', async () => {
     await updateSettings({ mode: 'manual' });
     await updateSettings({ showDemoResults: false });
-    expect(await getSettings()).toEqual({ mode: 'manual', showDemoResults: false, disabledSites: [] });
+    expect(await getSettings()).toEqual({ mode: 'manual', showDemoResults: false, disabledSites: [], summaryEngine: 'extractive' });
   });
 
   it('notifies listeners on change', async () => {

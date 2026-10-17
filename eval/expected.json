@@ -1,0 +1,122 @@
+{
+  "01-cycle-lanes": {
+    "headline": "Council approves protected cycle lanes for High Street",
+    "kind": "news, long opening sentence",
+    "lang": "en",
+    "expected": "Millbrook council approved two kilometres of protected cycle lanes on High Street after a narrow vote."
+  },
+  "02-bridge": {
+    "headline": "Old Mill footbridge reopens after summer repairs",
+    "kind": "news, short opening sentence",
+    "lang": "en",
+    "expected": "The Old Mill footbridge reopened after fourteen weeks of repairs costing the council 410,000 pounds."
+  },
+  "03-quote-opening": {
+    "headline": "Swimming pool to close for a year as roof fails safety check",
+    "kind": "news that opens on a quote",
+    "lang": "en",
+    "expected": "Millbrook Leisure Centre pool will close for about a year after its roof failed a safety inspection."
+  },
+  "04-question-opening": {
+    "headline": "Bus fares to rise by 20p on most routes from January",
+    "kind": "news that opens on a question",
+    "lang": "en",
+    "expected": "Bus fares on most Millbrook routes will rise by 20p in January when a government fare cap ends."
+  },
+  "05-dateline": {
+    "headline": "Fire crews tackle blaze at disused mill",
+    "kind": "byline and update line before the story",
+    "lang": "en",
+    "expected": "Firefighters spent the night tackling a large fire at the disused Weaver Street mill; nobody was hurt."
+  },
+  "06-science-hedged": {
+    "headline": "Garden compost may cut tomato blight, small study suggests",
+    "kind": "science with a hedged finding",
+    "lang": "en",
+    "expected": "A small university study suggests garden compost may reduce tomato blight, but the results need repeating at larger scale."
+  },
+  "07-court": {
+    "headline": "Former councillor denies fraud over grant payments",
+    "kind": "court report with allegations",
+    "lang": "en",
+    "expected": "A former Millbrook councillor denies fraud charges over community grants allegedly paid to firms he controlled."
+  },
+  "08-sport": {
+    "headline": "Millbrook Rovers beat Ashford in cup replay",
+    "kind": "sports result",
+    "lang": "en",
+    "expected": "Millbrook Rovers beat Ashford 3-2 in an FA Trophy replay and will play Dunmore in the next round."
+  },
+  "09-business": {
+    "headline": "Valley Foods profits fall as costs rise",
+    "kind": "business results with numbers",
+    "lang": "en",
+    "expected": "Valley Foods profits fell 18% to £42m as energy and packaging costs rose, though sales grew 6%."
+  },
+  "10-weather": {
+    "headline": "Yellow warning for heavy rain across the valley",
+    "kind": "weather warning",
+    "lang": "en",
+    "expected": "Forecasters issued a yellow warning for heavy rain across the valley on Thursday, with flooding possible near rivers."
+  },
+  "11-explainer": {
+    "headline": "What we know about the new town centre car parking charges",
+    "kind": "explainer with a filler-style opening",
+    "lang": "en",
+    "expected": "Millbrook town centre car parks will charge 1.20 pounds an hour from April, with the first 30 minutes free."
+  },
+  "12-opinion": {
+    "headline": "Our high street needs fewer plans and more open shops",
+    "kind": "first-person opinion",
+    "lang": "en",
+    "expected": "A columnist argues Millbrook should cut business rates for small shops instead of producing more high street plans."
+  },
+  "13-review": {
+    "headline": "Review: The Granary is the best new restaurant in town",
+    "kind": "restaurant review",
+    "lang": "en",
+    "expected": "The Granary on Mill Lane serves excellent seasonal cooking at fair prices, though service can be slow."
+  },
+  "14-obituary": {
+    "headline": "Margaret Ellis, founder of the Millbrook Food Bank, has died aged 84",
+    "kind": "obituary",
+    "lang": "en",
+    "expected": "Margaret Ellis, who founded the Millbrook Food Bank in her garage in 2009, has died aged 84."
+  },
+  "15-strike": {
+    "headline": "Rail staff to strike on two days next month",
+    "kind": "transport strike",
+    "lang": "en",
+    "expected": "Rail staff will strike on 4 and 11 November in a pay dispute, with no trains expected through Millbrook."
+  },
+  "16-schools": {
+    "headline": "Inspectors praise reading at Hillside Primary",
+    "kind": "education report",
+    "lang": "en",
+    "expected": "Inspectors rated Hillside Primary good, praising its reading teaching after two years of improvement."
+  },
+  "17-health": {
+    "headline": "Waiting times at Millbrook hospital A&E fall for third month",
+    "kind": "health statistics",
+    "lang": "en",
+    "expected": "Accident and emergency waiting times at Millbrook General fell for a third month, with 71% seen within four hours."
+  },
+  "18-tech": {
+    "headline": "Millbrook startup launches solar battery for allotments",
+    "kind": "product launch",
+    "lang": "en",
+    "expected": "Millbrook startup Plotcell launched a 249-pound solar battery that powers allotment tools and lights for a week."
+  },
+  "19-french": {
+    "headline": "Le conseil approuve de nouvelles pistes cyclables",
+    "kind": "French-language news",
+    "lang": "fr",
+    "expected": "Le conseil de Millbrook a approuvé deux kilomètres de pistes cyclables protégées sur la Grand-Rue."
+  },
+  "20-spanish": {
+    "headline": "La biblioteca de Millbrook ampliará su horario",
+    "kind": "Spanish-language news",
+    "lang": "es",
+    "expected": "La biblioteca de Millbrook abrirá los domingos desde enero tras una revisión del servicio."
+  }
+}

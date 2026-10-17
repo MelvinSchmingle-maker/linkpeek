@@ -34,6 +34,9 @@ describe('failure checks', () => {
     expect(looksLikeChallenge('', 'Just a moment...', 0)).toBe(true);
     expect(looksLikeChallenge('<script src="/cdn-cgi/challenge-platform/x"></script>', 'Example', 10)).toBe(true);
     expect(looksLikeChallenge('<script src="https://ct.captcha-delivery.com/c.js"></script>', 'Example', 10)).toBe(true);
+    // The Times served this to the live check on 17 Oct 2026 (docs/compat/part-04-live.md).
+    expect(looksLikeChallenge('<div class="text">Verifying your device, please wait</div>', 'Verifying Device', 0)).toBe(true);
+    expect(looksLikeChallenge('<div>Verifying your device, please wait</div>', 'The Times', 6)).toBe(true);
   });
 
   it('a normal article with a reCAPTCHA comment form is not a robot check', () => {

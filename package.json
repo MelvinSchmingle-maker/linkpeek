@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build:e2e && playwright test",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
-    "screenshots": "npm run build:e2e && SCREENSHOTS=1 playwright test screenshots"
+    "screenshots": "npm run build:e2e && SCREENSHOTS=1 playwright test screenshots",
+    "eval": "node scripts/run-eval.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

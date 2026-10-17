@@ -31,6 +31,17 @@
           <ul class="plain" id="disabled-list"></ul>
         </section>
 
+        <section aria-labelledby="summary-heading">
+          <h2 id="summary-heading">Summaries</h2>
+          <p class="muted">LinkPeek's summaries are always 20 words or fewer. By default it picks the article's most informative sentence, and the card says "In the article's own words".</p>
+          <label class="toggle">
+            <input type="checkbox" id="ondevice-toggle" />
+            <span>Let Chrome's built-in AI write summaries on this computer<br /><span class="muted">Free, and the article text stays on this computer. Chrome downloads its AI model once (it needs at least 22 GB of free disk space and a fairly powerful computer). When it isn't available, LinkPeek picks a sentence instead.</span></span>
+          </label>
+          <p class="muted" id="ondevice-status" role="status"></p>
+          <button type="button" class="secondary" id="ondevice-download" hidden>Download Chrome's AI model</button>
+        </section>
+
         <section aria-labelledby="shortcut-heading">
           <h2 id="shortcut-heading">Keyboard shortcut</h2>
           <p>Peek at the focused link: <kbd id="shortcut">Alt+Shift+P</kbd></p>
@@ -47,7 +58,7 @@
 
         <section>
           <h2>Your data</h2>
-          <p>Nothing leaves your device in this version. Settings and your thumbs up/down votes are stored in your browser only.</p>
+          <p>Nothing goes to LinkPeek or anyone else. When you open a card, LinkPeek fetches that one page from its own website, without your cookies. Settings, your thumbs up/down votes and recent results stay in your browser.</p>
         </section>
       </main>
     </div>

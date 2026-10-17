@@ -131,3 +131,35 @@ Results are kept for 24 hours, at most 60, in `chrome.storage.session`, which Ch
 
 ## D29. The opening sentence, after the live check (Part 04)
 The live check (`docs/compat/part-04-live.md`) found that Readability's text alone gave the wrong opening on three of seven readable sites. The opening is now the first paragraph of six words or more that isn't in a table, figure, caption, aside or hidden label, with footnote markers removed. If Readability started part-way through an `<article>` that's split into identical blocks (BBC News), LinkPeek starts from the first block instead. Only paragraphs laid out exactly like Readability's first one count, so a standfirst isn't mistaken for the opening. The card's label says "The text begins", not "The article begins", because a link can lead to a discussion or a reference page.
+
+## D30. What counts as a word (Part 05)
+One rule, in `src/core/summary/wordcount.ts`, used everywhere a summary's length is checked. Words are separated by whitespace. A hyphenated word, a number with its symbols ("£3.5bn", "12%", "1,000") and an abbreviation ("U.K.") each count as one. Punctuation on its own isn't a word. An em dash, or an en dash between words, separates them, but "3–2" is one. Scripts written without spaces (Chinese, Japanese, Thai and others) are split by the browser's word segmenter.
+
+## D31. The 20-word limit is enforced, never fudged (Part 05)
+A summary over 20 words is never shown. The provider may be asked once to shorten it. After that it's cut at a clause boundary so that what's left is a whole sentence, with a full stop and never "...". First choice is a comma, semicolon, "and" or "but". Failing that, just before a dependent clause ("after...", "which...", "with...", and "that" after a noun but not after "said" or "suggests"). Of the cuts that work, the one that keeps the most words wins. A cut is refused when it would leave:
+- a lead-in on its own ("After the vote on Tuesday.")
+- a dangling word ("...at the.")
+- an open quote or bracket
+- a clause split in the middle ("as energy." from "as energy and packaging costs rose")
+- a range split in two ("between 2022.")
+- a list item ("roads, bridges.")
+- a subject with an aside and no verb ("The Granary, which opened in September.")
+- a "so ... that" broken off ("patched so often.")
+
+If no cut works, the provider tries its next candidate, and if nothing fits the card says so and shows where the text begins. The evaluation set (D33) found every one of these cases. The plan only listed commas, semicolons, "and" and "but", and with those alone a long opening sentence with no comma always failed. That's why dependent-clause cuts were added.
+
+## D32. Default summaries are the article's own words (Part 05)
+The free default picks the most informative sentence from the first 12 paragraphs. The opening sentence starts ahead, because news puts the point first. Sentences gain for sharing the headline's key words, carrying numbers or names, and being 10 to 30 words long. They lose for needing the sentence before ("He said...", "This means..."), for opening with a quote, and for being a question. Filler openers and the headline repeated back are rejected. The card labels it "In the article's own words:", because LinkPeek chose the sentence but didn't write it. Known weak spots, from the evaluation:
+- An opinion piece gets its opening anecdote, not its argument.
+- A review gets a detail, not the verdict.
+- A science story with a long opening sentence gets a sentence about the method.
+- A PDF can have its title run into the first sentence (dropped only when the PDF declares the same title).
+
+All of these are true sentences from the article, never invented ones.
+
+## D33. An evaluation set, and what it measures (Part 05)
+There are 20 fictional, self-written articles in `eval/articles/` (two of them in French and Spanish), with hand-written expected summaries in `eval/expected.json`. They cover leads that open on a quote, a question, a byline, a hedged science finding, an allegation, a sports result, an opinion and a review. `npm test` fails if any output is over 20 words, starts with filler, ends in "..." or is missing. `npm run eval` also writes `docs/eval/part-05.md` with each summary next to the expected one and a key-word overlap score. The overlap rewards the right facts and names; it says nothing about whether a summary reads well, so it's reported, not used as a pass mark. Generator: `scripts/make-eval-articles.py`.
+
+## D34. Chrome's on-device AI is opt-in (Part 05)
+Chrome's Summarizer API (stable since Chrome 138) writes summaries on the computer with Gemini Nano, for free, without sending the text anywhere. It needs a desktop with at least 22 GB of free disk space and a capable GPU or 16 GB of RAM, so many computers can't run it. It's off by default, and switched on in Settings, which says whether this computer can run it and offers the one-time model download (Chrome only downloads after a click). It runs in the offscreen document, because the API isn't available in workers. It only runs when the model is already there, asks for a "headline" summary of about 17 words, and asks once for a shorter one if needed. The result passes the same limit and quality checks, and if anything fails the free sentence pick is used instead. The card labels it "Summary by Chrome's AI, on this computer:". It is unit-tested against a stand-in for the API only. The Playwright browser has no model, so it has not been tried with the real one (see `docs/progress.md`). Switching engine clears remembered results, so the next card uses the new engine.
+

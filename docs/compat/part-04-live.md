@@ -8,24 +8,25 @@ machine (a data-centre address, through a proxy), which some sites treat with
 more suspicion than a home connection.
 
 <!-- live-check:start -->
-Run on 2026-10-14. **7 of 10** pages came back `full`.
+Run on 2026-10-17. **7 of 10** pages came back `full`.
 
-| Page | Expected | Evidence | Reason | Read by | Words | Shown on the card | Time |
-|---|---|---|---|---|---|---|---|
-| [BBC News article](https://www.bbc.co.uk/news/articles/c3qjn45pepx1o) | full | full |  | readability | 766 | Russell Brand was described as "ruthless" and a "sexual predator" by the prosecution at the start of his trial for rape and sexual assault o | 0.7s |
-| [Guardian feature](https://www.theguardian.com/lifeandstyle/2026/oct/14/a-moment-that-changed-me-i-learned-to-read-at-42) | full | full |  | readability | 874 | In 2021, at 42 years old, I had the reading age of a four-year-old. | 0.6s |
-| [GOV.UK press release](https://www.gov.uk/government/news/new-action-to-crackdown-on-bogus-self-employment-loopholes) | full | full |  | readability | 411 | Over 900,000 people could benefit from new plans which include measures to crack down on bogus self-employment. | 0.2s |
-| [Wikipedia article](https://en.wikipedia.org/wiki/Dachshund) | full | full |  | readability | 6610 | The Dachshund, also known as the Dackel or Teckel, is a German breed of short-legged, long-bodied dog of hound type. | 0.7s |
-| [GitHub blog post](https://github.blog/ai-and-ml/generative-ai/how-ai-code-generation-works/) | full | full |  | readability | 2540 | Generative AI coding tools are changing software production for enterprises. | 1.5s |
-| [arXiv paper (PDF)](https://arxiv.org/pdf/1706.03762) | full or first pages | full |  | pdf | 6472 | Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in | 1.6s |
-| [Hacker News thread](https://news.ycombinator.com/item?id=50087328) | discussion, not an article | full |  | readability | 3134 | It's not good for adults either.If implemented as the title implies, data about minors would still be collected (though they'd get generic a | 1.0s |
-| [YouTube video](https://www.youtube.com/watch?v=dQw4w9WgXcQ) | preview (needs Part 06) | unavailable | bot-challenge |  |  |  | 1.0s |
-| [Reddit (old)](https://old.reddit.com/r/UKPersonalFinance/) | login wall | unavailable | login-wall |  |  |  | 0.7s |
-| [The Times (paywall)](https://www.thetimes.com/business/companies-markets/article/arrests-fca-nca-insider-trading-nbff2hm2x) | paywall, description only | partial | paywall |  |  | Nikhil Rathi, the head of the City regulator, said the investigation came amid a rise in financial crime that was getting increasingly sophi | 1.1s |
+| Page | Expected | Evidence | Reason | Read by | Words | Opening or preview | Summary (words) | Time |
+|---|---|---|---|---|---|---|---|---|
+| [BBC News article](https://www.bbc.co.uk/news/articles/c3qjn45pepx1o) | full | full |  | readability | 927 | Russell Brand was described as "ruthless" and a "sexual predator" by the prosecution at the start of his trial for rape and sexual assault o | The 51-year-old actor and comedian faces three counts of rape, three charges of sexual assault and one of indecent assault. (20) | 0.6s |
+| [Guardian feature](https://www.theguardian.com/lifeandstyle/2026/oct/14/a-moment-that-changed-me-i-learned-to-read-at-42) | full | full |  | readability | 886 | In 2021, at 42 years old, I had the reading age of a four-year-old. | In 2021, at 42 years old, I had the reading age of a four-year-old. (14) | 0.4s |
+| [GOV.UK press release](https://www.gov.uk/government/news/new-action-to-crackdown-on-bogus-self-employment-loopholes) | full | full |  | readability | 411 | Over 900,000 people could benefit from new plans which include measures to crack down on bogus self-employment. | Over 900,000 people could benefit from new plans which include measures to crack down on bogus self-employment. (17) | 0.1s |
+| [Wikipedia article](https://en.wikipedia.org/wiki/Dachshund) | full | full |  | readability | 6624 | The Dachshund, also known as the Dackel or Teckel, is a German breed of short-legged, long-bodied dog of hound type. | The Dachshund, also known as the Dackel or Teckel, is a German breed of short-legged, long-bodied dog of hound type. (20) | 0.5s |
+| [GitHub blog post](https://github.blog/ai-and-ml/generative-ai/how-ai-code-generation-works/) | full | full |  | readability | 2540 | Generative AI coding tools are changing software production for enterprises. | Generative AI coding tools are changing software production for enterprises. (10) | 0.4s |
+| [arXiv paper (PDF)](https://arxiv.org/pdf/1706.03762) | full or first pages | full |  | pdf | 6472 | Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in | Our model achieves 28.4 BLEU on the WMT 2014 English- to-German translation task, improving over the existing best results. (19) | 1.1s |
+| [Hacker News thread](https://news.ycombinator.com/item?id=50087328) | discussion, not an article | full |  | readability | 5975 | There's been a lot of recent swiss efforts to curtail advertising. |  | 0.8s |
+| [YouTube video](https://www.youtube.com/watch?v=dQw4w9WgXcQ) | preview (needs Part 06) | unavailable | bot-challenge |  |  |  |  | 1.0s |
+| [Reddit (old)](https://old.reddit.com/r/UKPersonalFinance/) | login wall | unavailable | login-wall |  |  |  |  | 0.5s |
+| [The Times (paywall)](https://www.thetimes.com/business/companies-markets/article/arrests-fca-nca-insider-trading-nbff2hm2x) | paywall, description only | unavailable | bot-challenge |  |  |  |  | 0.5s |
 
-"Shown on the card" is the first sentence of the article for a `full`
-result, or the page's own description for a preview. Text in this table comes
-from the websites, not from LinkPeek.
+"Opening or preview" is the first sentence of the article for a `full`
+result, or the page's own description for a preview. "Summary" is what the
+card shows (Part 05, extractive), with its word count. Text in this table
+comes from the websites; LinkPeek only chose and cut it.
 
 Redirects: YouTube video ended on https://www.google.com/sorry/index; Reddit (old) ended on https://old.reddit.com/login/.
 <!-- live-check:end -->
@@ -71,3 +72,12 @@ Still wrong, and left for later parts:
   Discussion pages get their own handling in Part 13 (social adapters).
 - The arXiv PDF really does open with a licence note from Google, so that is
   what the card shows. A summary (Parts 05 and 06) will need to look past it.
+
+## 17 Oct 2026 run (with Part 05 summaries)
+
+The table above is now from this run, with a summary column. Every summary is 20 words or fewer and is a whole sentence from the page.
+- BBC News: the opening sentence ("described as "ruthless" and a "sexual predator"...") is 26 words and can't be cut without splitting "ruthless and a sexual predator". So the summary is the second paragraph, which states the charges.
+- arXiv PDF: the summary is the paper's result ("Our model achieves 28.4 BLEU..."), not the licence note it opens with. It keeps a line-break hyphen ("English- to-German"), a PDF text artefact.
+- Hacker News: no sentence passed, so the card shows where the text begins. Discussion pages are still Part 13.
+
+The Times now sends this machine a 1.3 KB "Verifying Device" page from a bot-protection service instead of the article. The first run of the day reported it as "needs JavaScript", because that title wasn't on the robot-check list. It is now, together with the wording "Verifying your device", and the page is reported as a robot check. A test covers it in `src/core/retrieve/retrieve-parts.test.ts`.

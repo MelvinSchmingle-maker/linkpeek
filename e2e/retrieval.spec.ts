@@ -39,12 +39,29 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('a[data-case="full"] + [data-linkpeek="icon"]')).toHaveCount(1);
 });
 
+/** Full articles: a summary, labelled with who wrote it, 20 words or fewer (Part 05). */
+const SUMMARISED: [string, string][] = [
+  ['full', 'Millbrook council has approved two kilometres of protected cycle lanes on High Street, with work due to start in March.'],
+  ['full-divs', "A review of Millbrook's library service has recommended longer opening hours at weekends."],
+  ['full-blog', 'I have grown tomatoes on a small balcony for three summers now.'],
+  ['other-site', 'I have grown tomatoes on a small balcony for three summers now.'],
+  ['redirect', 'Millbrook council has approved two kilometres of protected cycle lanes on High Street, with work due to start in March.'],
+];
+
+for (const [name, summary] of SUMMARISED) {
+  test(`summarises: ${name}`, async ({ page }) => {
+    const c = await openCase(page, name);
+    await expect(c.locator('.summary-label')).toHaveText("In the article's own words:");
+    await expect(c.locator('.summary')).toHaveText(summary);
+    const words = (await c.locator('.summary').innerText()).trim().split(/\s+/).length;
+    expect(words).toBeLessThanOrEqual(20);
+    // No verdict mark LinkPeek didn't earn.
+    await expect(c.locator('[data-status]')).toHaveCount(0);
+  });
+}
+
 const READ: [string, RegExp][] = [
-  ['full', /The text begins[\s\S]*Millbrook council has approved two kilometres of protected cycle lanes/],
-  ['full-divs', /The text begins[\s\S]*A review of Millbrook's library service has recommended/],
-  ['full-blog', /The text begins[\s\S]*I have grown tomatoes on a small balcony/],
-  ['other-site', /The text begins[\s\S]*I have grown tomatoes on a small balcony/],
-  ['partial-short', /Preview only[\s\S]*Full article unavailable\. Showing a preview[\s\S]*The Saturday market returns this weekend/],
+  ['partial-short', /Preview only[\s\S]*Full article unavailable\. Showing a preview[\s\S]*The Saturday market returns this weekend with twenty stalls\./],
   ['partial-meta', /Full article unavailable[\s\S]*Residents will discuss the proposed park redesign/],
   ['nothing', /Couldn't find the article text on this page\./],
   ['login', /Couldn't open this article\. The site asks you to log in\./],
@@ -55,9 +72,9 @@ const READ: [string, RegExp][] = [
   ['404', /The site said the page isn't available\./],
   ['429', /The site is limiting requests right now\./],
   ['500', /The site had an error\./],
-  ['redirect', /Millbrook council has approved[\s\S]*Opens on demo\.test\./],
+  ['redirect', /Opens on demo\.test\./],
   ['huge', /It's too large to preview\./],
-  ['pdf', /The text begins[\s\S]*Fictional test document for LinkPeek/],
+  ['pdf', /In the article's own words:/],
   ['pdf-long', /Only the first pages of this PDF were read/],
   ['pdf-scanned', /Couldn't find the article text/],
 ];
@@ -66,14 +83,24 @@ for (const [name, expected] of READ) {
   test(`reads: ${name}`, async ({ page }) => {
     const c = await openCase(page, name);
     await expect(c).toContainText(expected);
-    // Never a summary yet, never a verdict mark LinkPeek didn't earn.
-    await expect(c.locator('.summary, [data-status]')).toHaveCount(0);
+    // Never a verdict mark LinkPeek didn't earn. A summary only where the whole article was read.
+    await expect(c.locator('[data-status]')).toHaveCount(0);
+    if (!['redirect', 'pdf'].includes(name)) await expect(c.locator('.summary')).toHaveCount(0);
   });
 }
 
-test('a paywalled page never shows text from its paid body', async ({ page }) => {
+test('a paywalled page never shows text from its paid body, and gets no summary', async ({ page }) => {
   const c = await openCase(page, 'paywall');
   await expect(c).not.toContainText('Councillors voted seven to five');
+  await expect(c.locator('.summary')).toHaveCount(0);
+});
+
+test('Settings: the on-device AI option says plainly when this computer cannot run it', async ({ context, extensionId }) => {
+  const page = await context.newPage();
+  await page.goto(`chrome-extension://${extensionId}/options/index.html`);
+  await expect(page.locator('#ondevice-toggle')).not.toBeChecked();
+  // Playwright's Chromium has no on-device model: the page must say so, not pretend.
+  await expect(page.locator('#ondevice-status')).toHaveText(/can't run|doesn't offer|needs to download/);
 });
 
 test('a slow site times out with a clear message (after one retry)', async ({ page }) => {

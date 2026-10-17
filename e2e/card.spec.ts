@@ -31,11 +31,11 @@ test('puts an icon on each demo link and the one real headline, nowhere else', a
   await expect(page.locator('nav [data-linkpeek="icon"], footer [data-linkpeek="icon"]')).toHaveCount(0);
 });
 
-test('a real (non-demo) link is actually read: its first sentence, never tagged as demo', async ({ page }) => {
+test('a real (non-demo) link is actually read and summarised, never tagged as demo', async ({ page }) => {
   await open(page);
   await page.locator('a[href="/articles/ordinary.html"] + [data-linkpeek="icon"]').getByRole('button').click();
-  await expect(card(page)).toContainText("The text begins (LinkPeek writes summaries in a later version):");
-  await expect(card(page)).toContainText("A review of Millbrook's library service");
+  await expect(card(page).locator('.summary-label')).toHaveText("In the article's own words:");
+  await expect(card(page).locator('.summary')).toContainText("A review of Millbrook's library service");
   await expect(card(page)).not.toContainText('Demo data');
 });
 

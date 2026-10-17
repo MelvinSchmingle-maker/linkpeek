@@ -4,8 +4,8 @@
  * Kept in chrome.storage.session: memory only, gone when the browser closes,
  * and not readable by content scripts (so web pages can't get at it). Each
  * entry expires after 24 hours; at most MAX_ENTRIES are kept. Only the
- * verdict and a first sentence or short preview are stored, never full
- * article text.
+ * verdict, a first sentence or short preview and the 20-word summary are
+ * stored, never full article text.
  */
 import type { Assessment } from '../extract/assess';
 
@@ -46,4 +46,10 @@ export async function setCached(key: string, assessment: Assessment, now = Date.
  */
 export function cacheable(a: Assessment): boolean {
   return !a.failure || !['timeout', 'network', 'http-429', 'permission-denied'].includes(a.failure);
+}
+
+/** Forget every remembered result (for example when the summary engine changes). */
+export async function clearCached(): Promise<void> {
+  const { [INDEX]: index = [] } = (await chrome.storage.session.get(INDEX)) as { [INDEX]?: string[] };
+  await chrome.storage.session.remove([...index.map((k) => PREFIX + k), INDEX]);
 }

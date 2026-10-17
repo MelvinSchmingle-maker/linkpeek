@@ -34,7 +34,7 @@ describe('renderCard', () => {
 
   it('inserts page text as text, never as markup', () => {
     const r = demoResult('full', link) as LinkResult;
-    r.summary = { text: '<img src=x onerror=alert(1)>', wordCount: 3, provider: 'test' };
+    r.summary = { text: '<img src=x onerror=alert(1)>', wordCount: 3, provider: 'demo' };
     const card = renderCard(toCardView({ kind: 'result', result: r }), link.href, { onClose: vi.fn(), onFeedback: vi.fn() });
     expect(card.querySelector('img')).toBeNull();
     expect(card.querySelector('.summary')?.textContent).toBe('<img src=x onerror=alert(1)>');

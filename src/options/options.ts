@@ -1,5 +1,6 @@
 import { ALL_SITES, grantedSiteOrigins, hasSiteAccess, hostFromPattern, sitePatterns } from '../core/sites';
 import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
+import { chromeSummarizer, summarizerOptions, type Availability } from '../core/summary/chrome-builtin';
 import { renderModePicker } from '../ui/mode-picker';
 import { applyBrand } from '../ui/theme';
 
@@ -15,6 +16,61 @@ void chrome.commands.getAll().then((cmds) => {
 const demo = $<HTMLInputElement>('#demo-toggle');
 demo.checked = (await getSettings()).showDemoResults;
 demo.addEventListener('change', () => void updateSettings({ showDemoResults: demo.checked }));
+
+// Summaries: Chrome's on-device AI, if this computer has it (see src/core/summary/chrome-builtin.ts).
+const onDevice = $<HTMLInputElement>('#ondevice-toggle');
+const onDeviceStatus = $<HTMLElement>('#ondevice-status');
+const onDeviceDownload = $<HTMLButtonElement>('#ondevice-download');
+onDevice.checked = (await getSettings()).summaryEngine === 'chrome-on-device';
+onDevice.addEventListener('change', () => {
+  void updateSettings({ summaryEngine: onDevice.checked ? 'chrome-on-device' : 'extractive' });
+  void showOnDeviceStatus();
+});
+onDeviceDownload.addEventListener('click', () => void downloadModel());
+void showOnDeviceStatus();
+
+async function showOnDeviceStatus(): Promise<void> {
+  const api = chromeSummarizer();
+  onDeviceDownload.hidden = true;
+  if (!api) {
+    onDeviceStatus.textContent = "This version of Chrome doesn't offer on-device summaries.";
+    return;
+  }
+  let state: Availability = 'unavailable';
+  try {
+    state = await api.availability(summarizerOptions('en', 'medium'));
+  } catch {
+    // Treated as unavailable.
+  }
+  onDeviceStatus.textContent = ON_DEVICE_STATUS[state];
+  onDeviceDownload.hidden = state !== 'downloadable' || !onDevice.checked;
+}
+
+async function downloadModel(): Promise<void> {
+  const api = chromeSummarizer();
+  if (!api) return;
+  onDeviceDownload.disabled = true;
+  onDeviceStatus.textContent = ON_DEVICE_STATUS.downloading;
+  try {
+    // Needs the click that got us here: Chrome only downloads the model after a user action.
+    const session = await api.create({
+      ...summarizerOptions('en', 'medium'),
+      monitor(m: EventTarget) {
+        m.addEventListener('downloadprogress', (e) => {
+          const loaded = (e as ProgressEvent).loaded;
+          onDeviceStatus.textContent = `Downloading Chrome's AI model: ${Math.round(loaded * 100)}%`;
+        });
+      },
+    } as Parameters<typeof api.create>[0]);
+    session.destroy?.();
+  } catch {
+    onDeviceStatus.textContent = "Chrome couldn't download its AI model. LinkPeek will keep picking a sentence from the article.";
+    onDeviceDownload.disabled = false;
+    return;
+  }
+  onDeviceDownload.disabled = false;
+  await showOnDeviceStatus();
+}
 
 const allSites = $<HTMLInputElement>('#all-sites');
 allSites.addEventListener('change', () => {
@@ -104,3 +160,11 @@ chrome.permissions.onAdded.addListener(() => void render());
 chrome.permissions.onRemoved.addListener(() => void render());
 onSettingsChanged(() => void render());
 await render();
+
+const ON_DEVICE_STATUS: Record<Availability, string> = {
+  unavailable: "This computer can't run Chrome's on-device AI. LinkPeek will pick a sentence from the article instead.",
+  downloadable: "Chrome needs to download its AI model first. Until then, LinkPeek picks a sentence from the article.",
+  downloading: "Chrome is downloading its AI model. Until it's done, LinkPeek picks a sentence from the article.",
+  available: 'Ready. Summaries are written on this computer.',
+};
+

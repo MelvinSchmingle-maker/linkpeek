@@ -4,7 +4,8 @@ import { wordCount } from '../detect/classify';
 const MAX_SENTENCE_WORDS = 45;
 const MIN_SENTENCE_WORDS = 6;
 
-function sentences(text: string): string[] {
+/** Splits text into sentences (the browser's own sentence rules where available). */
+export function sentences(text: string): string[] {
   if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
     const seg = new Intl.Segmenter(undefined, { granularity: 'sentence' });
     return [...seg.segment(text)].map((s) => s.segment.trim()).filter(Boolean);

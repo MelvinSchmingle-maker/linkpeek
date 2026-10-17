@@ -49,11 +49,24 @@ export type FailureReason =
   | 'too-large'
   | 'summary-failed';
 
+/** Which engine wrote a summary. "demo" is fixture data on the test pages. */
+export type SummaryProviderName = 'extractive' | 'chrome-on-device' | 'remote' | 'demo';
+
+/**
+ * Notes about how a summary was made.
+ * - preview: built from the page's own description or a short excerpt, not the full article.
+ * - trimmed: cut at a clause boundary to fit 20 words.
+ * - shortened: the provider was asked once to make it shorter.
+ */
+export type SummaryFlag = 'preview' | 'trimmed' | 'shortened';
+
 export interface Summary {
   text: string;
   wordCount: number;
-  /** Which engine wrote it, e.g. "extractive", "demo". */
-  provider: string;
+  provider: SummaryProviderName;
+  /** The evidence the summary was made from. */
+  evidence?: EvidenceLevel;
+  flags?: SummaryFlag[];
 }
 
 export interface HeadlineCheck {

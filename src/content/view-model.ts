@@ -9,6 +9,7 @@ import {
   opensOn,
   permissionNeeded,
   RISK_WARNING,
+  SUMMARY_BY,
   VERDICT_LABEL,
 } from '../core/messages';
 import { siteOf } from '../core/retrieve/url';
@@ -29,6 +30,8 @@ export interface CardView {
   openLabel: string;
   /** The one-sentence summary, when we really have one. */
   summary?: string;
+  /** Who wrote the summary ("In the article's own words:"). */
+  summaryLabel?: string;
   /** What the article text begins with, while there's no summary. Always introduced by extractLabel. */
   extract?: string;
   extractLabel?: string;
@@ -81,7 +84,7 @@ export function toCardView(input: CardInput): CardView {
     view.message = FAILURE_MESSAGE[r.failure];
     // Some failures still leave something honest to show: a subscription
     // page's own public description, for example.
-    if (r.preview) view.preview = r.preview;
+    if (r.preview) view.preview = r.summary?.text ?? r.preview;
     // A verdict on the headline's wording can still help when the article
     // failed. A bare "no verdict" would only add clutter, so skip it.
     if (r.headlineCheck.verdict !== 'unknown') addVerdict(view, r);
@@ -92,6 +95,7 @@ export function toCardView(input: CardInput): CardView {
     case 'full':
       if (r.summary) {
         view.summary = r.summary.text;
+        view.summaryLabel = SUMMARY_BY[r.summary.provider];
         view.showFeedback = true;
       } else if (r.extract?.firstSentence) {
         view.extractLabel = MSG.extractLabel;
@@ -106,7 +110,8 @@ export function toCardView(input: CardInput): CardView {
         view.extract = r.extract.firstSentence;
       } else {
         view.message = MSG.partialIntro;
-        view.preview = r.preview;
+        // A preview fitted to 20 words when the summary engine managed it, else Part 04's.
+        view.preview = r.summary?.text ?? r.preview;
         view.showFeedback = Boolean(r.preview) && r.isDemo;
       }
       break;

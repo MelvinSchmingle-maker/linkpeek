@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAILURE_MESSAGE, MSG } from '../core/messages';
+import { FAILURE_MESSAGE, MSG, SUMMARY_BY } from '../core/messages';
 import type { LinkResult } from '../core/types';
 import { DEMO_FIXTURES, demoResult, type DemoKey } from './fixtures';
 import { toCardView } from './view-model';
@@ -176,3 +176,46 @@ describe('real results (Part 04)', () => {
     expect(v.extract).toBe('The report finds X.');
   });
 });
+
+describe('summaries (Part 05)', () => {
+  const real = (patch: Partial<LinkResult>): LinkResult => ({
+    id: 'r-2',
+    url: 'https://news.example.com/b',
+    headline: 'A headline',
+    evidence: 'full',
+    headlineCheck: { verdict: 'unknown', notChecked: true },
+    linkRisk: { level: 'not-checked' },
+    isDemo: false,
+    extract: { firstSentence: 'The council met on Tuesday.', wordCount: 400, method: 'readability' },
+    ...patch,
+  });
+
+  it("an extractive summary says it is the article's own words, and replaces the first-sentence display", () => {
+    const v = toCardView({ kind: 'result', result: real({ summary: { text: 'The council approved new cycle lanes.', wordCount: 6, provider: 'extractive' } }) });
+    expect(v.summary).toBe('The council approved new cycle lanes.');
+    expect(v.summaryLabel).toBe(SUMMARY_BY.extractive);
+    expect(v.extract).toBeUndefined();
+    expect(v.showFeedback).toBe(true);
+  });
+
+  it("an on-device AI summary says Chrome's AI wrote it", () => {
+    const v = toCardView({ kind: 'result', result: real({ summary: { text: 'Council approves cycle lanes for High Street.', wordCount: 7, provider: 'chrome-on-device' } }) });
+    expect(v.summaryLabel).toBe(SUMMARY_BY['chrome-on-device']);
+  });
+
+  it('demo summaries keep the demo tag and get no "who wrote it" line', () => {
+    const v = toCardView({ kind: 'result', result: real({ isDemo: true, summary: { text: 'Made-up summary here.', wordCount: 3, provider: 'demo' } }) });
+    expect(v.summaryLabel).toBeUndefined();
+  });
+
+  it('a partial page shows its 20-word preview under the preview notice, not as a summary', () => {
+    const v = toCardView({
+      kind: 'result',
+      result: real({ evidence: 'partial', extract: undefined, preview: 'A long description that goes on…', summary: { text: 'A short preview.', wordCount: 3, provider: 'extractive', flags: ['preview'] } }),
+    });
+    expect(v.summary).toBeUndefined();
+    expect(v.message).toBe(MSG.partialIntro);
+    expect(v.preview).toBe('A short preview.');
+  });
+});
+

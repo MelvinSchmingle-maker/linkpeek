@@ -309,7 +309,8 @@
 
 /* ---------- Article extract, notes, action (Part 04) ---------- */
 
-.extract-label {
+.extract-label,
+.summary-label {
   margin: 0 0 2px;
   font-size: 12px;
   color: var(--lp-muted);

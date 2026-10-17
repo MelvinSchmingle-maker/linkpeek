@@ -8,6 +8,7 @@ import { hostFromPattern, originPattern, syncSiteScripts } from '../core/sites';
 import { DEFAULT_SETTINGS, getSettings, updateSettings } from '../core/storage/settings';
 import { isWorkerMessage, type ContentMessage, type ContentResponse, type SiteStatus } from '../content/messages';
 import type { LinkResult } from '../core/types';
+import { clearCached } from '../core/retrieve/cache';
 import { retrieve, type RetrieveResponse } from './retrieve';
 
 const MENU_ID = 'linkpeek-peek';
@@ -216,6 +217,16 @@ function errorResult(url: string, headline: string): LinkResult {
     isDemo: false,
   };
 }
+
+// Remembered results carry a summary from the engine that wrote it. When the
+// user switches engine, forget them so the next card uses the new one.
+chrome.storage.onChanged.addListener((changes, area) => {
+  const change = area === 'local' ? changes.settings : undefined;
+  if (!change) return;
+  const before = (change.oldValue as { summaryEngine?: string } | undefined)?.summaryEngine;
+  const after = (change.newValue as { summaryEngine?: string } | undefined)?.summaryEngine;
+  if (before !== after) void clearCached();
+});
 
 // Test builds only: lets scripts/live-check.mjs run the real reading pipeline
 // on a list of addresses. Not present in the real build.
