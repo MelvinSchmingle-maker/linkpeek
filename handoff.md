@@ -7,7 +7,7 @@ Read this first in a new window, then `todo.md`. Updated 17 Oct 2026 on branch `
 - Parts 01 to 12 are built. Part 13 is research only, and Part 14 is mostly not built, on purpose (see `todo.md` section 5 and `docs/progress.md`).
 - LinkPeek is a Chrome extension (Manifest V3). It has access to no websites after install. Access is asked for per site, when the user acts.
 - The summary backend is a Vercel project, `linkpeek-api`, with root directory `server/`. Every push to `main` deploys it.
-- Checks on this branch: `npm run check` passes (465 unit tests pass, 5 skipped; backend 41 pass). Browser tests: see the commit message for the last full run.
+- Checks on this branch: `npm run check` passes (465 unit tests pass, 5 skipped; backend 41 pass). Browser tests (`npm run test:e2e`) on commit `f5255f9`: 142 passed, 3 skipped.
 
 ## Things the owner asked for, and what they're waiting on
 
