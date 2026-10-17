@@ -341,3 +341,44 @@
   outline: 2px solid var(--lp-accent);
   outline-offset: 2px;
 }
+
+.rewrite-label {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+.rewrite {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--lp-fg);
+}
+.reveal-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+.definitions-toggle {
+  all: unset;
+  box-sizing: border-box;
+  /* Tight on purpose: a 200% zoom test needs the card to fit above its link. */
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--lp-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.definitions-toggle:focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+.definitions {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--lp-muted);
+}
+.definitions p {
+  margin: 4px 0 0;
+}
+.definitions strong {
+  color: var(--lp-fg);
+}

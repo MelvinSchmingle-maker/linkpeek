@@ -116,7 +116,8 @@ const expected: Record<(typeof DEMO_KEYS)[number], RegExp> = {
   full: /Headline check passed[\s\S]*Millbrook council approved/,
   clickbait: /Possible clickbait[\s\S]*withholds the main event/,
   partial: /Preview only[\s\S]*Full article unavailable\. Showing a preview/,
-  insufficient: /No headline verdict[\s\S]*Not enough information to assess this headline\./,
+  // A full article with no verdict: the label only, no extra reason (LinkPeek did read it).
+  insufficient: /^No headline verdict/,
   'headline-only': /Headline only[\s\S]*Only the headline was available/,
   inaccessible: /Couldn't open this article\. The site asks you to log in\./,
   'summary-failed': /Couldn't write a summary for this article/,

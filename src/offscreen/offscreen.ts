@@ -3,6 +3,7 @@
  * pages are parsed and read. The service worker has no DOM, and doing this in
  * the web page itself would let that page watch what LinkPeek reads.
  */
+import { contentFacts } from '../core/clickbait/content';
 import { assessHtml, assessPdf, assessUnsupported, type Assessment } from '../core/extract/assess';
 import { extractHtml } from '../core/extract/html';
 import { extractPdf } from '../core/extract/pdf';
@@ -34,16 +35,21 @@ async function assess(raw: RawFetch, headline: string, engine: SummaryEngine, re
       return { evidence: 'unavailable', failure: 'extraction-failed' };
     }
     const paragraphs = pdf.text ? [withoutLeadingTitle(pdf.text, pdf.title).slice(0, 20_000)] : [];
-    return withSummary(assessPdf(meta, pdf), { headline, url: raw.finalUrl, paragraphs }, engine, remote);
+    return withSummary(withFacts(assessPdf(meta, pdf), paragraphs), { headline, url: raw.finalUrl, paragraphs }, engine, remote);
   }
   if (kind === 'html' && raw.text !== undefined) {
     const ex = extractHtml(raw.text, raw.finalUrl);
     const a = assessHtml(meta, raw.text, ex);
-    return withSummary(a, { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine, remote);
+    return withSummary(withFacts(a, ex.paragraphs), { headline, url: raw.finalUrl, paragraphs: ex.paragraphs, language: ex.language }, engine, remote);
   }
   // An error page served as something other than HTML still counts as the error.
   if (raw.status >= 400) return assessHtml(meta, '', extractHtml('', raw.finalUrl));
   return assessUnsupported(meta);
+}
+
+/** The headline check's facts, kept once the article is read in full (see core/clickbait). */
+function withFacts(a: Assessment, paragraphs: string[]): Assessment {
+  return a.evidence === 'full' ? { ...a, facts: contentFacts(paragraphs) } : a;
 }
 
 /** Adds a summary when there's something honest to summarise (see core/summary/input.ts). */

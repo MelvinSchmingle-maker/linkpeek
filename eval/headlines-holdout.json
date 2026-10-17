@@ -1,0 +1,65 @@
+{
+  "about": "Part 07 held-out set. Written after the rules in src/core/clickbait were tuned on eval/headlines.json, and not used to tune them. Same label definitions as eval/headlines.json. Run once and reported as it comes out.",
+  "items": [
+    { "id": "h01", "headline": "You'll never believe what the bride's dad did at the altar", "label": "cross" },
+    { "id": "h02", "headline": "Doctors hate this one weird trick for better sleep", "label": "cross", "note": "Bait, but 'weird' isn't in the pattern list. Expected miss." },
+    { "id": "h03", "headline": "What happened next will shock the village", "label": "cross" },
+    { "id": "h04", "headline": "The moment the tram driver saw the child, nobody expected this", "label": "neutral", "note": "Bait-like wording with no listed pattern. Neutral by the same rule as 'This is the moment'." },
+    { "id": "h05", "headline": "Wait until you hear what this council did with the reserve fund", "label": "cross" },
+    { "id": "h06", "headline": "This is the one trick to save on your gas bill", "label": "cross" },
+    {
+      "id": "h07", "headline": "Honey heals burns, scientists prove", "label": "cross",
+      "article": { "paragraphs": ["In tests on rats, the honey gel closed wounds faster. The team says trials in people have not begun."] }
+    },
+    {
+      "id": "h08", "headline": "Honey may heal burns, early tests suggest", "label": "neutral", "note": "Same article as h07, hedged headline.",
+      "article": { "paragraphs": ["In tests on rats, the honey gel closed wounds faster. The team says trials in people have not begun."] }
+    },
+    {
+      "id": "h09", "headline": "Football club makes £20m loss last season", "label": "cross",
+      "article": { "paragraphs": ["The club reported a loss of £4.2m. Ticket sales raised £6.1m, sponsorship brought in £3.8m, and wages cost £9.9m."] }
+    },
+    {
+      "id": "h10", "headline": "Ticket sales raised £6.1m for the club", "label": "tick",
+      "article": { "paragraphs": ["The club reported a loss of £4.2m. Ticket sales raised £6.1m, sponsorship brought in £3.8m, and wages cost £9.9m."] }
+    },
+    { "id": "h11", "headline": "Happening today: rail line reopens after repairs", "label": "cross", "article": { "published": "2020-01-15", "modified": "2020-01-15", "paragraphs": ["The line between the two towns reopened on Thursday after three months of track repairs."] } },
+    { "id": "h12", "headline": "Breaking: rail line reopens after repairs", "label": "neutral", "article": { "published": "2026-10-01", "modified": "2026-10-01", "paragraphs": ["The line between the two towns reopened on Thursday after three months of track repairs."] } },
+    { "id": "h13", "headline": "Council agrees new recycling targets", "label": "neutral", "article": { "paragraphs": ["Councillors agreed targets to recycle 60% of household waste by 2030, up from 52%."] } },
+    { "id": "h14", "headline": "Garden compost is linked to healthier tomatoes", "label": "neutral", "article": { "paragraphs": ["A small study of 40 plants found that compost-fed tomatoes had fewer blighted leaves. The team said the work needs repeating."] } },
+    { "id": "h15", "headline": "Should you rent or buy in 2026?", "label": "neutral" },
+    { "id": "h16", "headline": "10 surprising facts about the Thames", "label": "neutral" },
+    { "id": "h17", "headline": "Mother's heartbreak as the last ferry leaves the island", "label": "neutral" },
+    { "id": "h18", "headline": "The best ever result for the Millbrook under-12s", "label": "neutral" },
+    { "id": "h19", "headline": "Mayor defends decision to close two parks", "label": "neutral" },
+    { "id": "h20", "headline": "Here's the council's full plan for the old mill", "label": "neutral" },
+    {
+      "id": "h21", "headline": "You won't believe the results of the council's bin survey", "label": "cross",
+      "article": { "paragraphs": ["Residents returned 4,000 surveys. 62% said weekly collections should stay."] }
+    },
+    {
+      "id": "h22", "headline": "Schools to get £2m for new roofs", "label": "tick",
+      "article": { "paragraphs": ["The Department for Education will give £2m to 14 schools for new roofs, the council said."] }
+    },
+    { "id": "h23", "headline": "Man, 34, arrested after bus station disturbance", "label": "neutral" },
+    { "id": "h24", "headline": "The secret ingredient in your breakfast cereal", "label": "neutral", "note": "Bait-like wording with no listed pattern. Neutral by the rule." },
+    {
+      "id": "h25", "headline": "Hospital opens new cancer unit", "label": "tick", "note": "The article backs the headline, but there's no figure in the headline. Expected miss.",
+      "article": { "paragraphs": ["The £12m unit opened on Monday with 24 beds for patients receiving chemotherapy."] }
+    },
+    {
+      "id": "h26", "headline": "Green coffee guarantees fat loss, trial shows", "label": "cross",
+      "article": { "paragraphs": ["The trial enrolled 60 women and tested the drink for 8 weeks. Weight changes were small and not statistically significant. The researchers said larger trials are needed."] }
+    },
+    { "id": "h27", "headline": "Fire crews tackle blaze at Harbour Road warehouse", "label": "neutral" },
+    { "id": "h28", "headline": "Trust apologises after patients left in corridor", "label": "neutral" },
+    {
+      "id": "h29", "headline": "Breaking: museum to close early on Fridays", "label": "neutral", "note": "Old article, recently updated.",
+      "article": { "published": "2019-05-01", "modified": "2026-06-01", "paragraphs": ["The museum will close at 3pm on Fridays from next month, its trustees said."] }
+    },
+    {
+      "id": "h30", "headline": "Council fines firm £50,000", "label": "neutral", "note": "Only two money figures in the article, which isn't enough to cross on.",
+      "article": { "paragraphs": ["The firm was fined £20,000 for the breach and ordered to pay £5,000 in costs."] }
+    }
+  ]
+}

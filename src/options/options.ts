@@ -3,6 +3,7 @@ import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/
 import { chromeSummarizer, summarizerOptions, type Availability } from '../core/summary/chrome-builtin';
 import type { SummaryEngine } from '../core/summary/provider';
 import { renderModePicker } from '../ui/mode-picker';
+import { MSG } from '../core/messages';
 import { applyBrand } from '../ui/theme';
 
 applyBrand();
@@ -184,3 +185,12 @@ const ON_DEVICE_STATUS: Record<Availability, string> = {
   available: 'Ready. Summaries are written on this computer.',
 };
 
+// Headline checks: the same three outcomes the card explains (src/core/messages.ts).
+$('#headline-intro').textContent = MSG.definitionsIntro;
+for (const [term, meaning] of MSG.verdictDefinitions) {
+  const line = document.createElement('p');
+  const name = document.createElement('strong');
+  name.textContent = term;
+  line.append(name, ` ${meaning}`);
+  $('#verdict-definitions').append(line);
+}

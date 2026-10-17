@@ -41,6 +41,13 @@ export interface CardView {
   preview?: string;
   /** One-line reason for a headline verdict. */
   reason?: string;
+  /** A plainer headline from the article. Only with a fail verdict and the full article. */
+  rewrite?: string;
+  rewriteLabel?: string;
+  /** The rewrite states a result the headline held back. */
+  revealNote?: string;
+  /** Offer the "What does this mean?" explanation of the three outcomes. */
+  showDefinitions?: boolean;
   /** A small factual note, e.g. the link opens on another site. */
   note?: string;
   /** A button the card offers (e.g. "Allow access…"), handled by the card's owner. */
@@ -128,8 +135,14 @@ export function toCardView(input: CardInput): CardView {
 }
 
 function addVerdict(view: CardView, r: LinkResult): void {
-  const { verdict, reason, notChecked } = r.headlineCheck;
+  const { verdict, reason, notChecked, rewrite, revealsWithheld } = r.headlineCheck;
   if (notChecked) return;
   view.status = { verdict, label: VERDICT_LABEL[verdict] };
-  view.reason = reason ?? (verdict === 'unknown' ? MSG.insufficient : undefined);
+  view.reason = reason ?? (verdict === 'unknown' && r.evidence !== 'full' ? MSG.insufficient : undefined);
+  view.showDefinitions = true;
+  if (rewrite) {
+    view.rewrite = rewrite;
+    view.rewriteLabel = MSG.rewriteLabel;
+    if (revealsWithheld) view.revealNote = MSG.revealNote;
+  }
 }

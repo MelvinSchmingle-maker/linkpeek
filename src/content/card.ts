@@ -152,6 +152,7 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     status.append(icon(view.status.verdict), text(view.status.label));
     top.append(status);
   }
+  const definitions = view.showDefinitions ? definitionsBlock() : undefined;
   if (view.evidenceTag) top.append(el('span', 'tag', view.evidenceTag));
   if (view.isDemo) {
     const demo = el('span', 'tag demo', MSG.demoTag);
@@ -197,6 +198,10 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
     if (view.message) body.append(el('p', 'message', view.message));
     if (view.preview) body.append(el('p', 'preview', view.preview));
     if (view.reason) body.append(el('p', 'reason', view.reason));
+    if (view.rewrite) {
+      body.append(el('p', 'rewrite-label', view.rewriteLabel ?? ''), el('p', 'rewrite', view.rewrite));
+      if (view.revealNote) body.append(el('p', 'reveal-note', view.revealNote));
+    }
     if (view.note) body.append(el('p', 'note', view.note));
     if (view.action && handlers.onAction) {
       const action = document.createElement('button');
@@ -207,7 +212,10 @@ export function renderCard(view: CardView, href: string, handlers: CardHandlers)
       body.append(action);
     }
   }
+  // The toggle comes after the close button in reading order, so Tab reaches Close first.
+  if (definitions) body.append(definitions.toggle);
   card.append(body);
+  if (definitions) card.append(definitions.panel);
 
   // Footer: open link and feedback.
   if (!view.loading && (isWebUrl(href) || view.showFeedback)) {
@@ -248,6 +256,36 @@ function feedbackControls(onFeedback: (v: FeedbackValue) => void): HTMLElement {
     wrap.append(b);
   }
   return wrap;
+}
+
+/**
+ * "What does this mean?": a small button in the top row, and a panel under the
+ * body that stays shut (and empty) until it's opened. Closed, it costs no
+ * height, so the card still fits small and zoomed-in windows.
+ */
+function definitionsBlock(): { toggle: HTMLElement; panel: HTMLElement } {
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'definitions-toggle';
+  toggle.textContent = MSG.whatDoesThisMean;
+  toggle.setAttribute('aria-expanded', 'false');
+  const panel = el('div', 'definitions');
+  panel.hidden = true;
+  let filled = false;
+  toggle.addEventListener('click', () => {
+    if (!filled) {
+      filled = true;
+      panel.append(el('p', 'definitions-intro', MSG.definitionsIntro));
+      for (const [term, meaning] of MSG.verdictDefinitions) {
+        const line = el('p', 'definition');
+        line.append(el('strong', '', term), text(` ${meaning}`));
+        panel.append(line);
+      }
+    }
+    panel.hidden = !panel.hidden;
+    toggle.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  return { toggle, panel };
 }
 
 function el(tag: string, className: string, content?: string): HTMLElement {

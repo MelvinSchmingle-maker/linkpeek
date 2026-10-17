@@ -18,7 +18,7 @@ import {
 } from '../retrieve/diagnose';
 import type { FetchError } from '../retrieve/fetcher';
 import { siteOf } from '../retrieve/url';
-import type { ArticleExtract, EvidenceLevel, FailureReason, SourceInfo, Summary } from '../types';
+import type { ArticleExtract, ContentFacts, EvidenceLevel, FailureReason, SourceInfo, Summary } from '../types';
 import type { HtmlExtraction } from './html';
 import { firstSentence, limitWords } from './sentences';
 
@@ -38,6 +38,8 @@ export interface Assessment {
   finalUrl?: string;
   /** Added after reading, by the summary engine (Part 05). 20 words or fewer. */
   summary?: Summary;
+  /** Added for full articles, for the headline check (Part 07). Derived facts, never article text. */
+  facts?: ContentFacts;
 }
 
 export interface FetchedMeta {

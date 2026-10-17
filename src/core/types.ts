@@ -71,12 +71,35 @@ export interface Summary {
 
 export interface HeadlineCheck {
   verdict: HeadlineVerdict;
-  /** The check hasn't run at all (it arrives in Part 07). The card then shows no verdict mark. */
+  /** The check hasn't run at all. The card then shows no verdict mark. */
   notChecked?: boolean;
   /** One short sentence explaining the verdict. */
   reason?: string;
-  /** A plain rewrite. Only ever present when evidence is "full". */
+  /** A plainer headline from the article. Only ever present when evidence is "full", and only with a fail verdict. */
   rewrite?: string;
+  /** The rewrite states a result the headline held back on purpose. The card says so. */
+  revealsWithheld?: boolean;
+}
+
+/**
+ * Limits on a study's findings that an article states. Only these labels are
+ * kept, never the article's own words.
+ */
+export type StudyLimit = 'animal' | 'lab' | 'small' | 'early' | 'observational' | 'further';
+
+/** A money or percentage figure from an article, as a plain number. */
+export interface Figure {
+  unit: 'money' | 'percent';
+  value: number;
+}
+
+/**
+ * What the headline check needs to know about an article, kept after reading.
+ * Derived facts only, so a cached result carries no article text.
+ */
+export interface ContentFacts {
+  limits: StudyLimit[];
+  figures: Figure[];
 }
 
 export interface LinkRisk {

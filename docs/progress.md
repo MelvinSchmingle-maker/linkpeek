@@ -227,3 +227,32 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - Vercel's Hobby plan is for personal, non-commercial use. A LinkPeek that earns money needs a paid plan.
 - Your check from the build plan, answered 17 Oct 2026: you chose Haiku 5.5 as the model after comparing the Claude and free columns (`docs/eval/part-06.md`, with the Opus and Sonnet runs beside it). AI summaries stay off by default in the extension.
 
+## Part 07. Clickbait tick, cross or neutral (17 Oct 2026, built; not checked with real readers)
+
+**Built:**
+- `src/core/clickbait/`: stage 1 reads the headline's wording (strong, medium or weak patterns). Stage 2 reads the full article's study limits and money or percentage figures, and checks the headline against them. The check combines both into one verdict and one reason (D40 to D42).
+- A rewrite under a cross, when the full article was read: the summary cut to 15 words, labelled as LinkPeek's, with a note when it may reveal a held-back result (D43).
+- The card: the status, the reason, the rewrite, and a "What does this mean?" button that opens the three outcomes (D45). The options page has the same three outcomes.
+- The article's facts are kept with each cached result. Nothing from the article's own words is kept (D41, `docs/privacy.md`).
+- Labelled sets: `eval/headlines.json` (81 headlines, 33 with a short article), written before the rules, and `eval/headlines-holdout.json` (30 headlines), written after the tuning and never used to change a rule.
+- A test page and article for the browser tests: `test-pages/clickbait.html` and `test-pages/articles/mouse-study.html`.
+
+**Tested (actual results):**
+- `npm run check`: typecheck, lint, 343 unit tests pass (5 skipped), build, backend 41 pass.
+- `npm run test:e2e`: 117 pass, 3 skipped. The new `e2e/clickbait.spec.ts` checks, in Chromium: a withheld headline is a cross and says why; an overstated headline is crossed against a real article ("cures", a study in animals); a plain headline is never a cross and gets no rewrite; the explanation opens and shuts.
+- Labelled set, crosses (`docs/eval/part-07.md`):
+  - First run, before any tuning (`docs/eval/part-07-first-run.md`): 95% precision, 80% recall. One false cross, five misses.
+  - After fixing a percentage bug and two patterns: 100% precision, 92% recall (23 of 25 found, no false cross). These two patterns were tuned on this set, so this is the optimistic figure.
+- Held-out set (not used for tuning): 100% precision (9 of 9, no false cross), 90% recall (1 miss). Nine crosses is a small sample.
+- Ticks: 69% recall on the labelled set. The check ticks only when a figure in the headline matches one in the article, so plain true headlines are neutral.
+
+**Not done or not verified:**
+- The AI version of stage 2 (the plan's option when Part 06 is on). The simple checks are what's built and measured.
+- Real readers: no one has read the false crosses yet. The plan's "Your check" is still open for you: read the crosses in `docs/eval/part-07.md`, and say whether any of those publishers would have a fair complaint.
+- The labelled sets were written by the same person who wrote the rules, so the numbers are a first check, not a proof. An independently labelled set is the next step.
+- The "main claim" check (does the article contain the headline's main claim, beyond figures) isn't built: it needs the article's vocabulary, which we don't keep.
+- The date check only sees the page's own published and modified dates. Pages without them can't be checked.
+- At 200% zoom in a small window, the card has to fit above its link. A browser test checks the default card, and it fits with about 3 pixels to spare. A longer reason on a cross card would break that, and that case isn't tested.
+- One browser test (infinite feed, icon count) failed once in a full run from a scroll race in the test page. It passes alone, three times out of three. Not caused by this part, not fixed.
+
+**Your check:** read the crosses that went wrong in `docs/eval/part-07.md`. The held-out set had no false crosses. The first run's one false cross was a timeline headline, and the rule now lets it through. Would those publishers have a fair complaint?

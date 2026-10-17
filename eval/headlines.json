@@ -1,0 +1,185 @@
+{
+  "about": "Part 07 labelled set. Labels follow the definitions in build-plan/07-clickbait-check.md: cross = a specific clickbait or misleading pattern with enough evidence; tick = the headline states its main point and the article (when we have it) backs it up; neutral = not enough evidence, or no clear verdict (the default). A tick needs the article, so headline-only items are never labelled tick. Items with an article are scored as having full evidence, with the article as a short snippet. Written before the rules in src/core/clickbait, and not changed to suit them.",
+  "items": [
+    { "id": "c01", "headline": "You won't believe what this council found in its bin lorries", "label": "cross" },
+    { "id": "c02", "headline": "This one simple trick cuts your energy bill in half", "label": "cross" },
+    { "id": "c03", "headline": "What happened next will change how you pay your pension", "label": "cross" },
+    { "id": "c04", "headline": "You'll never guess which high street chain is closing next", "label": "cross" },
+    { "id": "c05", "headline": "The shocking truth about your morning coffee", "label": "cross" },
+    { "id": "c06", "headline": "Wait until you see what this dog does with a tennis ball", "label": "cross" },
+    { "id": "c07", "headline": "You won't believe the final score of the Millbrook derby", "label": "cross" },
+    { "id": "c08", "headline": "This is the one thing doctors wish you knew about sleep", "label": "cross" },
+    { "id": "c09", "headline": "What the minister said next left the room silent", "label": "cross", "note": "Withheld result, but not a listed pattern. Expected miss." },
+    { "id": "c10", "headline": "She opened the box. What she found inside changed everything", "label": "cross", "note": "Withheld result, not a listed pattern. Expected miss." },
+    { "id": "c25", "headline": "You won't believe how much the council spent on paint", "label": "cross" },
+    {
+      "id": "c11", "headline": "Common painkiller cures blood cancer, study finds", "label": "cross",
+      "article": { "paragraphs": ["The drug killed cancer cells in mice, researchers reported. The team says the work is at an early stage and human trials have not started. Larger studies are needed before any treatment is tested."] }
+    },
+    {
+      "id": "c12", "headline": "Coffee cures memory loss, says new study", "label": "cross",
+      "article": { "paragraphs": ["The study followed 40 volunteers for six weeks. It found some improvement in word recall, but the sample was small. The authors said the results may need repeating in larger trials."] }
+    },
+    {
+      "id": "c13", "headline": "New nasal spray stops flu in its tracks", "label": "cross",
+      "article": { "paragraphs": ["In laboratory tests, the spray reduced infection in mice. Researchers said it may slow the virus in people, but testing in humans has not started."] }
+    },
+    {
+      "id": "c14", "headline": "Tesla profits soar 40% in third quarter", "label": "cross",
+      "article": { "paragraphs": ["Net profit rose 4% to $1.2bn in the quarter. Sales grew 5% from a year earlier, and gross margin was 18%. Operating costs rose by 6%."] }
+    },
+    {
+      "id": "c15", "headline": "Council to pay £5m to bus company", "label": "cross",
+      "article": { "paragraphs": ["The council agreed to pay £750,000 in compensation. Legal fees were £120,000. A further £1.1m was set aside for appeals, and £300,000 for administration."] }
+    },
+    {
+      "id": "c16", "headline": "Breaking: council approves new bus lanes", "label": "cross",
+      "article": { "published": "2021-03-10", "modified": "2021-03-10", "paragraphs": ["Councillors voted on Tuesday to approve bus lanes on Mill Road. Work will start in the spring."] }
+    },
+    {
+      "id": "c17", "headline": "Happening now: the motorway is closed after a crash", "label": "cross",
+      "article": { "published": "2019-07-02", "modified": "2019-07-02", "paragraphs": ["A lorry crashed on the M6 near Stafford on Monday, closing the motorway for several hours."] }
+    },
+    {
+      "id": "c18", "headline": "Study proves music makes you live longer", "label": "cross",
+      "article": { "paragraphs": ["Adults who listened to music every day were less likely to die during the ten years studied. The data is observational, so it cannot show cause. The researchers said more work is needed."] }
+    },
+    {
+      "id": "c19", "headline": "Eating nuts cuts heart attack risk, proven", "label": "cross",
+      "article": { "paragraphs": ["The trial enrolled 300 people at one hospital. The findings are preliminary and need confirming in larger studies."] }
+    },
+    {
+      "id": "c20", "headline": "Vitamin D kills off Covid, researchers confirm", "label": "cross",
+      "article": { "paragraphs": ["Lab tests showed the compound killed the virus in cell cultures. The work is at an early stage."] }
+    },
+    {
+      "id": "c23", "headline": "Oil firm hit by 25% profit fall", "label": "cross",
+      "article": { "paragraphs": ["Profit fell 2% to £80m. Revenue was £2.1bn, up 3% from last year. The dividend was 4p a share. Capital spending rose 7%."] }
+    },
+    {
+      "id": "c24", "headline": "Charity raised £3m in one day", "label": "cross",
+      "article": { "paragraphs": ["The appeal raised £1.4m by midday. Donations later reached £1.9m. Gift Aid added £400,000 on top."] }
+    },
+    {
+      "id": "c28", "headline": "Green tea reverses ageing, lab study shows", "label": "cross",
+      "article": { "paragraphs": ["In lab tests on skin cells, the extract slowed markers of ageing. Researchers said human trials are still needed."] }
+    },
+    {
+      "id": "c29", "headline": "Sugar free drinks guarantee weight loss, study finds", "label": "cross",
+      "article": { "paragraphs": ["The study of 120 adults found a small reduction in weight over six months. The researchers said the effect was modest and that the study was observational."] }
+    },
+    {
+      "id": "t05", "headline": "Valley Foods profits fall 18% to £42m", "label": "tick",
+      "article": { "paragraphs": ["Profits fell 18% to £42m last year. Energy and packaging costs rose, though sales grew 6%."] }
+    },
+    {
+      "id": "t06", "headline": "Council cuts bus fares to £1 for under-25s", "label": "tick",
+      "article": { "paragraphs": ["From April, passengers under 25 will pay £1 a journey, down from £2. The council said the change would cost £400,000 a year."] }
+    },
+    {
+      "id": "t07", "headline": "Sales at Greenfield Bakery rise 9% to £310m", "label": "tick",
+      "article": { "paragraphs": ["Sales rose 9% to £310m in the year to March. Flour costs cut the company's profit margin."] }
+    },
+    {
+      "id": "t08", "headline": "Single fares up 20p from January", "label": "tick",
+      "article": { "paragraphs": ["Single fares on most routes will rise by 20p from January, when the government fare cap ends."] }
+    },
+    {
+      "id": "t09", "headline": "Hospital waiting times fall for third month", "label": "tick", "note": "The article backs it up, but the headline has no figure to match. Expected miss.",
+      "article": { "paragraphs": ["A&E waiting times fell for a third month. 71% of patients were seen within four hours in September, up from 68%."] }
+    },
+    {
+      "id": "t10", "headline": "Heavy rain warning for the valley on Thursday", "label": "tick", "note": "No figure in the headline. Expected miss.",
+      "article": { "paragraphs": ["The Met Office issued a yellow warning for heavy rain across the valley on Thursday, with up to 50mm possible."] }
+    },
+    {
+      "id": "t11", "headline": "Plotcell launches £249 solar battery for allotments", "label": "tick",
+      "article": { "paragraphs": ["Plotcell has launched a £249 battery for allotments. Independent tests are not yet published."] }
+    },
+    {
+      "id": "t12", "headline": "Council agrees to pay £5m to bus company", "label": "tick",
+      "article": { "paragraphs": ["The council agreed a £5m settlement with the bus operator on Monday. Legal advice cost £120,000."] }
+    },
+    {
+      "id": "n23", "headline": "Rents up 3% in a year", "label": "tick", "note": "Number written as a word in the article. A test that the check doesn't cross on it.",
+      "article": { "paragraphs": ["Average rents rose by three per cent over the year to September, the ONS said. Rents in London rose 5%. Wages grew 4%."] }
+    },
+    {
+      "id": "t14", "headline": "Museum attendance tops 500,000 for first time", "label": "tick", "note": "The article supports the headline, but the figure is a count, not money or a percentage. Expected miss.",
+      "article": { "paragraphs": ["Visitor numbers reached 512,000 last year, the first time the museum has passed half a million."] }
+    },
+    {
+      "id": "t15", "headline": "Waste collections move to fortnightly from May", "label": "tick", "note": "The article backs it up, but there's no figure. Expected miss.",
+      "article": { "paragraphs": ["From May, bins will be collected every two weeks instead of weekly, the council confirmed."] }
+    },
+    {
+      "id": "t16", "headline": "Museum to reopen after £2m refurbishment", "label": "tick",
+      "article": { "paragraphs": ["The museum reopens on 1 June after a £2m refurbishment funded by the council and a lottery grant."] }
+    },
+    {
+      "id": "t17", "headline": "Hospital car park charges rise to £4 a day", "label": "tick",
+      "article": { "paragraphs": ["From June, car park charges at Millbrook General will rise from £3 to £4 a day, the trust said."] }
+    },
+    { "id": "n01", "headline": "Families flee as wildfire reaches the edge of Mendocino", "label": "neutral", "note": "Emotional but plain. Should not be a cross." },
+    {
+      "id": "n02", "headline": "Heartbreak as town loses its last bank", "label": "neutral", "note": "Emotional but honest.",
+      "article": { "paragraphs": ["Lloyds closed its branch on Church Street on Friday, leaving the town without a bank for the first time since 1889. Residents said the nearest branch is 12 miles away."] }
+    },
+    { "id": "n03", "headline": "Is it safe to eat raw cookie dough?", "label": "neutral", "note": "A question that's fine." },
+    { "id": "n04", "headline": "Could this be the end of the Millbrook library?", "label": "neutral", "note": "A question with no pattern beyond a question." },
+    { "id": "n05", "headline": "7 things to check before you buy a used car", "label": "neutral", "note": "Listicle: weak signal only." },
+    { "id": "n06", "headline": "17 reasons your cat is judging you", "label": "neutral", "note": "Listicle: weak signal only, so not a cross." },
+    { "id": "n07", "headline": "Here's how the council plans to spend £2m on parks", "label": "neutral", "note": "Forward reference: medium signal, headline only." },
+    { "id": "n08", "headline": "The most important election result in 30 years", "label": "neutral", "note": "Superlative: medium signal, headline only." },
+    { "id": "n09", "headline": "Stop what you're doing and read this council report", "label": "neutral", "note": "Suspense: medium signal, headline only." },
+    { "id": "n11", "headline": "Council leader resigns after row over budget", "label": "neutral" },
+    { "id": "n12", "headline": "Millbrook Rovers beat Ashford 3-2 in a replay", "label": "neutral" },
+    { "id": "n13", "headline": "Rail strike to close Valley line on 4 and 11 November", "label": "neutral" },
+    { "id": "n14", "headline": "Hospital trust cancels 300 operations after flood damage", "label": "neutral" },
+    { "id": "n15", "headline": "Bus fares rise by 20p in January", "label": "neutral", "note": "No article, so no tick." },
+    { "id": "n16", "headline": "Council to build new cycle lanes on High Street from March", "label": "neutral", "note": "No article, so no tick." },
+    {
+      "id": "n17", "headline": "Coffee may help memory, early study suggests", "label": "neutral", "note": "Same article as c12, but the headline is hedged. Should not be a cross.",
+      "article": { "paragraphs": ["The study followed 40 volunteers for six weeks. It found some improvement in word recall, but the sample was small. The authors said the results may need repeating in larger trials."] }
+    },
+    { "id": "n18", "headline": "Coffee cures memory loss", "label": "neutral", "note": "Overstated, but no article, so the content comparison can't run. Expected miss." },
+    { "id": "n25", "headline": "Timeline: what happened next in the Ellis case", "label": "neutral", "note": "A plain timeline headline. Tests the withheld-fact rule for false crosses." },
+    { "id": "n26", "headline": "This is why the pound is falling", "label": "neutral", "note": "Forward reference: medium signal." },
+    { "id": "n27", "headline": "Here's what the Prime Minister said about housing", "label": "neutral", "note": "Forward reference: medium signal." },
+    {
+      "id": "n28", "headline": "Breaking: council approves new bus lanes", "label": "neutral", "note": "Old article, recently updated. Should not be a date cross.",
+      "article": { "published": "2021-03-10", "modified": "2026-08-01", "paragraphs": ["Councillors voted on Tuesday to approve bus lanes on Mill Road. Work will start in the spring."] }
+    },
+    {
+      "id": "n29", "headline": "Hillside Primary rated good by inspectors", "label": "neutral",
+      "article": { "paragraphs": ["Inspectors rated Hillside Primary good, praising its reading teaching after two years of improvement. Maths teaching remains uneven."] }
+    },
+    {
+      "id": "n30", "headline": "Margaret Ellis, who founded the food bank, has died aged 84", "label": "neutral",
+      "article": { "paragraphs": ["Margaret Ellis, who founded the Millbrook Food Bank in her garage in 2009, has died aged 84. The food bank now helps about 600 households a month."] }
+    },
+    {
+      "id": "n22", "headline": "Council to pay £5m to bus company", "label": "neutral", "note": "Same headline as c15, but the article has only two money figures, which isn't enough to cross on.",
+      "article": { "paragraphs": ["The council agreed to pay £750,000 in compensation. Legal fees were £120,000."] }
+    },
+    { "id": "n31", "headline": "Local MP to stand down at next election", "label": "neutral" },
+    { "id": "n32", "headline": "School to close for two days after storm damage", "label": "neutral" },
+    { "id": "n33", "headline": "Ferry operator adds Sunday sailings", "label": "neutral" },
+    { "id": "n34", "headline": "Charity launches winter appeal for food banks", "label": "neutral" },
+    { "id": "n35", "headline": "Man charged over Mill Road fire", "label": "neutral" },
+    { "id": "n38", "headline": "Council warns of rise in fly-tipping", "label": "neutral" },
+    { "id": "n39", "headline": "Village pub named best in county", "label": "neutral" },
+    { "id": "n40", "headline": "Scientists find new species of frog in Borneo", "label": "neutral" },
+    { "id": "n41", "headline": "Town centre to get new benches", "label": "neutral" },
+    { "id": "n42", "headline": "Residents react to new bus timetable", "label": "neutral" },
+    { "id": "n43", "headline": "Bakery reports strong year", "label": "neutral" },
+    { "id": "n44", "headline": "A guide to council tax bands", "label": "neutral" },
+    { "id": "n45", "headline": "Families of the crash victims ask for answers", "label": "neutral" },
+    { "id": "n46", "headline": "Why the high street is struggling", "label": "neutral" },
+    { "id": "n47", "headline": "The reason the Harbour Ferries timetable changed", "label": "neutral" },
+    { "id": "n48", "headline": "Plant nursery closes after 40 years", "label": "neutral" },
+    { "id": "n49", "headline": "A new report on library funding is due this week", "label": "neutral" },
+    { "id": "n50", "headline": "Power cut hits thousands across the south", "label": "neutral" },
+    { "id": "n51", "headline": "Waterfront plans go out to consultation", "label": "neutral" }
+  ]
+}

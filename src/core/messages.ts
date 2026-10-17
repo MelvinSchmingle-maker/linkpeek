@@ -8,6 +8,16 @@ export const MSG = {
   iconLabel: 'Preview this link with LinkPeek',
   cardLabel: 'LinkPeek preview',
   close: 'Close preview',
+  whatDoesThisMean: 'What does this mean?',
+  definitionsIntro: "A headline check judges the headline, not the story.",
+  rewriteLabel: "LinkPeek's plainer headline, from the article:",
+  revealNote: 'This rewrite states the result the headline holds back.',
+  /** The three outcomes, in the words the card and the options page both show. */
+  verdictDefinitions: [
+    ['Possible clickbait:', 'The headline is written to make you click, or says more than the article does. It doesn\'t mean the story is false.'],
+    ['Headline check passed:', "The headline states its main point, and the article we read backs it up. It doesn't mean the story is true."],
+    ['No headline verdict:', "We don't have enough to say either way. This is the default."],
+  ] as [string, string][],
   loading: 'Reading the article...',
   openArticle: 'Open article',
   openLink: 'Open link',

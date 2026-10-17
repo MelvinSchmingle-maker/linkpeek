@@ -56,7 +56,7 @@ for (const [name, summary] of SUMMARISED) {
     const words = (await c.locator('.summary').innerText()).trim().split(/\s+/).length;
     expect(words).toBeLessThanOrEqual(20);
     // No verdict mark LinkPeek didn't earn.
-    await expect(c.locator('[data-status]')).toHaveCount(0);
+    await expect(c.locator('[data-status="fail"]')).toHaveCount(0);
   });
 }
 
@@ -84,7 +84,7 @@ for (const [name, expected] of READ) {
     const c = await openCase(page, name);
     await expect(c).toContainText(expected);
     // Never a verdict mark LinkPeek didn't earn. A summary only where the whole article was read.
-    await expect(c.locator('[data-status]')).toHaveCount(0);
+    await expect(c.locator('[data-status="fail"]')).toHaveCount(0);
     if (!['redirect', 'pdf'].includes(name)) await expect(c.locator('.summary')).toHaveCount(0);
   });
 }

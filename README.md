@@ -15,8 +15,9 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 03 Link detection and modes | Done |
 | 04 Fetching and reading articles | Done |
 | 05 Summary engine (no AI) | Done. Summaries of 20 words or fewer: the article's own most informative sentence, or Chrome's on-device AI if you switch it on |
-| 06 AI summaries | Built and tested with stand-ins. Needs deploying (`server/README.md`) and a real-model evaluation (`npm run eval:ai`) |
-| 07 onward | Not started |
+| 06 AI summaries | Done. Deployed at `linkpeek-api.vercel.app`, Claude Haiku 5.5 by default. Measured in `docs/eval/part-06.md` |
+| 07 Clickbait tick, cross or neutral | Built. Headline checks with one reason each, from the headline alone or with the article. Measured on a labelled set and a held-out set (`docs/eval/part-07.md`); the held-out numbers are small, so read them as a first check, not a guarantee |
+| 08 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
 
@@ -60,7 +61,7 @@ To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
 | `npm test` | Unit tests (fast, no browser, no internet) |
 | `npm run test:e2e` | Builds two test versions (`dist-e2e/` loads by itself on the test pages; `dist-e2e-on-demand/` only when asked, like any other site) and runs them in a real Chromium |
 | `npm run check` | typecheck + lint + unit tests + build, in one go |
-| `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md` |
+| `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md`. Also checks the headline check on `eval/headlines.json` and `eval/headlines-holdout.json`, writing `docs/eval/part-07.md` |
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |

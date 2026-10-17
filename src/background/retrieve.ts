@@ -12,6 +12,7 @@
  * Reading (parsing HTML, PDF text) happens in the offscreen document.
  */
 import type { Assessment } from '../core/extract/assess';
+import { checkHeadline } from '../core/clickbait/check';
 import { assessFetchError } from '../core/extract/assess';
 import { cacheable, getCached, setCached } from '../core/retrieve/cache';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
@@ -85,8 +86,15 @@ function toResult(req: RetrieveRequest, key: string, a: Assessment): LinkResult 
     ...(a.finalUrl ? { finalUrl: a.finalUrl } : {}),
     ...(a.summary ? { summary: a.summary } : {}),
     ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(req.url) } : {}),
-    // No headline check yet (Part 07): the card shows no verdict mark rather than a vague one.
-    headlineCheck: { verdict: 'unknown', notChecked: true },
+    // Run per request, not cached: the same article can be linked with different wording.
+    headlineCheck: checkHeadline({
+      headline: req.headline,
+      evidence: a.evidence,
+      facts: a.facts,
+      published: a.source?.published,
+      modified: a.source?.modified,
+      summary: a.summary?.text,
+    }),
     linkRisk: { level: 'not-checked' },
     isDemo: false,
   };

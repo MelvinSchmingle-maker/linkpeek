@@ -4,8 +4,9 @@
  * Kept in chrome.storage.session: memory only, gone when the browser closes,
  * and not readable by content scripts (so web pages can't get at it). Each
  * entry expires after 24 hours; at most MAX_ENTRIES are kept. Only the
- * verdict, a first sentence or short preview and the 20-word summary are
- * stored, never full article text.
+ * verdict, a first sentence or short preview, the 20-word summary and a few
+ * derived facts for the headline check (which study limits the article states,
+ * and its money and percentage figures) are stored, never article text.
  */
 import type { Assessment } from '../extract/assess';
 

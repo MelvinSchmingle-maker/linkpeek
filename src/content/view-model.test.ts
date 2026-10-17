@@ -64,10 +64,10 @@ describe('card view model', () => {
     expect(v.summary).toBeDefined();
   });
 
-  it('insufficient evidence: neutral with the standard sentence', () => {
+  it('a full article with no headline verdict: the label only, no extra reason (we did read it)', () => {
     const v = view('insufficient');
-    expect(v.status?.verdict).toBe('unknown');
-    expect(v.reason).toBe(MSG.insufficient);
+    expect(v.status).toEqual({ verdict: 'unknown', label: 'No headline verdict' });
+    expect(v.reason).toBeUndefined();
   });
 
   it('unsupported: one plain message and nothing else', () => {
