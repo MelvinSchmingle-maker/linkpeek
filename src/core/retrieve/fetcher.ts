@@ -14,7 +14,7 @@ export const TIMEOUT_MS = __E2E__ && !__LIVE__ ? 3000 : 8000;
 export const MAX_HTML_BYTES = 3 * 1024 * 1024;
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
-export type FetchError = 'timeout' | 'network' | 'too-large';
+export type FetchError = 'timeout' | 'network' | 'too-large' | 'unsafe-address';
 
 /** What came back, in a form that can be passed between parts of the extension. */
 export interface RawFetch {
@@ -41,6 +41,12 @@ export type FetchOutcome = { ok: true; raw: RawFetch } | { ok: false; error: Fet
 export interface FetchOptions {
   via: 'page' | 'extension';
   timeoutMs?: number;
+  /**
+   * Checked on the address the response finally came from, before its body is
+   * read. A refused address is never read. Redirects can't be checked one by
+   * one from an extension, so this only sees where the chain ended.
+   */
+  refuse?: (url: string) => boolean;
   /** Injectable for tests. */
   fetchImpl?: typeof fetch;
 }
@@ -64,6 +70,10 @@ async function fetchOnce(url: string, opts: FetchOptions): Promise<FetchOutcome>
       signal: controller.signal,
       headers: { Accept: 'text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.5' },
     });
+    if (opts.refuse?.(res.url || url)) {
+      await res.body?.cancel().catch(() => undefined);
+      return { ok: false, error: 'unsafe-address' };
+    }
     const contentType = (res.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase();
     const isPdf = contentType === 'application/pdf' || (!contentType && /\.pdf($|\?)/i.test(res.url));
     const limit = isPdf ? MAX_PDF_BYTES : MAX_HTML_BYTES;

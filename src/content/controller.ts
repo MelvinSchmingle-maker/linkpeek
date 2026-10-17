@@ -23,6 +23,8 @@ import type { LinkResult, LinkRisk } from '../core/types';
 import { attachIcon, CardController, HOST_ATTR, isOurHost, isWebUrl } from './card';
 import { demoResult, isDemoKey } from './fixtures';
 import type { ContentMessage, ContentResponse, RedirectCheckError, RedirectCheckResult, SiteStatus, WorkerMessage } from './messages';
+import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
+import { destinationOf, resolveLink } from '../core/retrieve/resolve';
 import { assessLink } from '../core/security/assess';
 import { MSG } from '../core/messages';
 import { getSettings, updateSettings, type Settings } from '../core/storage/settings';
@@ -312,7 +314,7 @@ export class PageController {
 
     let res = await this.askWorker(req);
     if (res?.kind === 'fetch-from-page') {
-      res = await this.askWorker({ ...req, fromPage: await fetchLimited(link.href, { via: 'page' }) });
+      res = await this.askWorker({ ...req, fromPage: await fetchLimited(link.href, { via: 'page', refuse: REFUSE_LOCAL ? refusedUrl : undefined }) });
     }
     show(res?.kind === 'result' ? res.result : unreachable(link.href, headline));
   }
@@ -362,7 +364,9 @@ export class PageController {
 
   /** The card's "Allow access…" button: LinkPeek opens its own small window to ask. */
   private askForAccess(link: HTMLAnchorElement): void {
-    void chrome.runtime.sendMessage({ type: 'open-permission', url: link.href } satisfies WorkerMessage).catch(() => undefined);
+    // The permission is for the site the article is on, not the wrapper's site (for a Facebook link, facebook.com is not the article's site).
+    const destination = destinationOf(resolveLink(link.href), link.href);
+    void chrome.runtime.sendMessage({ type: 'open-permission', url: destination } satisfies WorkerMessage).catch(() => undefined);
   }
 
   /** Manual peek: open the card, adding a temporary icon if the link has none. */

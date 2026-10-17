@@ -47,7 +47,11 @@ export type FailureReason =
   | 'extraction-failed'
   | 'unsupported-type'
   | 'too-large'
-  | 'summary-failed';
+  | 'summary-failed'
+  /** The link's address can't be followed to a destination LinkPeek can read (a wrapper that doesn't say where it goes, or one that's malformed or looping). */
+  | 'bad-link'
+  /** The address is this computer, the local network or a reserved range. LinkPeek doesn't read these on its own. */
+  | 'unsafe-address';
 
 /** Which engine wrote a summary. "demo" is fixture data on the test pages. */
 export type SummaryProviderName = 'extractive' | 'chrome-on-device' | 'remote' | 'demo';
@@ -195,6 +199,8 @@ export interface LinkResult {
   extract?: ArticleExtract;
   /** Where the link ended up after redirects, when that differs from url. */
   finalUrl?: string;
+  /** The destination of a social wrapper link (for example the article behind a Facebook link), when LinkPeek could read it from the link. */
+  resolvedUrl?: string;
   /** LinkPeek needs the user's permission to read pages on this host before it can try. */
   needsPermissionFor?: string;
   /** True when this came from fixtures, not a real assessment. Always shown in the UI. */

@@ -15,6 +15,8 @@ import type { Assessment } from '../core/extract/assess';
 import { checkHeadline } from '../core/clickbait/check';
 import { assessFetchError } from '../core/extract/assess';
 import { cacheable, getCached, setCached } from '../core/retrieve/cache';
+import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
+import { destinationOf, resolveLink, type Resolution } from '../core/retrieve/resolve';
 import { forget } from './in-flight';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
 import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
@@ -38,23 +40,36 @@ export type RetrieveResponse = { kind: 'result'; result: LinkResult } | { kind: 
 
 const inFlight = new Map<string, Promise<Assessment | 'fetch-from-page'>>();
 
+/** Automatic reading refuses this computer, the local network and reserved addresses (see REFUSE_LOCAL). */
+const REFUSE = REFUSE_LOCAL ? refusedUrl : undefined;
+
 export async function retrieve(req: RetrieveRequest, pageUrl: string | undefined): Promise<RetrieveResponse> {
-  const key = cacheKey(req.url);
+  const resolution = resolveLink(req.url);
+  // The cache and the in-flight map use the destination, so two wrappers for one article share a result.
+  const key = cacheKey(destinationOf(resolution, req.url));
   // Shared between simultaneous requests for the same article from the same
   // site (whether the page may fetch it depends on which site it's on).
   const flightKey = `${key}|${pageUrl ? new URL(pageUrl).origin : ''}|${req.readable ? 'readable' : ''}`;
   let pending = inFlight.get(flightKey);
   if (!pending || req.fromPage) {
-    pending = work(req, key, pageUrl);
+    pending = work(req, resolution, key, pageUrl);
     inFlight.set(flightKey, pending);
     forget(inFlight, flightKey, pending);
   }
   const outcome = await pending;
   if (outcome === 'fetch-from-page') return { kind: 'fetch-from-page' };
-  return { kind: 'result', result: toResult(req, key, outcome) };
+  return { kind: 'result', result: toResult(req, key, outcome, resolution) };
 }
 
-async function work(req: RetrieveRequest, key: string, pageUrl: string | undefined): Promise<Assessment | 'fetch-from-page'> {
+async function work(
+  req: RetrieveRequest,
+  resolution: Resolution,
+  key: string,
+  pageUrl: string | undefined,
+): Promise<Assessment | 'fetch-from-page'> {
+  if (resolution.kind === 'rejected') return { evidence: 'unavailable', failure: 'bad-link' };
+  // The address LinkPeek reads: the destination of a wrapper, or the link itself.
+  const target = destinationOf(resolution, req.url);
   // A platform adapter (Part 13) may answer first. None is registered yet, so the general reader runs.
   const adapter = adapterFor(new URL(req.url));
   if (adapter && !req.readable) {
@@ -67,12 +82,16 @@ async function work(req: RetrieveRequest, key: string, pageUrl: string | undefin
     if (cached) return cached;
   }
 
+  // The page's own copy (or the page the user is already on) sends no new request, so it isn't refused again.
+  if (!req.fromPage && REFUSE?.(target)) return { evidence: 'unavailable', failure: 'unsafe-address' };
+
   let outcome: FetchOutcome;
   if (req.fromPage) {
     outcome = req.fromPage;
-  } else if (await hasHostAccess(req.url)) {
-    outcome = await fetchLimited(req.url, { via: 'extension' });
-  } else if (pageUrl && sameOrigin(req.url, pageUrl)) {
+  } else if (await hasHostAccess(target)) {
+    outcome = await fetchLimited(target, { via: 'extension', refuse: REFUSE });
+  } else if (resolution.kind === 'direct' && pageUrl && sameOrigin(target, pageUrl)) {
+    // Only a link to the page's own site is fetched by the page. A wrapper's destination is always fetched here.
     return 'fetch-from-page';
   } else {
     return { evidence: 'unavailable', failure: 'permission-denied' };
@@ -88,10 +107,11 @@ async function work(req: RetrieveRequest, key: string, pageUrl: string | undefin
   return assessment;
 }
 
-function toResult(req: RetrieveRequest, key: string, a: Assessment): LinkResult {
+function toResult(req: RetrieveRequest, key: string, a: Assessment, resolution: Resolution): LinkResult {
   return {
     id: `r-${hash(key)}`,
     url: req.url,
+    ...(resolution.kind === 'decoded' ? { resolvedUrl: resolution.url } : {}),
     headline: req.headline,
     evidence: a.evidence,
     ...(a.failure ? { failure: a.failure } : {}),
@@ -102,7 +122,7 @@ function toResult(req: RetrieveRequest, key: string, a: Assessment): LinkResult 
     ...(a.finalUrl ? { finalUrl: a.finalUrl } : {}),
     ...(a.summary ? { summary: a.summary } : {}),
     ...(a.readable ? { readable: a.readable } : {}),
-    ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(req.url) } : {}),
+    ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(destinationOf(resolution, req.url)) } : {}),
     // Run per request, not cached: the same article can be linked with different wording.
     headlineCheck: checkHeadline({
       headline: req.headline,

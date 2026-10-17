@@ -30,7 +30,7 @@ export function isContentMessage(msg: unknown): msg is ContentMessage {
 }
 
 /** Why a "check where this link goes" couldn't finish. */
-export type RedirectCheckError = 'no-access' | 'timeout' | 'network';
+export type RedirectCheckError = 'no-access' | 'timeout' | 'network' | 'unsafe-address';
 export type RedirectCheckResult = { kind: 'ok'; finalUrl: string } | { kind: 'error'; reason: RedirectCheckError };
 
 /** Messages the content script and LinkPeek's pages send to the service worker. */

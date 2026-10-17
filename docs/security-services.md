@@ -134,3 +134,11 @@ different from stage 1, which never sends anything. If stage 2 is built:
   possible in the extension, and that's recorded in `docs/decisions.md` (D54).
 - **Backend URL fetching:** none. If it's ever moved to the backend, the plan's
   SSRF protection is required first.
+
+## Private addresses and social wrappers (17 Oct 2026)
+
+- **What LinkPeek refuses to read on its own.** Automatic reading, and "Check where this link goes", refuse this computer (127.x, ::1), the local network, link-local, shared, reserved, multicast and documentation addresses, in IPv4 and IPv6. That includes IPv4 written inside IPv6 (mapped, NAT64, 6to4), other spellings of an address (127.1, 0x7f000001), and names such as `localhost`, `*.local`, `*.internal`, `*.lan` and names with no dots. Code: `src/core/retrieve/address.ts`; tests: `address.test.ts`.
+- **Test builds.** The browser test build doesn't refuse, because its tests read local test pages. The live-check build does refuse, so it behaves like a release build.
+- **What the check can't see.** An extension can't see where a public name resolves to, so a name that points at a private address (DNS rebinding) is not caught. Nor can it read the address of each step of a redirect chain. The check sees the address a request was made to and the address the response finally came from, before the body is read. A request can still reach a private address on the way through a public redirect; the body is never read or shown in that case.
+- **Social wrappers.** `src/core/retrieve/resolve.ts` follows only the known wrappers, each through its own parameter: Facebook (`l.php`, `u`) and Instagram (`/`, `u`) carry their destination; X (`t.co`), Reddit (`out.reddit.com`) and Google News (`news.google.com/rss/articles`) can only be followed by fetching them. Nested wrappers are followed up to three deep. Malformed, over-long, credential-bearing and non-web destinations are refused, and no other query parameter is ever followed.
+- **Still open.** Chrome's own handling of a t.co redirect to a destination the extension has no access to is unverified; it needs a real X post on the owner's computer.

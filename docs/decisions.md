@@ -290,3 +290,11 @@ A page that needs JavaScript to show its text is reported as "The page needs to 
 - **The matrix is run, not read from code.** Twenty scenarios: the live rows from the 17 Oct run, four extra live runs, and fixture tests. Rows that were not run are said so.
 - **Part 14 is mostly not built, on purpose.** Usage counts need a backend and real users, and a partner and billing need decisions the owner hasn't made. The schema for counts exists, refuses URLs and article text, and nothing sends it (`docs/measurement.md`).
 
+
+## D59. Automatic reading refuses local and private addresses (17 Oct 2026)
+
+Release builds don't read this computer, the local network or reserved addresses on their own, for links or for "Check where this link goes". Test builds keep local access, because their tests read local test pages. The check is on the parsed address (IPv4, IPv6 and the forms that wrap IPv4), not on the text of the link. It can't see DNS names that point at private addresses, or the middle steps of a redirect; `docs/security-services.md` says so. Owner decision to confirm.
+
+## D60. Social wrappers: the destination is read from the link where the wrapper carries it (17 Oct 2026)
+
+A Facebook or Instagram wrapper's `u` parameter is the destination, and LinkPeek reads it and asks for access to that destination, not the wrapper's site. X, Reddit and Google News wrappers are only followed by fetching them, and the permission is for the wrapper's site until a real post is tested. Only the listed wrappers are followed, and only through their own parameter (`src/core/retrieve/resolve.ts`).
