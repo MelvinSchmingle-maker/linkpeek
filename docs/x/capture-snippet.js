@@ -1,66 +1,93 @@
+/* global $0 */
 (() => {
-  // LinkPeek: X link capture. Paste this whole block into the DevTools console (F12 > Console) on an
-  // X page that has one post with a link in it. It prints the STRUCTURE of the links on the page:
-  // hosts, attribute names and short text. It does not print full addresses, paths, query strings,
-  // account names or long text. Read the output before you share it.
-  const hostOf = (value) => {
+  // LinkPeek: X post capture. Paste into the DevTools console.
+  //
+  // Before running: on the X post, right-click the external link and choose Inspect. The link is then
+  // selected in the Elements panel, and this script reads it as $0. Nothing else on the page is read.
+  //
+  // It prints ONLY structure: the link's hostname, attribute NAMES, the tag names and test IDs from the
+  // link up to its post, and the HOSTNAME of any web address held in an attribute of that link or its post.
+  // It never prints: visible text, the page path, account names, post IDs, query strings, full addresses,
+  // or raw attribute values. It doesn't look outside the one post, and it makes no network request.
+  const POST = 'article, [data-testid="tweet"]';
+  const X_HOSTS = ['x.com', 'twitter.com'];
+  const isXHost = (host) => X_HOSTS.some((x) => host === x || host.endsWith(`.${x}`));
+  // The hostname of a web address held in an attribute, or null. Never the path, query, or user name.
+  const hostnameOf = (value) => {
+    if (typeof value !== 'string' || !/^https?:\/\//i.test(value.trim())) return null;
     try {
-      return new URL(value, location.href).host;
+      const url = new URL(value.trim());
+      if (url.username || url.password) return null;
+      return url.hostname || null;
     } catch {
-      return '';
+      return null;
     }
   };
-  // Visible text, shortened: handles masked, and any path after a domain masked (the host stays).
-  const shortText = (s) =>
-    (s || '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/@[\w.]+/g, '@name')
-      .replace(/([\w-]+(?:\.[\w-]+)+)\/\S*/g, '$1/…')
-      .slice(0, 40);
-  const attributeNames = (el) => Array.from(el.attributes).map((a) => a.name);
-  // Attributes that might hold a destination, with the host only. The value is never printed.
-  const urlAttributes = (el) =>
-    Array.from(el.attributes)
-      .filter((a) => a.name !== 'href' && /url|expand|title|dest|target/i.test(a.name))
-      .map((a) => ({ name: a.name, host: /^https?:\/\//i.test(a.value) ? hostOf(a.value) : '(not a web address)' }));
-  const ancestors = (el, depth) => {
-    const out = [];
-    let node = el.parentElement;
-    for (let i = 0; i < depth && node; i++, node = node.parentElement) out.push(node);
-    return out;
+  const report = (status, details) => {
+    const result = { status, ...details };
+    console.log(JSON.stringify(result, null, 2));
+    return result;
   };
-  const testIds = (el) =>
-    ancestors(el, 8)
-      .map((n) => n.getAttribute('data-testid'))
-      .filter(Boolean);
 
-  const anchors = Array.from(document.querySelectorAll('a[href]'));
-  const links = anchors.map((a) => {
-    const href = a.getAttribute('href') || '';
-    const host = /^https?:\/\//i.test(href) ? hostOf(href) : href ? '(relative link)' : '';
-    return {
-      host,
-      isTco: host === 't.co',
-      text: shortText(a.textContent),
-      textLooksLikeDomain: /^[\w-]+(\.[\w-]+)+/.test((a.textContent || '').trim()),
-      anchorAttributes: attributeNames(a),
-      anchorUrlAttributes: urlAttributes(a),
-      ancestorUrlAttributes: ancestors(a, 4).flatMap((n) => urlAttributes(n).map((u) => ({ ...u, on: n.tagName.toLowerCase() }))),
-      testIdsAbove: testIds(a),
-      insideArticle: Boolean(a.closest('article')),
-    };
-  });
-  const tco = links.filter((l) => l.isTco);
-  const result = {
-    page: { host: location.host, path: location.pathname.split('/').filter(Boolean).map((p, i) => (i === 0 ? p : '…')).join('/') },
-    linkCount: links.length,
-    tcoCount: tco.length,
-    // Attribute names that appear on every t.co link, and on some: the first place to look for an expanded address.
-    tcoAttributeNames: [...new Set(tco.flatMap((l) => l.anchorAttributes))].sort(),
-    tcoUrlAttributes: tco.flatMap((l) => l.anchorUrlAttributes.concat(l.ancestorUrlAttributes)),
-    links,
+  if (typeof $0 === 'undefined' || !$0 || $0.nodeType !== 1) {
+    return report('not-found', { reason: 'Right-click the external link in the post, choose Inspect, then run this again.' });
+  }
+  const post = $0.closest(POST);
+  if (!post) {
+    return report('not-found', { reason: 'The selected element is not inside a post container.' });
+  }
+  const isExternal = (a) => {
+    const host = hostnameOf(a.getAttribute('href'));
+    return Boolean(host) && !isXHost(host);
   };
-  console.log(JSON.stringify(result, null, 2));
-  return result;
+
+  // The link: the selected one, or the single external link in this post. Never guessed.
+  let anchor = $0.closest('a[href]');
+  if (!anchor || !post.contains(anchor)) {
+    const external = Array.from(post.querySelectorAll('a[href]')).filter(isExternal);
+    if (external.length !== 1) {
+      return report('ambiguous', {
+        reason: 'Select the link itself in the Elements panel, not the text around it.',
+        externalLinksInPost: external.length,
+      });
+    }
+    anchor = external[0];
+  }
+
+  // Elements from the link up to its post (inclusive). Only these are read.
+  const chain = [];
+  for (let node = anchor.parentElement; node; node = node.parentElement) {
+    chain.push(node);
+    if (node === post) break;
+  }
+  const tagOf = (el) => el.tagName.toLowerCase();
+  const testIdOf = (el) => el.getAttribute('data-testid');
+
+  // Destinations: web addresses in attributes of the link and its post. Hostnames only.
+  const candidateDestinations = [];
+  for (const el of [anchor, ...chain]) {
+    for (const attr of Array.from(el.attributes)) {
+      if (el === anchor && attr.name === 'href') continue; // the link itself is reported below
+      const host = hostnameOf(attr.value);
+      if (host) candidateDestinations.push({ attribute: attr.name, on: tagOf(el), hostname: host, isXHost: isXHost(host) });
+    }
+  }
+
+  const linksInPost = Array.from(post.querySelectorAll('a[href]'));
+  return report('ok', {
+    pageHostname: location.hostname,
+    anchor: {
+      hostname: hostnameOf(anchor.getAttribute('href')) ?? 'not a web address',
+      isTco: hostnameOf(anchor.getAttribute('href')) === 't.co',
+      attributeNames: Array.from(anchor.attributes, (a) => a.name),
+      ancestors: [...chain].map((el) => ({ tag: tagOf(el), testId: testIdOf(el) })),
+    },
+    candidateDestinations,
+    post: {
+      tag: tagOf(post),
+      testId: testIdOf(post),
+      linkCount: linksInPost.length,
+      externalLinkCount: linksInPost.filter(isExternal).length,
+    },
+  });
 })();
