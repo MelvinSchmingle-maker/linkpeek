@@ -91,6 +91,11 @@ export function permissionNeeded(host: string): string {
   return `LinkPeek needs your permission to read pages on ${host}.`;
 }
 
+/** An X card whose t.co link leads to the site the card names (D66). */
+export function xCardLinksTo(host: string): string {
+  return `This post links to ${host}. LinkPeek needs your permission to read pages on ${host}.`;
+}
+
 /** A small factual note when a link ends up on another site. Not a warning. */
 export function opensOn(host: string): string {
   return `Opens on ${host}.`;
@@ -147,6 +152,7 @@ export const FAILURE_MESSAGE: Record<FailureReason, string> = {
   'summary-failed': MSG.summaryFailed,
   'bad-link': `${SITE_BLOCKED} This link goes through a redirect LinkPeek can't follow safely yet.`,
   'unsafe-address': `${SITE_BLOCKED} LinkPeek only reads public websites, and this address isn't one.`,
+  'destination-differs': `${SITE_BLOCKED} The link doesn't lead to the site the card names, or it couldn't be reached.`,
 };
 
 /**

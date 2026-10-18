@@ -11,7 +11,7 @@ LinkPeek asks for as little as possible. This file lists every permission, why i
 | `scripting` | Lets LinkPeek put its icon and card into a page, only on pages it already has access to. Also used to register "run on the sites I turned on". | No |
 | `offscreen` | A hidden page where LinkPeek reads fetched articles and PDFs (service workers can't parse HTML). It shows nothing and closes after 2 minutes without work. | No |
 | `contextMenus` | Adds "Peek at this link with LinkPeek" to the right-click menu on links. | No |
-| `optional_host_permissions` (`https://*/*`, `http://*/*`) | Not granted at install. When you press "Turn on" for a site in the popup, or "Allow access…" on a card for a link to another site, Chrome asks you to allow that one site. "Turn on for all websites" in Settings, or "Allow all websites" in the access window, asks for all sites at once. | Not at install. Chrome shows its own prompt when you turn a site on. |
+| `optional_host_permissions` (`https://*/*`, `http://*/*`) | Not granted at install. When you press "Turn on" for a site in the popup, or "Allow access…" on a card for a link to another site, Chrome asks you to allow that one site. For an X post's card, the same prompt also covers X's link shortener, t.co. "Turn on for all websites" in Settings, or "Allow all websites" in the access window, asks for all sites at once. | Not at install. Chrome shows its own prompt when you turn a site on. |
 | `declarativeNetRequest` | Lets LinkPeek refuse its own requests to this computer and the local network, including the hops of a redirect, before they are made. It applies to LinkPeek's requests only: ordinary web pages are not affected. Code: `src/background/local-rule.ts`. Not in the test builds. | Yes. Chrome shows a warning for this permission when LinkPeek is installed. We have not yet captured the exact wording from a packed build (unpacked extensions show no warning), so the store text should quote it once it's checked. |
 
 The keyboard shortcut (`commands` in the manifest, Alt+Shift+P by default) is not a permission and shows no warning. Chrome may leave it unassigned if another extension already uses that key. You can set it at `chrome://extensions/shortcuts`.
@@ -39,6 +39,7 @@ Reading an article means fetching it, and an extension can only fetch from sites
 
 - A link to the same site as the page you're on: fetched by LinkPeek's script in that page. No extra permission.
 - A link to another site: the card says "LinkPeek needs your permission to read pages on example.com" and offers **Allow access…**. That opens a small LinkPeek window, then Chrome's own prompt. Allowing a site also turns LinkPeek on there.
+- An X post's link card: the card names the site its link goes to. One prompt asks for that site and for t.co, X's link shortener, which LinkPeek opens only for that card. Any other site reached on the way gets no request (D66).
 - No LinkPeek server is involved. The article's own website sees the request, from your browser, without your cookies or login.
 
 The live-check build (`dist-live/`, made by `node scripts/build.mjs --live`) has access to all sites so `scripts/live-check.mjs` can read real pages without a prompt. Like the test builds, it is never the version you install or publish.

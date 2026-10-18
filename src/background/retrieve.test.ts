@@ -15,6 +15,7 @@ beforeEach(() => {
   chromeGlobal.declarativeNetRequest = {
     isRegexSupported: vi.fn(async () => ({ isSupported: true })),
     updateDynamicRules: vi.fn(async () => undefined),
+    updateSessionRules: vi.fn(async () => undefined),
   };
   chromeGlobal.runtime = { ...(chromeGlobal.runtime as object | undefined), id: 'abcdefghijklmnopabcdefghijklmnop' };
 });
@@ -104,3 +105,52 @@ describe('private and local destinations', () => {
     if (res.kind === 'result') expect(res.result.finalUrl).toBeUndefined();
   });
 });
+
+/** An X card: a t.co link whose label names the card's site (the names here are invented). */
+const CARD = 'https://t.co/Yfm360MAr4';
+const cardAsk = (site?: string) => retrieve({ type: 'retrieve', url: CARD, headline: 'A headline', ...(site ? { expectedHost: site } : {}) }, undefined);
+const sessionRules = () => (globalThis as unknown as { chrome: { declarativeNetRequest: { updateSessionRules: ReturnType<typeof vi.fn> } } }).chrome.declarativeNetRequest.updateSessionRules;
+
+describe('an X card (D66)', () => {
+  it('asks for the card\'s site, and names it as the site needing permission', async () => {
+    access.value = false;
+    const { fetchSpy } = fetchReturns('https://news.example/story');
+    const res = await cardAsk('news.example');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ kind: 'result', result: { failure: 'permission-denied', needsPermissionFor: 'news.example' } });
+  });
+
+  it('follows the t.co link only inside a window that allows just t.co and the card\'s site', async () => {
+    const { fetchSpy } = fetchReturns('https://news.example/story');
+    await cardAsk('news.example').catch(() => undefined);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(CARD);
+    const [first] = sessionRules().mock.calls[0]!;
+    expect(first.addRules[1].condition.requestDomains).toEqual(['t.co', 'news.example']);
+    // The window is closed afterwards.
+    const removals = sessionRules().mock.calls.filter((c) => c[0].addRules.length === 0);
+    expect(removals.length).toBe(1);
+  });
+
+  it('says the link does not lead to the card\'s site when the chain lands somewhere else', async () => {
+    const { fetchSpy } = fetchReturns('http://other.test/story');
+    const res = await cardAsk('news.example');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(res).toMatchObject({ kind: 'result', result: { failure: 'destination-differs' } });
+  });
+
+  it('reads nothing when the card names no plain site', async () => {
+    const { fetchSpy } = fetchReturns('https://news.example/story');
+    const res = await cardAsk(undefined);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ kind: 'result', result: { failure: 'bad-link' } });
+  });
+
+  it('reads nothing, and says why, when the window cannot be set up', async () => {
+    sessionRules().mockRejectedValueOnce(new Error('no rules'));
+    const { fetchSpy } = fetchReturns('https://news.example/story');
+    const res = await cardAsk('news.example');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ kind: 'result', result: { failure: 'network' } });
+  });
+});
+

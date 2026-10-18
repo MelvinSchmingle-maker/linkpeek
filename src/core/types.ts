@@ -51,7 +51,9 @@ export type FailureReason =
   /** The link's address can't be followed to a destination LinkPeek can read (a wrapper that doesn't say where it goes, or one that's malformed or looping). */
   | 'bad-link'
   /** The address is this computer, the local network or a reserved range. LinkPeek doesn't read these on its own. */
-  | 'unsafe-address';
+  | 'unsafe-address'
+  /** An X card's link doesn't lead to the card's site, or the page couldn't be reached. Both look the same from here. */
+  | 'destination-differs';
 
 /** Which engine wrote a summary. "demo" is fixture data on the test pages. */
 export type SummaryProviderName = 'extractive' | 'chrome-on-device' | 'remote' | 'demo';

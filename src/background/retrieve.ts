@@ -19,6 +19,8 @@ import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
 import { localRuleReady } from './local-rule';
 import { destinationOf, resolveLink, type Resolution } from '../core/retrieve/resolve';
 import { forget } from './in-flight';
+import { withCardNetwork, withSharedNetwork } from './card-network';
+import { isSiteHostname, SHORTENER_HOST } from '../core/x/card-site';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
 import { cacheKey, hostname, sameOrigin } from '../core/retrieve/url';
 import type { LinkResult } from '../core/types';
@@ -28,6 +30,8 @@ import { adapterFor } from '../adapters';
 import { OFFSCREEN_TARGET, type OffscreenRequest, type OffscreenResponse } from '../offscreen/messages';
 
 export interface RetrieveRequest {
+  /** On an X card: the site the card names (from its accessible label). Checked again before use. */
+  expectedHost?: string;
   type: 'retrieve';
   url: string;
   headline: string;
@@ -69,10 +73,10 @@ async function work(
   pageUrl: string | undefined,
 ): Promise<Assessment | 'fetch-from-page'> {
   if (resolution.kind === 'rejected') return { evidence: 'unavailable', failure: 'bad-link' };
-  // A wrapper that only reveals its destination by being followed (t.co, Reddit, Google News). Following
-  // it reaches the destination before any permission for it is checked: measured in Chrome, the request
-  // arrives and only the response is withheld. So LinkPeek doesn't follow it.
-  if (resolution.kind === 'needs-redirect') return { evidence: 'unavailable', failure: 'bad-link' };
+  // A wrapper that only reveals its destination by being followed (t.co, Reddit, Google News). Following it
+  // reaches the destination before any permission for it is checked (measured in Chrome), so LinkPeek only
+  // follows an X card's t.co link, and only inside the card window (readCard). Anything else is refused.
+  if (resolution.kind === 'needs-redirect' && !cardSite(req, resolution)) return { evidence: 'unavailable', failure: 'bad-link' };
   // The address LinkPeek reads: the destination of a wrapper, or the link itself.
   const target = destinationOf(resolution, req.url);
   // A platform adapter (Part 13) may answer first. None is registered yet, so the general reader runs.
@@ -87,6 +91,8 @@ async function work(
     if (cached) return cached;
   }
 
+  if (resolution.kind === 'needs-redirect') return readCard(req, resolution.url, cardSite(req, resolution)!, key);
+
   // The page's own copy (or the page the user is already on) sends no new request, so it isn't refused again.
   if (!req.fromPage && REFUSE?.(target)) return { evidence: 'unavailable', failure: 'unsafe-address' };
 
@@ -96,7 +102,7 @@ async function work(
   } else if (await hasHostAccess(target)) {
     // Without the network rule a redirect could reach a private address, so nothing is requested without it.
     if (!(await localRuleReady())) return { evidence: 'unavailable', failure: 'network' };
-    outcome = await fetchLimited(target, { via: 'extension', refuse: REFUSE });
+    outcome = await withSharedNetwork(() => fetchLimited(target, { via: 'extension', refuse: REFUSE }));
   } else if (resolution.kind === 'direct' && pageUrl && sameOrigin(target, pageUrl)) {
     // Only a link to the page's own site is fetched by the page. A wrapper's destination is always fetched here.
     return 'fetch-from-page';
@@ -104,9 +110,46 @@ async function work(
     return { evidence: 'unavailable', failure: 'permission-denied' };
   }
 
-  const assessment = outcome.ok ? await assessRaw(outcome.raw, req.headline, req.readable) : assessFetchError(outcome.error);
+  const assessment = outcome.ok ? await withSharedNetwork(() => assessRaw(outcome.raw, req.headline, req.readable)) : assessFetchError(outcome.error);
   if (cacheable(assessment)) {
     // The article's text (reading mode) is handed on, but never kept.
+    const storable: Assessment = { ...assessment };
+    delete storable.readable;
+    await setCached(key, storable);
+  }
+  return assessment;
+}
+
+/** The site an X card names, when this is an X t.co link and the card gives a plain domain (see core/x/card-site.ts). */
+function cardSite(req: RetrieveRequest, resolution: Resolution): string | undefined {
+  if (resolution.kind !== 'needs-redirect' || resolution.wrapper !== 'X') return undefined;
+  return isSiteHostname(req.expectedHost) ? req.expectedHost.toLowerCase() : undefined;
+}
+
+/**
+ * Reads an X card's article (D66). The t.co link is followed inside a card
+ * window: only t.co and the card's site are allowed, so a redirect to any
+ * other site is blocked before it's made. The article is then read as usual.
+ */
+async function readCard(req: RetrieveRequest, shortLink: string, site: string, key: string): Promise<Assessment> {
+  // Both hosts need access: t.co for the first hop, and the card's site for the article.
+  if (!(await hasHostAccess(`https://${site}/`)) || !(await hasHostAccess(shortLink))) return { evidence: 'unavailable', failure: 'permission-denied' };
+  if (!(await localRuleReady())) return { evidence: 'unavailable', failure: 'network' };
+
+  let outcome: FetchOutcome;
+  try {
+    outcome = await withCardNetwork([SHORTENER_HOST, site], () => fetchLimited(shortLink, { via: 'extension', refuse: REFUSE }));
+  } catch {
+    // The window couldn't be set up, so nothing was requested.
+    return { evidence: 'unavailable', failure: 'network' };
+  }
+  // A hop blocked by the window and an unreachable site look the same from here, so the card says both.
+  if (!outcome.ok) return outcome.error === 'network' ? { evidence: 'unavailable', failure: 'destination-differs' } : assessFetchError(outcome.error);
+  const landed = hostname(outcome.raw.finalUrl);
+  if (landed !== site && !landed.endsWith(`.${site}`)) return { evidence: 'unavailable', failure: 'destination-differs' };
+
+  const assessment = await withSharedNetwork(() => assessRaw(outcome.raw, req.headline, req.readable));
+  if (cacheable(assessment)) {
     const storable: Assessment = { ...assessment };
     delete storable.readable;
     await setCached(key, storable);
@@ -129,7 +172,7 @@ function toResult(req: RetrieveRequest, key: string, a: Assessment, resolution: 
     ...(a.finalUrl ? { finalUrl: a.finalUrl } : {}),
     ...(a.summary ? { summary: a.summary } : {}),
     ...(a.readable ? { readable: a.readable } : {}),
-    ...(a.failure === 'permission-denied' ? { needsPermissionFor: hostname(destinationOf(resolution, req.url)) } : {}),
+    ...(a.failure === 'permission-denied' ? { needsPermissionFor: cardSite(req, resolution) ?? hostname(destinationOf(resolution, req.url)) } : {}),
     // Run per request, not cached: the same article can be linked with different wording.
     headlineCheck: checkHeadline({
       headline: req.headline,

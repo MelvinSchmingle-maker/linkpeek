@@ -39,7 +39,7 @@ const ARTICLE = `<!doctype html><html><head><title>A quiet day on the river</tit
 ].map((p) => `<p>${p}</p>`).join('')}</article></body></html>`;
 
 /** Counts of requests each server received. */
-const hits = { private: 0, privateIPv6: 0, article: 0, wrapper: 0 };
+const hits = { private: 0, privateIPv6: 0, article: 0, wrapper: 0, cardAllowed: 0, cardOther: 0 };
 let privatePort = 0;
 let privateIPv6Port = 0;
 let publicPort = 0;
@@ -96,6 +96,21 @@ test.beforeAll(async () => {
       case '/AbC123':
         hits.wrapper++;
         return redirect(res, `http://other.test:${publicPort}/article`);
+      // An X card: the t.co link leads to the site the card names (news.example)...
+      // Real t.co codes are letters and digits only, and the wrapper check needs that shape (resolve.ts).
+      case '/CardAllowed1':
+        return redirect(res, `http://news.example:${publicPort}/card-allowed-article`);
+      case '/card-allowed-article':
+        hits.cardAllowed++;
+        res.setHeader('content-type', 'text/html; charset=utf-8');
+        return res.end(ARTICLE);
+      // ...or to a site it doesn't name (other.test), which must get no request.
+      case '/CardOther1':
+        return redirect(res, `http://other.test:${publicPort}/card-other-article`);
+      case '/card-other-article':
+        hits.cardOther++;
+        res.setHeader('content-type', 'text/html; charset=utf-8');
+        return res.end(ARTICLE);
       default:
         res.writeHead(404);
         res.end();
@@ -116,6 +131,8 @@ test.beforeEach(() => {
   hits.privateIPv6 = 0;
   hits.article = 0;
   hits.wrapper = 0;
+  hits.cardAllowed = 0;
+  hits.cardOther = 0;
 });
 
 /** Opens a browser with one build of the extension loaded. */
@@ -126,7 +143,7 @@ async function launch(extensionPath: string, userDataDir = '') {
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
       // public.test and other.test are public-looking names; both are sent to this computer.
-      '--host-resolver-rules=MAP public.test 127.0.0.1,MAP other.test 127.0.0.1,MAP t.co 127.0.0.1',
+      '--host-resolver-rules=MAP public.test 127.0.0.1,MAP other.test 127.0.0.1,MAP news.example 127.0.0.1,MAP t.co 127.0.0.1',
     ],
   });
   const isLinkPeek = (w: Worker) => w.url().startsWith('chrome-extension://');
@@ -156,12 +173,15 @@ async function extensionId(worker: Worker) {
 }
 
 /** Asks LinkPeek to read an address, as the card does. Only the live build has this hook. */
-async function retrieve(worker: Worker, url: string) {
+async function retrieve(worker: Worker, url: string, expectedHost?: string) {
   for (let i = 0; i < 40; i++) {
     if (await worker.evaluate(() => typeof (globalThis as { __linkpeekRetrieve?: unknown }).__linkpeekRetrieve === 'function')) break;
     await new Promise((done) => setTimeout(done, 150));
   }
-  const res = await worker.evaluate((u) => (globalThis as unknown as { __linkpeekRetrieve: (u: string) => Promise<unknown> }).__linkpeekRetrieve(u), url);
+  const res = await worker.evaluate(
+    ([u, host]) => (globalThis as unknown as { __linkpeekRetrieve: (u: string, h?: string) => Promise<unknown> }).__linkpeekRetrieve(u, host),
+    [url, expectedHost] as const,
+  );
   return res as { kind: string; result?: { failure?: string; finalUrl?: string; evidence: string } };
 }
 
@@ -276,6 +296,46 @@ test.describe('live build (release-equivalent, dist-live/)', () => {
       expect(res.result?.failure).toBe('bad-link');
       expect(hits.wrapper).toBe(0);
       expect(hits.article).toBe(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('an X card reads the article its t.co link leads to, when that is the site the card names', async () => {
+    const { context, worker } = await launch(LIVE);
+    try {
+      await installedRules(worker);
+      const res = await retrieve(worker, `http://t.co:${publicPort}/CardAllowed1`, 'news.example');
+      expect(res.result?.failure).toBeUndefined();
+      expect(res.result?.finalUrl).toBe(`http://news.example:${publicPort}/card-allowed-article`);
+      expect(hits.cardAllowed).toBe(1);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('an X card whose link leads to another site: that site gets no request, and the card says why', async () => {
+    const { context, worker } = await launch(LIVE);
+    try {
+      await installedRules(worker);
+      const res = await retrieve(worker, `http://t.co:${publicPort}/CardOther1`, 'news.example');
+      expect(res.result?.failure).toBe('destination-differs');
+      expect(hits.cardOther).toBe(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('the card window closes: its rules are removed, and ordinary reads work again', async () => {
+    const { context, worker } = await launch(LIVE);
+    try {
+      await installedRules(worker);
+      await retrieve(worker, `http://t.co:${publicPort}/CardOther1`, 'news.example');
+      const sessionRules = await worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules());
+      expect(sessionRules).toEqual([]);
+      const res = await retrieve(worker, `http://public.test:${publicPort}/article`);
+      expect(res.result?.failure).toBeUndefined();
+      expect(hits.article).toBe(1);
     } finally {
       await context.close();
     }

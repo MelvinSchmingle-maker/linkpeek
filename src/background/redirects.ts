@@ -17,6 +17,7 @@ import { originPattern } from '../core/sites';
 import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
 import { destinationOf, resolveLink } from '../core/retrieve/resolve';
 import { localRuleReady } from './local-rule';
+import { withSharedNetwork } from './card-network';
 import type { RedirectCheckResult } from '../content/messages';
 
 const TIMEOUT_MS = 8_000;
@@ -42,14 +43,14 @@ export async function checkRedirects(url: string): Promise<RedirectCheckResult> 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(start, {
+    const res = await withSharedNetwork(() => fetch(start, {
       method: 'GET',
       redirect: 'follow',
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
       cache: 'no-store',
       signal: controller.signal,
-    });
+    }));
     // Only the address is wanted. Don't download the page.
     await res.body?.cancel().catch(() => undefined);
     const final = new URL(res.url || start);

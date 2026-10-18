@@ -20,6 +20,11 @@ try {
   target = undefined;
 }
 
+// An X card also needs X's shortener (t.co) for the first hop. The window asks for it in the same prompt.
+const SHORTENER = 'https://t.co/';
+const alsoParam = params.get('also');
+const alsoOrigin = alsoParam === SHORTENER ? 't.co' : undefined;
+
 const status = $('#status');
 if (!target) {
   $('#host').textContent = 'this site';
@@ -29,9 +34,11 @@ if (!target) {
 } else {
   $('#host').textContent = target.hostname;
   $('#allow-site').textContent = `Allow ${target.hostname}`;
+  if (alsoOrigin) $('#also').hidden = false;
 }
 
 function request(origins: string[]): void {
+  if (alsoOrigin) origins = [...origins, `https://${alsoOrigin}/*`];
   // Called straight from the click, so Chrome shows its prompt.
   chrome.permissions.request({ origins }).then(
     (granted) => {

@@ -8,13 +8,13 @@
 
 ## Status: decided to build, from the rendered page (18 Oct 2026)
 
-The owner has decided to build an X adapter (D64). What we know now, and what we don't:
+The owner has decided to build an X adapter (D64). What is built so far is the card step in D66: an X card's named site, and its t.co link followed inside a window that allows only t.co and that site. The expanded-address reader is not built. What we know, and what we don't:
 
 - **Post pages are built by JavaScript.** The HTML that X's home page sends has scripts and no post content. A post link cannot be read by fetching the post in the background, so the adapter must read the page the user has open, in the content script, after X has drawn it.
-- **Links go through t.co.** LinkPeek must not follow them to find the destination: following a t.co redirect sends a request to the article site before its permission is checked (measured, D62).
+- **Links go through t.co.** The general reader must not follow them to find the destination: following a t.co redirect sends a request to the article site before its permission is checked (measured, D62). For an X card, the t.co link is followed only inside the D66 window, which blocks every other site.
 - **The expanded destination is not yet confirmed.** X's public API documents an `expanded_url` field, which shows that X keeps the destination separately. Whether the page exposes it, and on which element, has to be read from a real post. Historical Twitter markup is not evidence that it's still there.
 - **Capture first.** `docs/x/capture-snippet.js` runs in the owner's own browser, on one post. Before running it, right-click the external link and choose Inspect, so the link is selected in the Elements panel; the script reads only that link and its post. It prints structure only: the link's hostname, attribute names, the tags and test IDs above it, and the hostname of any web address held in an attribute of the link or its post. It never prints visible text, the page path, account names, post IDs, query strings, full addresses or raw attribute values, and it makes no network request. Its tests (`src/core/x/capture-snippet.test.ts`) run it on synthetic markup only.
 
-Until the capture has been checked on real posts, LinkPeek shows X links as "can't tell where this link goes yet", and the compatibility report marks every X link with the note above.
+Until the capture has been checked on real posts, X links without a named card site show "This link goes through a redirect LinkPeek can't follow safely yet.", and the compatibility report marks every X link with the note above.
 
 Privacy of the capture: a post's URL contains the account name and the post ID, so the capture never reads the URL, and never prints any part of it except the hostname of a candidate destination. Check the output before sharing it.

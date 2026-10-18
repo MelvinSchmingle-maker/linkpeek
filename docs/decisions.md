@@ -311,7 +311,7 @@ The rules are split into one per IPv4 range because Chrome limits each rule's pa
 
 t.co, Reddit's out links and Google News links can only be resolved by following them. Measured in Chrome (a copy of the live build with access to t.co only, and a 301 from t.co to an article site): following the redirect sent a request to the article site before any permission for it was checked, and only the response was withheld from LinkPeek. So LinkPeek no longer follows these wrappers. The card says the link goes through a redirect LinkPeek can't follow safely yet. The same rule applies to "Check where this link goes".
 
-The way to restore X links is to read the destination from the post itself (for example its expanded link text). That needs a real X post's markup to check, and the owner's permission for x.com. Until then, X links show the message above. Browser test: `e2e/local-guard.spec.ts` (a t.co link produces no request to its destination).
+The way to restore X links is to read the destination from the post itself (for example its expanded link text). That needs a real X post's markup to check, and the owner's permission for x.com. Until then, X links show the message above, except an X card whose label names its site, which D66 reads inside a restricted window. Browser test: `e2e/local-guard.spec.ts` (a t.co link produces no request to its destination).
 
 ## D63. Three extraction fixes, each tested on a saved page or a fixture (18 Oct 2026)
 
@@ -325,9 +325,27 @@ Not changed, and why:
 
 ## D64. X links: an adapter that reads the rendered page, not t.co (18 Oct 2026)
 
-The owner decided to build an X adapter. It reads the post the user has open, in the content script, after X has drawn it. It finds the destination from what the page exposes (for example an expanded link address), validates it, and asks for permission to read the article's own site. It never follows a t.co redirect to find the destination (D62), and it never guesses from link text. Fetching X post pages in the background can't work: their HTML is built by JavaScript. Whether the expanded address is on the page, and where, is not yet known: it needs a capture from a real post (`docs/x/capture-snippet.js`, `docs/adapters/x.md`). Until then, X links show "can't tell where this link goes yet".
+The owner decided to build an X adapter. It reads the post the user has open, in the content script, after X has drawn it. It finds the destination from what the page exposes (for example an expanded link address), validates it, and asks for permission to read the article's own site. It never follows a t.co redirect to find the destination (D62), and it never guesses from link text. Fetching X post pages in the background can't work: their HTML is built by JavaScript. Whether the expanded address is on the page, and where, is not yet known: it needs a capture from a real post (`docs/x/capture-snippet.js`, `docs/adapters/x.md`). Until then, X links without a named card site show "This link goes through a redirect LinkPeek can't follow safely yet." The first X step, D66, is built: for an X card it follows the t.co link inside a window that allows only t.co and the card's named site. This reader is not.
 
 ## D65. The compatibility lab proposes, and a person approves (18 Oct 2026)
 
 The lab works from a curated, reproducible set of links and fixtures. It records each failure's stage, reason, permission state and evidence level, and it can cluster failures and propose code changes with tests. It does not change production rules, push commits or deploy, and it does not crawl the web or try workarounds for blocked pages. A proposed change is applied only after the owner approves it, and it must come with a reproducing test and the regression results.
+
+## D66. X cards: the card names the site, and the t.co link is followed only inside a restricted window (18 Oct 2026)
+
+An X post's link card names the site its link goes to, at the start of the card's accessible label (for example "dailymail.com ..."). LinkPeek takes that name only when it is a plain public domain, not x.com, twitter.com or t.co (`src/core/x/card-site.ts`). It is a hint about the site, not the article's address.
+
+The card follows its t.co link only while a card window is open (`src/background/card-network.ts`). In the window, Chrome's network rules block every LinkPeek request except the t.co hop and the card's named site, so a redirect to any other site gets no request. The window closes when the read ends, even after an error, and the rules are removed when the worker starts. Other LinkPeek requests wait for a window to close, and a window waits for them.
+
+The card says "This post links to <site>. LinkPeek needs your permission to read pages on <site>." One permission prompt covers the named site and t.co, X's link shortener, and only for an X card (`src/permission/permission.ts`). If the article lands on a site other than the named one, or on no site, the card says the link doesn't lead to the site the card names, and shows nothing from it.
+
+Checked in Chrome on the live build with a 301 from t.co: the named site is read; a redirect to another site gets no request, and that site's server records none. Automated tests: `src/background/retrieve.test.ts` ("an X card"), `src/background/card-network.test.ts`, `src/core/x/card-site.test.ts`, `src/content/view-model.test.ts`, and the browser tests in `e2e/local-guard.spec.ts`. Those browser tests must use t.co-shaped paths (letters and digits only): `resolve.ts` treats any other path as an ordinary link, so the window isn't exercised.
+
+Limits:
+- The name is page text. A wrong name fails closed: no article is read from the other site. The landing check accepts the named site and its subdomains, and nothing more.
+- The rules match the address as written (`docs/security-services.md`).
+- If the window's rules can't be set, nothing is requested.
+- One card reads at a time, so a card can wait behind another card's window.
+- Not checked on a real X post in the owner's Chrome, which needs X access. Check one card by hand before relying on it.
+- The expanded-address reader (D64) is still not built.
 

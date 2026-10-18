@@ -13,6 +13,8 @@ import { retrieve, type RetrieveResponse } from './retrieve';
 import { checkSiteCorrections } from './corrections';
 import { checkRedirects } from './redirects';
 import { localRuleReady } from './local-rule';
+import { clearCardRules } from './card-network';
+import { SHORTENER_HOST } from '../core/x/card-site';
 import type { CorrectionsResult } from '../core/source/corrections';
 
 const MENU_ID = 'linkpeek-peek';
@@ -21,6 +23,8 @@ const PEEK_COMMAND = 'peek-link';
 const PENDING_TURN_ON_MS = 2 * 60 * 1000;
 // Put the network rule in place as soon as the worker starts (idempotent; a request waits for it anyway).
 void localRuleReady();
+// A card window that was cut short (the worker stopped mid-window) must not leave its rules behind.
+void clearCardRules();
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason === 'install') {
@@ -72,7 +76,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse: (r: un
       return true;
     case 'open-permission':
       if (!fromContentScript || !sender.tab?.id) return false;
-      void openPermissionWindow(msg.url, sender.tab.id);
+      // The optional second origin is only ever the X shortener, for an X card (D66).
+      void openPermissionWindow(msg.url, sender.tab.id, msg.also === `https://${SHORTENER_HOST}/` ? msg.also : undefined);
       return false;
     case 'permission-granted':
       // From LinkPeek's own permission window: try the open card again.
@@ -208,8 +213,8 @@ async function showProblem(tabId: number): Promise<void> {
  * (Chrome only shows its permission prompt from an extension page after a
  * click there; a click in the web page doesn't count.)
  */
-async function openPermissionWindow(url: string, tabId: number): Promise<void> {
-  const params = new URLSearchParams({ url, tab: String(tabId) });
+async function openPermissionWindow(url: string, tabId: number, also?: string): Promise<void> {
+  const params = new URLSearchParams({ url, tab: String(tabId), ...(also ? { also } : {}) });
   await chrome.windows.create({
     url: chrome.runtime.getURL(`permission/index.html?${params}`),
     type: 'popup',
@@ -247,6 +252,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // Test builds only: lets scripts/live-check.mjs run the real reading pipeline
 // on a list of addresses. Not present in the real build.
 if (__E2E__) {
-  (globalThis as unknown as { __linkpeekRetrieve: unknown }).__linkpeekRetrieve = (url: string) =>
-    retrieve({ type: 'retrieve', url, headline: '' }, undefined);
+  (globalThis as unknown as { __linkpeekRetrieve: unknown }).__linkpeekRetrieve = (url: string, expectedHost?: string) =>
+    retrieve({ type: 'retrieve', url, headline: '', ...(expectedHost ? { expectedHost } : {}) }, undefined);
 }

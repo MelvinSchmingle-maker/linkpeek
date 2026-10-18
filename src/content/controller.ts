@@ -24,6 +24,7 @@ import { attachIcon, CardController, HOST_ATTR, isOurHost, isWebUrl } from './ca
 import { demoResult, isDemoKey } from './fixtures';
 import type { ContentMessage, ContentResponse, RedirectCheckError, RedirectCheckResult, SiteStatus, WorkerMessage } from './messages';
 import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
+import { cardSiteFromLabel, isShortenerHref, SHORTENER_HOST } from '../core/x/card-site';
 import { destinationOf, resolveLink } from '../core/retrieve/resolve';
 import { assessLink } from '../core/security/assess';
 import { MSG } from '../core/messages';
@@ -49,6 +50,11 @@ const STORY_BLOCK = 'article, [role="article"], li';
 
 /** A demo or ready-made result, 'loading' for the stays-loading demo, or 'fetch' for a real link. */
 type Result = LinkResult | 'loading' | 'fetch';
+
+/** The site an X card names, for an X t.co link whose label names one. */
+function cardSiteOf(link: HTMLAnchorElement): string | undefined {
+  return isShortenerHref(link.href) ? cardSiteFromLabel(link.getAttribute('aria-label')) : undefined;
+}
 
 export class PageController {
   private cards = new CardController();
@@ -308,7 +314,9 @@ export class PageController {
     };
     if (this.cards.openFor === link) this.cards.update({ kind: 'loading', isDemo: false, risk: this.riskFor(link) });
 
-    const req: RetrieveRequest = { type: 'retrieve', url: link.href, headline };
+    // An X card names its site in its label: the t.co link is read only for that site (see D66).
+    const cardSite = cardSiteOf(link);
+    const req: RetrieveRequest = { type: 'retrieve', url: link.href, headline, ...(cardSite ? { expectedHost: cardSite } : {}) };
     // The link points at this very page: read it as it is.
     if (samePage(link.href, this.doc.location.href)) req.fromPage = this.currentPage(link.href);
 
@@ -364,6 +372,14 @@ export class PageController {
 
   /** The card's "Allow access…" button: LinkPeek opens its own small window to ask. */
   private askForAccess(link: HTMLAnchorElement): void {
+    // An X card: the card's site, and X's shortener, which the first hop needs. One prompt for both.
+    const cardSite = cardSiteOf(link);
+    if (cardSite) {
+      void chrome.runtime
+        .sendMessage({ type: 'open-permission', url: `https://${cardSite}/`, also: `https://${SHORTENER_HOST}/` } satisfies WorkerMessage)
+        .catch(() => undefined);
+      return;
+    }
     // The permission is for the site the article is on, not the wrapper's site (for a Facebook link, facebook.com is not the article's site).
     const destination = destinationOf(resolveLink(link.href), link.href);
     void chrome.runtime.sendMessage({ type: 'open-permission', url: destination } satisfies WorkerMessage).catch(() => undefined);

@@ -7,6 +7,7 @@
 import { fetchLimited } from '../core/retrieve/fetcher';
 import { findCorrectionsPage, type CorrectionsResult, type PageCheck } from '../core/source/corrections';
 import { hasHostAccess } from './retrieve';
+import { withSharedNetwork } from './card-network';
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 const PREFIX = 'corrections:';
@@ -31,7 +32,7 @@ export async function checkSiteCorrections(url: string): Promise<CorrectionsResu
 }
 
 async function fetchCheck(url: string): Promise<PageCheck | undefined> {
-  const outcome = await fetchLimited(url, { via: 'extension' });
+  const outcome = await withSharedNetwork(() => fetchLimited(url, { via: 'extension' }));
   if (!outcome.ok) return undefined;
   const { status, contentType, redirected, finalUrl, text } = outcome.raw;
   // A redirect counts only when it lands on something still called corrections, editorial or ethics: not a login or home page.

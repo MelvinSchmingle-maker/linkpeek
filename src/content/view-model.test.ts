@@ -156,6 +156,15 @@ describe('real results (Part 04)', () => {
     expect(v.extract).toBeUndefined();
   });
 
+  it('an X card says which site its post links to, and asks for that site', () => {
+    const v = toCardView({
+      kind: 'result',
+      result: real({ url: 'https://t.co/Yfm360MAr4', evidence: 'unavailable', failure: 'permission-denied', needsPermissionFor: 'news.example' }),
+    });
+    expect(v.message).toBe('This post links to news.example. LinkPeek needs your permission to read pages on news.example.');
+    expect(v.action).toBe(MSG.allow);
+  });
+
   it('a subscription page shows the reason and its public description', () => {
     const v = toCardView({ kind: 'result', result: real({ evidence: 'partial', failure: 'paywall', preview: 'A teaser.' }) });
     expect(v.message).toBe(FAILURE_MESSAGE.paywall);

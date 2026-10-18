@@ -40,7 +40,7 @@ export type WorkerMessage =
   /** "Check where this link goes" (Part 11): asks the link's site where it ends up, once, without cookies. */
   | { type: 'check-redirects'; url: string }
   /** Open LinkPeek's small window that asks for access to a link's site. */
-  | { type: 'open-permission'; url: string }
+  | { type: 'open-permission'; url: string; also?: string }
   /** Sent by that window once access is granted. */
   | { type: 'permission-granted'; tabId: number }
   /** The user asked for the site's corrections page (Part 08). */

@@ -15,8 +15,10 @@ import {
   SOURCE_FROM,
   SUMMARY_BY,
   VERDICT_LABEL,
+  xCardLinksTo,
 } from '../core/messages';
 import { siteOf } from '../core/retrieve/url';
+import { isShortenerHref } from '../core/x/card-site';
 import type { HeadlineVerdict, LinkResult, LinkRisk, PrimaryCounts, SourceInfo } from '../core/types';
 
 /** One fact in "About this source": what it says, and where it came from. */
@@ -110,7 +112,7 @@ export function toCardView(input: CardInput): CardView {
   if (r.source) view.sourceLines = sourceLines(r.source);
 
   if (r.needsPermissionFor) {
-    view.message = permissionNeeded(r.needsPermissionFor);
+    view.message = isShortenerHref(r.url) ? xCardLinksTo(r.needsPermissionFor) : permissionNeeded(r.needsPermissionFor);
     view.action = MSG.allow;
     return view;
   }
