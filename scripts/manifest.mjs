@@ -69,5 +69,12 @@ export function buildManifest({ e2e = false, onDemand = false, live = false } = 
     }
   }
 
+  // Chrome's network rules, used to refuse LinkPeek's own requests to this
+  // computer and the local network, redirects included (src/background/local-rule.ts,
+  // D59). Chrome shows a warning for this permission at install. The browser
+  // test build reads local test pages, so it doesn't have the permission. The
+  // live-check build is a release-like build, so it does.
+  if (!e2e || live) manifest.permissions.push('declarativeNetRequest');
+
   return manifest;
 }

@@ -16,6 +16,7 @@ import { checkHeadline } from '../core/clickbait/check';
 import { assessFetchError } from '../core/extract/assess';
 import { cacheable, getCached, setCached } from '../core/retrieve/cache';
 import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
+import { localRuleReady } from './local-rule';
 import { destinationOf, resolveLink, type Resolution } from '../core/retrieve/resolve';
 import { forget } from './in-flight';
 import { fetchLimited, type FetchOutcome, type RawFetch } from '../core/retrieve/fetcher';
@@ -89,6 +90,8 @@ async function work(
   if (req.fromPage) {
     outcome = req.fromPage;
   } else if (await hasHostAccess(target)) {
+    // Without the network rule a redirect could reach a private address, so nothing is requested without it.
+    if (!(await localRuleReady())) return { evidence: 'unavailable', failure: 'network' };
     outcome = await fetchLimited(target, { via: 'extension', refuse: REFUSE });
   } else if (resolution.kind === 'direct' && pageUrl && sameOrigin(target, pageUrl)) {
     // Only a link to the page's own site is fetched by the page. A wrapper's destination is always fetched here.

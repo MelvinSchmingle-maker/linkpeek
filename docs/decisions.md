@@ -298,3 +298,12 @@ Release builds don't read this computer, the local network or reserved addresses
 ## D60. Social wrappers: the destination is read from the link where the wrapper carries it (17 Oct 2026)
 
 A Facebook or Instagram wrapper's `u` parameter is the destination, and LinkPeek reads it and asks for access to that destination, not the wrapper's site. X, Reddit and Google News wrappers are only followed by fetching them, and the permission is for the wrapper's site until a real post is tested. Only the listed wrappers are followed, and only through their own parameter (`src/core/retrieve/resolve.ts`).
+
+## D61. Network rules for automatic reading: accepted, with a limit (18 Oct 2026)
+
+The owner chose Option A over refusing every redirect: release builds install Chrome network rules (`declarativeNetRequest`) that block LinkPeek's own requests to this computer and the local network, including redirect hops. The rules are scoped to LinkPeek's extension ID, so ordinary pages are not affected. They add one install-time permission warning, which `docs/permissions.md` explains.
+
+Limits, stated in `docs/security-services.md`: the rules match the URL as written, so a public-looking name that resolves to a private address (DNS rebinding) is not caught; the page's own scripts are outside the rules; if the rules can't be installed, LinkPeek makes no request. This is an extra barrier, not complete protection against server-side request forgery or DNS rebinding.
+
+The rules are split into one per IPv4 range because Chrome limits each rule's pattern to 2 KB once compiled. A single combined pattern was refused, which the browser tests caught.
+

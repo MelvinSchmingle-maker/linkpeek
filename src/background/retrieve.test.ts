@@ -9,9 +9,14 @@ const access = { value: true };
 
 beforeEach(() => {
   access.value = true;
-  (globalThis as unknown as { chrome: Record<string, unknown> }).chrome.permissions = {
-    contains: vi.fn(async () => access.value),
+  const chromeGlobal = (globalThis as unknown as { chrome: Record<string, unknown> }).chrome;
+  chromeGlobal.permissions = { contains: vi.fn(async () => access.value) };
+  // The network rule (local-rule.ts) is installed before any request, so the stand-in must accept it.
+  chromeGlobal.declarativeNetRequest = {
+    isRegexSupported: vi.fn(async () => ({ isSupported: true })),
+    updateDynamicRules: vi.fn(async () => undefined),
   };
+  chromeGlobal.runtime = { ...(chromeGlobal.runtime as object | undefined), id: 'abcdefghijklmnopabcdefghijklmnop' };
 });
 afterEach(() => vi.unstubAllGlobals());
 

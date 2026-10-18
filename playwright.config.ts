@@ -8,7 +8,9 @@ export default defineConfig<{ extensionDir: string }>({
   reporter: [['list']],
   use: { trace: 'retain-on-failure' },
   projects: [
-    { name: 'auto', testIgnore: /on-demand\.spec\.ts/ },
+    { name: 'auto', testIgnore: [/on-demand\.spec\.ts/, /local-guard\.spec\.ts/] },
+    // The network rule (D59) needs the release-like live build, so these run apart from the test build.
+    { name: 'guard', testMatch: /local-guard\.spec\.ts/ },
     { name: 'on-demand', testMatch: /on-demand\.spec\.ts/, use: { extensionDir: 'dist-e2e-on-demand' } },
   ],
   webServer: {

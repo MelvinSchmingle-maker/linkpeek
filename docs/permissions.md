@@ -12,6 +12,7 @@ LinkPeek asks for as little as possible. This file lists every permission, why i
 | `offscreen` | A hidden page where LinkPeek reads fetched articles and PDFs (service workers can't parse HTML). It shows nothing and closes after 2 minutes without work. | No |
 | `contextMenus` | Adds "Peek at this link with LinkPeek" to the right-click menu on links. | No |
 | `optional_host_permissions` (`https://*/*`, `http://*/*`) | Not granted at install. When you press "Turn on" for a site in the popup, or "Allow access…" on a card for a link to another site, Chrome asks you to allow that one site. "Turn on for all websites" in Settings, or "Allow all websites" in the access window, asks for all sites at once. | Not at install. Chrome shows its own prompt when you turn a site on. |
+| `declarativeNetRequest` | Lets LinkPeek refuse its own requests to this computer and the local network, including the hops of a redirect, before they are made. It applies to LinkPeek's requests only: ordinary web pages are not affected. Code: `src/background/local-rule.ts`. Not in the test builds. | Yes. Chrome shows a warning for this permission when LinkPeek is installed. We have not yet captured the exact wording from a packed build (unpacked extensions show no warning), so the store text should quote it once it's checked. |
 
 The keyboard shortcut (`commands` in the manifest, Alt+Shift+P by default) is not a permission and shows no warning. Chrome may leave it unassigned if another extension already uses that key. You can set it at `chrome://extensions/shortcuts`.
 
@@ -41,3 +42,10 @@ Reading an article means fetching it, and an extension can only fetch from sites
 - No LinkPeek server is involved. The article's own website sees the request, from your browser, without your cookies or login.
 
 The live-check build (`dist-live/`, made by `node scripts/build.mjs --live`) has access to all sites so `scripts/live-check.mjs` can read real pages without a prompt. Like the test builds, it is never the version you install or publish.
+
+## The network-rule permission, in plain words (18 Oct 2026)
+
+LinkPeek asks Chrome for one extra permission: `declarativeNetRequest`. It has one job. It stops LinkPeek itself from requesting addresses on your own computer or your local network, including through a redirect. It doesn't change how other websites behave, and it doesn't give LinkPeek access to any website. Chrome shows a warning for it when you install LinkPeek. Text for the store listing and the options page should say what that warning means in these words, and should quote Chrome's exact wording once it's been checked on a packed build.
+
+Why it's needed: a public link can redirect to an address on your computer or network. Without the rule, LinkPeek would send that request before it could check where it ended up. The alternative, refusing every redirect, would stop many ordinary links (including social-media links) from working.
+

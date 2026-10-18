@@ -4,7 +4,14 @@ import { checkRedirects } from './redirects';
 const granted = { value: true };
 beforeEach(() => {
   granted.value = true;
-  vi.stubGlobal('chrome', { permissions: { contains: vi.fn(async () => granted.value) } });
+  vi.stubGlobal('chrome', {
+    permissions: { contains: vi.fn(async () => granted.value) },
+    declarativeNetRequest: {
+      isRegexSupported: vi.fn(async () => ({ isSupported: true })),
+      updateDynamicRules: vi.fn(async () => undefined),
+    },
+    runtime: { id: 'abcdefghijklmnopabcdefghijklmnop' },
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 

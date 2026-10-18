@@ -16,6 +16,7 @@
 import { originPattern } from '../core/sites';
 import { REFUSE_LOCAL, refusedUrl } from '../core/retrieve/address';
 import { destinationOf, resolveLink } from '../core/retrieve/resolve';
+import { localRuleReady } from './local-rule';
 import type { RedirectCheckResult } from '../content/messages';
 
 const TIMEOUT_MS = 8_000;
@@ -33,6 +34,7 @@ export async function checkRedirects(url: string): Promise<RedirectCheckResult> 
   // Without access to the site, Chrome refuses the request. Say so, rather than guess why it failed.
   const pattern = originPattern(start);
   if (!pattern || !(await chrome.permissions.contains({ origins: [pattern] }))) return { kind: 'error', reason: 'no-access' };
+  if (!(await localRuleReady())) return { kind: 'error', reason: 'network' };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

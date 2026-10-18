@@ -12,12 +12,15 @@ import { clearCached } from '../core/retrieve/cache';
 import { retrieve, type RetrieveResponse } from './retrieve';
 import { checkSiteCorrections } from './corrections';
 import { checkRedirects } from './redirects';
+import { localRuleReady } from './local-rule';
 import type { CorrectionsResult } from '../core/source/corrections';
 
 const MENU_ID = 'linkpeek-peek';
 const PEEK_COMMAND = 'peek-link';
 /** How long a "Turn on" press stays pending while Chrome shows its prompt. */
 const PENDING_TURN_ON_MS = 2 * 60 * 1000;
+// Put the network rule in place as soon as the worker starts (idempotent; a request waits for it anyway).
+void localRuleReady();
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason === 'install') {
