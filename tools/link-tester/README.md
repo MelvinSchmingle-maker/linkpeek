@@ -25,9 +25,23 @@ reading code in a test browser.
 
 ## Run it
 
+Say where the run happened, so the report can tell the runs apart:
+
+    node link-test.mjs links.txt --source own-computer
+
+`--source` is `own-computer`, `cloud` or `fixture`. To see everything you have run, use:
+
+    node link-test.mjs --report
+
+This writes `results/report.md`, grouped by source, with counts by outcome, by stage and by platform.
+
+By default the tester stores no article text, and no full addresses: each address is kept as scheme, host and path, without its query string. Add `--with-text` to also store the opening sentence and the summary. Only do that when you want to check the wording.
+
+
+
 1. Put one link per line in `links.txt`. Copy each link exactly as the post
    gives it, before you open it.
-2. Run `node link-test.mjs links.txt`.
+2. Run `node link-test.mjs links.txt --source own-computer`.
    Add `--headed` to watch the browser window. This helps when a site shows a
    robot check, because you can see what it shows.
 3. Open the newest CSV in `results/` in Excel or Google Sheets.

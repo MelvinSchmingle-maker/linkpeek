@@ -25,6 +25,8 @@ import { firstSentence, limitWords } from './sentences';
 
 /** Enough real article text to call it the full article. Explained in docs/decisions.md. */
 export const FULL_ARTICLE_WORDS = 150;
+/** Above this many words per sentence, text is a run of headlines, not an article (news and essays run near 20). */
+export const LISTING_WORDS_PER_SENTENCE = 60;
 const PREVIEW_WORDS = 50;
 const MIN_TEASER_WORDS = 15;
 
@@ -122,6 +124,11 @@ export function assessHtml(meta: FetchedMeta, html: string, ex: HtmlExtraction):
   // 6. Pages that only build themselves with JavaScript.
   if (looksJsRendered({ articleWords: ex.articleWords, bodyWords: ex.bodyWords, ...ex.signals })) {
     return fail('js-rendered-empty', description);
+  }
+
+  // 6b. A front page or topic page: a run of headlines, not an article.
+  if (ex.articleWords >= FULL_ARTICLE_WORDS && ex.wordsPerSentence !== undefined && ex.wordsPerSentence > LISTING_WORDS_PER_SENTENCE) {
+    return fail('extraction-failed', description);
   }
 
   // 7. A real article.

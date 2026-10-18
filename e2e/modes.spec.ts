@@ -1,13 +1,13 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, setSettings, test, TEST_SERVER } from './fixtures';
+import { expect, linkPeekWorker, setSettings, test, TEST_SERVER } from './fixtures';
 
 const NEWS = `${TEST_SERVER}/news-front.html`;
 const icons = (page: Page) => page.locator('[data-linkpeek="icon"]');
 
 /** Send a message to the test page's content script, as the popup or service worker would. */
 async function sendToPage(context: BrowserContext, msg: unknown) {
-  const [worker] = context.serviceWorkers();
-  return worker!.evaluate(async (m) => {
+  const worker = await linkPeekWorker(context);
+  return worker.evaluate(async (m) => {
     const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
     // null = no frame answered (what the service worker treats as "couldn't peek").
     return chrome.tabs.sendMessage(tab!.id!, m).catch(() => null);
@@ -15,8 +15,8 @@ async function sendToPage(context: BrowserContext, msg: unknown) {
 }
 
 async function openPopupFor(context: BrowserContext, extensionId: string) {
-  const [worker] = context.serviceWorkers();
-  const tabId = await worker!.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.1/*' }))[0]!.id);
+  const worker = await linkPeekWorker(context);
+  const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.1/*' }))[0]!.id);
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup/index.html?tab=${tabId}`);
   return popup;

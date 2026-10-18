@@ -307,3 +307,19 @@ Limits, stated in `docs/security-services.md`: the rules match the URL as writte
 
 The rules are split into one per IPv4 range because Chrome limits each rule's pattern to 2 KB once compiled. A single combined pattern was refused, which the browser tests caught.
 
+## D62. Wrapper links that reveal their destination only by being followed are not followed (18 Oct 2026)
+
+t.co, Reddit's out links and Google News links can only be resolved by following them. Measured in Chrome (a copy of the live build with access to t.co only, and a 301 from t.co to an article site): following the redirect sent a request to the article site before any permission for it was checked, and only the response was withheld from LinkPeek. So LinkPeek no longer follows these wrappers. The card says the link goes through a redirect LinkPeek can't follow safely yet. The same rule applies to "Check where this link goes".
+
+The way to restore X links is to read the destination from the post itself (for example its expanded link text). That needs a real X post's markup to check, and the owner's permission for x.com. Until then, X links show the message above. Browser test: `e2e/local-guard.spec.ts` (a t.co link produces no request to its destination).
+
+## D63. Three extraction fixes, each tested on a saved page or a fixture (18 Oct 2026)
+
+- NPR's false paywall. The Piano check matched Piano's loader script and empty slots on every NPR page. Now only a Piano element that holds text counts. Fixture: `test-pages/articles/npr-piano-mounts.html`; a short Piano teaser is still a paywall.
+- Front pages (a run of headlines, no sentence ends). A page with more than 60 words per sentence, and at least 150 words, is not read as an article. The Guardian's UK front page now shows its description with the reason `extraction-failed`, instead of its headlines as an article. Fixture: `test-pages/articles/front-page-listing.html`.
+- Opening sentence: licence and permission notices, and author lines with email addresses, are skipped. arXiv's first page now opens on the abstract's first sentence.
+
+Not changed, and why:
+- The Verge. Its page says `"isAccessibleForFree": false`. Showing the text when the publisher marks it paid would bypass the paywall, so LinkPeek keeps the publisher's flag. The owner can choose different wording for that case.
+- Ars Technica's opening, which may be a pull quote. It isn't reproduced by a fixture yet.
+

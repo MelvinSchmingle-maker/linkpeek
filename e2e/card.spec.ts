@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test, TEST_SERVER } from './fixtures';
+import { expect, linkPeekWorker, test, TEST_SERVER } from './fixtures';
 
 const PAGE = `${TEST_SERVER}/news-front.html`;
 const DEMO_KEYS = [
@@ -141,8 +141,8 @@ test('feedback is saved on the device and acknowledged', async ({ page, context 
   await page.locator('[data-linkpeek="card"]').getByRole('button', { name: 'Yes, useful' }).click();
   await expect(card(page)).toContainText('Thanks for the feedback.');
 
-  const [worker] = context.serviceWorkers();
-  const stored = await worker!.evaluate(() => chrome.storage.local.get('feedback'));
+  const worker = await linkPeekWorker(context);
+  const stored = await worker.evaluate(() => chrome.storage.local.get('feedback'));
   expect(stored.feedback).toEqual([
     expect.objectContaining({ resultId: 'demo-full', value: 'up', hostname: '127.0.0.1', isDemo: true }),
   ]);

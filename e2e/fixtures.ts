@@ -9,7 +9,7 @@
  * demo.test is mapped onto the local test server, to stand in for "a real
  * website that isn't LinkPeek's test server".
  */
-import { test as base, chromium, type BrowserContext } from '@playwright/test';
+import { test as base, chromium, type BrowserContext, type Worker } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 export const TEST_SERVER = 'http://127.0.0.1:4173';
@@ -31,18 +31,32 @@ export const test = base.extend<{ extensionDir: string; context: BrowserContext;
     await context.close();
   },
   extensionId: async ({ context }, use) => {
-    let [worker] = context.serviceWorkers();
-    if (!worker) worker = await context.waitForEvent('serviceworker');
+    const worker = await linkPeekWorker(context);
     await use(new URL(worker.url()).host);
   },
 });
 
 export const expect = test.expect;
 
+/**
+ * LinkPeek's own service worker, once its extension APIs exist. Chrome can list
+ * another worker first, and can report this one before its chrome.* APIs are
+ * there (the start-up race behind the intermittent "chrome.storage undefined").
+ */
+export async function linkPeekWorker(context: BrowserContext): Promise<Worker> {
+  const isLinkPeek = (w: Worker) => w.url().startsWith('chrome-extension://');
+  const worker = context.serviceWorkers().find(isLinkPeek) ?? (await context.waitForEvent('serviceworker', { predicate: isLinkPeek }));
+  for (let i = 0; i < 80; i++) {
+    const ready = await worker.evaluate(() => typeof chrome.storage !== 'undefined').catch(() => false);
+    if (ready) return worker;
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  throw new Error("LinkPeek's service worker did not expose its extension APIs");
+}
+
 /** Run code in the extension's service worker. */
 export async function inWorker<T, A>(context: BrowserContext, fn: (arg: A) => T | Promise<T>, arg: A): Promise<T> {
-  let [worker] = context.serviceWorkers();
-  if (!worker) worker = await context.waitForEvent('serviceworker');
+  const worker = await linkPeekWorker(context);
   // Playwright's own types for evaluate() don't line up with a generic helper.
   const evaluate = worker.evaluate.bind(worker) as (f: unknown, a: unknown) => Promise<unknown>;
   return (await evaluate(fn, arg)) as T;

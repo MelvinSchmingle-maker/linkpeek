@@ -39,7 +39,7 @@ const ARTICLE = `<!doctype html><html><head><title>A quiet day on the river</tit
 ].map((p) => `<p>${p}</p>`).join('')}</article></body></html>`;
 
 /** Counts of requests each server received. */
-const hits = { private: 0, privateIPv6: 0, article: 0 };
+const hits = { private: 0, privateIPv6: 0, article: 0, wrapper: 0 };
 let privatePort = 0;
 let privateIPv6Port = 0;
 let publicPort = 0;
@@ -92,6 +92,10 @@ test.beforeAll(async () => {
         return redirect(res, `http://[::1]:${privateIPv6Port}/secret`);
       case '/to-public':
         return redirect(res, `http://other.test:${publicPort}/article`);
+      // A t.co-style wrapper: it only reveals its destination by being followed.
+      case '/AbC123':
+        hits.wrapper++;
+        return redirect(res, `http://other.test:${publicPort}/article`);
       default:
         res.writeHead(404);
         res.end();
@@ -111,6 +115,7 @@ test.beforeEach(() => {
   hits.private = 0;
   hits.privateIPv6 = 0;
   hits.article = 0;
+  hits.wrapper = 0;
 });
 
 /** Opens a browser with one build of the extension loaded. */
@@ -121,7 +126,7 @@ async function launch(extensionPath: string, userDataDir = '') {
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
       // public.test and other.test are public-looking names; both are sent to this computer.
-      '--host-resolver-rules=MAP public.test 127.0.0.1,MAP other.test 127.0.0.1',
+      '--host-resolver-rules=MAP public.test 127.0.0.1,MAP other.test 127.0.0.1,MAP t.co 127.0.0.1',
     ],
   });
   const isLinkPeek = (w: Worker) => w.url().startsWith('chrome-extension://');
@@ -258,6 +263,19 @@ test.describe('live build (release-equivalent, dist-live/)', () => {
       const res = await retrieve(worker, `http://public.test:${publicPort}/to-private-ipv6`);
       expect(res.result?.failure).toBe('network');
       expect(hits.privateIPv6).toBe(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('a t.co link is not followed: the destination gets no request, and the card says why', async () => {
+    const { context, worker } = await launch(LIVE);
+    try {
+      await installedRules(worker);
+      const res = await retrieve(worker, `http://t.co:${publicPort}/AbC123`);
+      expect(res.result?.failure).toBe('bad-link');
+      expect(hits.wrapper).toBe(0);
+      expect(hits.article).toBe(0);
     } finally {
       await context.close();
     }

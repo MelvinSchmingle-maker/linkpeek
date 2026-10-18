@@ -8,6 +8,7 @@
  */
 import { Readability } from '@mozilla/readability';
 import { wordCount } from '../detect/classify';
+import { sentences } from './sentences';
 import type { FactOrigin } from '../types';
 
 export interface PageMetadata {
@@ -44,6 +45,8 @@ export interface HtmlExtraction {
   language?: string;
   /** Absolute web links from the article text, for counting primary sources. Undefined when no article text was read. */
   links?: string[];
+  /** Words per sentence in the article text. A front page runs its headlines together with no sentence ends. Undefined when no article text was read. */
+  wordsPerSentence?: number;
   /** Labels such as "Sponsored" or "Press release" found in the article's own area. */
   labels: PageLabel[];
   /** All visible-ish body text (scripts and styles removed), for words and phrase checks. */
@@ -60,6 +63,17 @@ export interface HtmlExtraction {
 
 const ARTICLE_TYPES =
   /^(Article|NewsArticle|ReportageNewsArticle|AnalysisNewsArticle|OpinionNewsArticle|BackgroundNewsArticle|ReviewNewsArticle|BlogPosting|SocialMediaPosting|LiveBlogPosting|Report|ScholarlyArticle|TechArticle|WebPage|Blog|DiscussionForumPosting|QAPage|VideoObject)$/;
+
+/**
+ * A Piano paywall element: one that holds text of its own. NPR's pages carry
+ * Piano's loader script and empty slots for Piano units on every page, so a
+ * script or an empty element is not a wall (see npr-piano-mounts.html).
+ */
+function pianoWall(doc: Document): boolean {
+  return [...doc.querySelectorAll('[id*="piano" i]')].some(
+    (el) => el.tagName !== 'SCRIPT' && (el.textContent ?? '').trim().length > 0,
+  );
+}
 
 export function extractHtml(html: string, url: string): HtmlExtraction {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -91,8 +105,8 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
     hasPasswordField: Boolean(doc.querySelector('input[type="password" i]')),
     hasPaywallElement: Boolean(
       doc.querySelector(
-        '[class*="paywall" i], [id*="paywall" i], [class*="subscriber-only" i], [class*="regwall" i], [class*="premium-content" i], [id*="piano" i], [class*="tp-modal" i]',
-      ),
+        '[class*="paywall" i], [id*="paywall" i], [class*="subscriber-only" i], [class*="regwall" i], [class*="premium-content" i], [class*="tp-modal" i]',
+      ) || pianoWall(doc),
     ),
     scriptCount: doc.querySelectorAll('script:not([type]), script[type="module"], script[type="text/javascript"]').length,
     hasEmptyAppRoot: [...doc.querySelectorAll('#root, #__next, #app, #___gatsby, [data-reactroot]')].some(
@@ -109,6 +123,7 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
   let articleText = '';
   let paras: string[] = [];
   let links: string[] | undefined;
+  let wordsPerSentence: number | undefined;
   try {
     // Readability changes the document it reads, so give it a copy.
     const parsed = new Readability(doc.cloneNode(true) as Document, { charThreshold: 400 }).parse();
@@ -118,6 +133,8 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
       articleText = blockText(readable.body);
       // A fragment isn't an article: counting its links would say "none" about a page we barely read.
       if (wordCount(articleText) >= MIN_WORDS_FOR_LINKS) links = linksIn(readable, url);
+      const sentenceCount = sentences(articleText).length;
+      wordsPerSentence = sentenceCount > 0 ? wordCount(articleText) / sentenceCount : undefined;
     } else {
       articleText = (parsed?.textContent ?? '').replace(/\s+/g, ' ').trim();
     }
@@ -146,6 +163,7 @@ export function extractHtml(html: string, url: string): HtmlExtraction {
     paragraphs: paras,
     language: doc.documentElement?.getAttribute('lang')?.trim() || undefined,
     links,
+    wordsPerSentence,
     labels: pageLabels(doc),
     bodyWords,
     bodySample: bodyText.slice(0, 20_000),

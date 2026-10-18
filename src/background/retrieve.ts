@@ -69,6 +69,10 @@ async function work(
   pageUrl: string | undefined,
 ): Promise<Assessment | 'fetch-from-page'> {
   if (resolution.kind === 'rejected') return { evidence: 'unavailable', failure: 'bad-link' };
+  // A wrapper that only reveals its destination by being followed (t.co, Reddit, Google News). Following
+  // it reaches the destination before any permission for it is checked: measured in Chrome, the request
+  // arrives and only the response is withheld. So LinkPeek doesn't follow it.
+  if (resolution.kind === 'needs-redirect') return { evidence: 'unavailable', failure: 'bad-link' };
   // The address LinkPeek reads: the destination of a wrapper, or the link itself.
   const target = destinationOf(resolution, req.url);
   // A platform adapter (Part 13) may answer first. None is registered yet, so the general reader runs.

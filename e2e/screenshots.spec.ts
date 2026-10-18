@@ -3,7 +3,7 @@
  * docs/screenshots/part-02/. Skipped in normal test runs.
  * Run with: npm run screenshots
  */
-import { expect, test, TEST_SERVER } from './fixtures';
+import { expect, linkPeekWorker, test, TEST_SERVER } from './fixtures';
 
 const KEYS = ['full', 'clickbait', 'partial', 'insufficient', 'headline-only', 'inaccessible', 'summary-failed', 'link-warning', 'unsupported', 'loading'];
 
@@ -50,8 +50,8 @@ for (const scheme of ['light', 'dark'] as const) {
 test('screenshots: popup and settings (Part 03)', async ({ page, context, extensionId }) => {
   const dir = 'docs/screenshots/part-03';
   await page.goto(`${TEST_SERVER}/news-front.html`);
-  const [worker] = context.serviceWorkers();
-  const tabId = await worker!.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.1/*' }))[0]!.id);
+  const worker = await linkPeekWorker(context);
+  const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'http://127.0.0.1/*' }))[0]!.id);
   for (const scheme of ['light', 'dark'] as const) {
     const popup = await context.newPage();
     await popup.emulateMedia({ colorScheme: scheme });

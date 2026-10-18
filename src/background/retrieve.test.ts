@@ -59,10 +59,11 @@ describe('social wrappers and destinations in the worker', () => {
     expect(fetchSpy.mock.calls[0]?.[0]).toBe('https://news.example/story');
   });
 
-  it('for X t.co links, the wrapper is the address: its destination is only known by following it', async () => {
+  it('does not follow an X t.co link: following it would reach the article site before its permission is checked', async () => {
     const { fetchSpy } = fetchReturns('https://news.example/story', 404);
-    await ask('https://t.co/AbC123').catch(() => undefined);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe('https://t.co/AbC123');
+    const res = await ask('https://t.co/AbC123');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ kind: 'result', result: { url: 'https://t.co/AbC123', failure: 'bad-link' } });
   });
 
   it('refuses a wrapper that cannot say where it goes, and makes no request', async () => {

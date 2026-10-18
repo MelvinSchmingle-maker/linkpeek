@@ -4,7 +4,7 @@
  * so no test reaches the real backend or an AI, and none costs money.
  */
 import type { Page } from '@playwright/test';
-import { expect, setSettings, test, TEST_SERVER } from './fixtures';
+import { expect, linkPeekWorker, setSettings, test, TEST_SERVER } from './fixtures';
 
 const card = (page: Page) => page.locator('[data-linkpeek="card"] .card');
 
@@ -62,8 +62,8 @@ test('switching AI summaries off stops sending and deletes the install ID', asyn
   await setSettings(context, { summaryEngine: 'extractive' });
   await expect
     .poll(async () => {
-      const [w] = context.serviceWorkers();
-      return w!.evaluate(async () => (await chrome.storage.local.get('installId')).installId ?? null);
+      const w = await linkPeekWorker(context);
+      return w.evaluate(async () => (await chrome.storage.local.get('installId')).installId ?? null);
     })
     .toBeNull();
   const c = await openCase(page, 'full');
@@ -79,8 +79,8 @@ test('Settings: three choices, the AI one says what it sends', async ({ context,
   await page.locator('input[name="engine"][value="extractive"]').check();
   await expect
     .poll(async () => {
-      const [w] = context.serviceWorkers();
-      return w!.evaluate(async () => ((await chrome.storage.local.get('settings')).settings as { summaryEngine?: string }).summaryEngine);
+      const w = await linkPeekWorker(context);
+      return w.evaluate(async () => ((await chrome.storage.local.get('settings')).settings as { summaryEngine?: string }).summaryEngine);
     })
     .toBe('extractive');
 });

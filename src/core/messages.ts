@@ -145,7 +145,7 @@ export const FAILURE_MESSAGE: Record<FailureReason, string> = {
   'unsupported-type': MSG.unsupported,
   'too-large': `${SITE_BLOCKED} It's too large to preview.`,
   'summary-failed': MSG.summaryFailed,
-  'bad-link': `${SITE_BLOCKED} LinkPeek can't tell where this link goes.`,
+  'bad-link': `${SITE_BLOCKED} This link goes through a redirect LinkPeek can't follow safely yet.`,
   'unsafe-address': `${SITE_BLOCKED} LinkPeek only reads public websites, and this address isn't one.`,
 };
 

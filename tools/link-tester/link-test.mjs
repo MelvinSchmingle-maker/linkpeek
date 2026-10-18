@@ -1,17 +1,26 @@
 /**
  * LinkPeek link tester. Runs each address through LinkPeek's own reading
- * code, in a Chromium with the test build loaded, then writes what came back
- * to results/ as a CSV and adds an entry to results/log.md.
+ * code, in a Chromium with the test build loaded, then writes one CSV per run
+ * to results/ and adds an entry to results/log.md.
  *
- *   node link-test.mjs links.txt
- *   node link-test.mjs links.txt --headed     (show the browser window)
+ *   node link-test.mjs links.txt --source own-computer
+ *   node link-test.mjs links.txt --source own-computer --headed   (show the browser window)
+ *   node link-test.mjs --report                                   (summarise every run in results/)
+ *
+ * --source says where the run happened: own-computer, cloud or fixture. Every
+ * CSV and report keeps the source, so the three are never mixed up.
+ *
+ * What is stored: the platform, the redacted address (scheme, host and path;
+ * no query string or token), the stage a failure happened at, the reason, the
+ * evidence level, the permission state and the time. Article text is NOT
+ * stored unless you add --with-text.
  *
  * This build allows every website, so it never asks for permission. An
- * installed LinkPeek asks once per site, so a result here can differ from
- * what someone sees with a normal install.
+ * installed LinkPeek asks once per site, so a result here can differ from what
+ * someone sees with a normal install.
  */
 import { chromium } from '@playwright/test';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,7 +30,17 @@ const resultsDir = resolve(here, 'results');
 
 const args = process.argv.slice(2);
 const headed = args.includes('--headed');
-const listFile = resolve(args.find((a) => !a.startsWith('--')) ?? resolve(here, 'links.txt'));
+const withText = args.includes('--with-text');
+const reportOnly = args.includes('--report');
+const sourceFlag = args.indexOf('--source');
+const SOURCES = ['own-computer', 'cloud', 'fixture', 'unspecified'];
+const source = sourceFlag >= 0 ? args[sourceFlag + 1] : 'unspecified';
+if (!SOURCES.includes(source)) {
+  console.log(`--source must be one of: ${SOURCES.join(', ')}`);
+  process.exit(1);
+}
+const listArg = args.find((a, i) => !a.startsWith('--') && (sourceFlag < 0 || i !== sourceFlag + 1));
+const listFile = resolve(listArg ?? resolve(here, 'links.txt'));
 
 /** Hosts that wrap a link on the way to the article. */
 const WRAPPER_HOSTS = {
@@ -42,24 +61,73 @@ const OUTCOME = {
   unavailable: 'fails',
 };
 
-const COLUMNS = [
+/** Which part of reading a failure came from. */
+const STAGE = {
+  'bad-link': 'resolution',
+  'permission-denied': 'permission',
+  'unsafe-address': 'refused (private address)',
+  network: 'fetch',
+  timeout: 'fetch',
+  'http-4xx': 'fetch',
+  'http-403': 'fetch',
+  'http-429': 'fetch',
+  'http-5xx': 'fetch',
+  'too-large': 'fetch',
+  'bot-challenge': 'extraction',
+  'login-wall': 'extraction',
+  paywall: 'extraction',
+  'js-rendered-empty': 'extraction',
+  'extraction-failed': 'extraction',
+  'unsupported-type': 'extraction',
+  'summary-failed': 'summary',
+};
+
+const BUILD = 'live check build: every site allowed, so no permission prompts';
+
+const BASE_COLUMNS = [
+  'source',
+  'platform',
   'link',
   'wrapper',
   'outcome',
+  'stage',
   'reason',
+  'evidence',
+  'permission',
   'final address',
   'words',
-  'opening',
-  'summary',
-  'publisher',
-  'published',
-  'article type',
   'seconds',
   'decoded address',
   'decoded outcome',
+  'decoded stage',
   'decoded reason',
   'your check',
 ];
+const TEXT_COLUMNS = ['opening', 'summary', 'publisher', 'published', 'article type'];
+const COLUMNS = withText ? [...BASE_COLUMNS, ...TEXT_COLUMNS] : BASE_COLUMNS;
+
+/** Scheme, host and path only: the query string and fragment often hold tokens and personal IDs. */
+function redact(address) {
+  if (!address) return '';
+  try {
+    const u = new URL(address);
+    return `${u.protocol}//${u.host}${u.pathname}`;
+  } catch {
+    return '';
+  }
+}
+
+/** A platform name for the host, so the report can group results by site. */
+function platformOf(url) {
+  const host = url.hostname.replace(/^www\./, '');
+  if (/(^|\.)(x|twitter)\.com$|^t\.co$/.test(host)) return 'X';
+  if (/(^|\.)facebook\.com$|^fb\.com$/.test(host)) return 'Facebook';
+  if (/(^|\.)instagram\.com$/.test(host)) return 'Instagram';
+  if (/(^|\.)reddit\.com$/.test(host)) return 'Reddit';
+  if (/(^|\.)youtube\.com$|^youtu\.be$/.test(host)) return 'YouTube';
+  if (/(^|\.)linkedin\.com$/.test(host)) return 'LinkedIn';
+  return 'website';
+}
 
 function readList(file) {
   return readFileSync(file, 'utf8')
@@ -86,6 +154,13 @@ function outcomeOf(res) {
 function reasonOf(res) {
   if (res.kind === 'result') return res.result.failure ?? '';
   return res.message ?? res.kind;
+}
+
+function stageOf(res) {
+  if (res.kind !== 'result') return 'test';
+  const failure = res.result.failure;
+  if (!failure) return 'none';
+  return STAGE[failure] ?? 'other';
 }
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -125,24 +200,24 @@ async function readOne(worker, address) {
 
 function rowFor(res, seconds) {
   const r = res.kind === 'result' ? res.result : undefined;
-  // Only the address and path: query strings on robot-check pages are one-off tokens.
-  let finalAddress = '';
-  if (r?.finalUrl) {
-    const f = new URL(r.finalUrl);
-    finalAddress = f.origin + f.pathname;
-  }
-  return {
+  const row = {
     outcome: outcomeOf(res),
+    stage: stageOf(res),
     reason: reasonOf(res),
-    'final address': finalAddress,
+    evidence: r?.evidence ?? '',
+    permission: r?.needsPermissionFor ? `needed for ${r.needsPermissionFor}` : 'not needed (every site allowed in this build)',
+    'final address': redact(r?.finalUrl),
     words: r?.extract?.wordCount ?? '',
-    opening: r?.extract?.firstSentence ?? r?.preview ?? '',
-    summary: r?.summary?.text ?? '',
-    publisher: r?.source?.publisher?.value ?? '',
-    published: r?.source?.published?.value ?? '',
-    'article type': r?.source?.articleType?.value ?? '',
     seconds,
   };
+  if (withText) {
+    row.opening = r?.extract?.firstSentence ?? r?.preview ?? '';
+    row.summary = r?.summary?.text ?? '';
+    row.publisher = r?.source?.publisher?.value ?? '';
+    row.published = r?.source?.published?.value ?? '';
+    row['article type'] = r?.source?.articleType?.value ?? '';
+  }
+  return row;
 }
 
 const csvCell = (v) => `"${String(v ?? '').replace(/\s+/g, ' ').replace(/"/g, '""')}"`;
@@ -150,6 +225,41 @@ const csvCell = (v) => `"${String(v ?? '').replace(/\s+/g, ' ').replace(/"/g, '"
 function writeCsv(file, rows) {
   const lines = [COLUMNS.join(','), ...rows.map((r) => COLUMNS.map((c) => csvCell(r[c])).join(','))];
   writeFileSync(file, `\uFEFF${lines.join('\r\n')}\r\n`);
+}
+
+/** A small CSV reader for the files this script writes (quoted cells, doubled quotes, CRLF). */
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  const s = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"' && s[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && s[i + 1] === '\n') i++;
+      row.push(cell);
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+      cell = '';
+    } else cell += c;
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  const [header, ...body] = rows;
+  return body.map((r) => Object.fromEntries(header.map((h, i) => [h, r[i] ?? ''])));
 }
 
 function logEntry(stamp, csvName, rows) {
@@ -160,11 +270,11 @@ function logEntry(stamp, csvName, rows) {
     .join(', ');
   const problems = rows.filter((r) => r.outcome !== 'works');
   const lines = problems.map((r) => {
-    const decoded = r['decoded address'] ? ` Decoded address: ${r['decoded outcome']}${r['decoded reason'] ? ` (${r['decoded reason']})` : ''}.` : '';
-    return `- ${r.link}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}.${decoded}`;
+    const decoded = r['decoded address'] ? ` Decoded address: ${r['decoded outcome']}${r['decoded stage'] ? ` at ${r['decoded stage']}` : ''}${r['decoded reason'] ? ` (${r['decoded reason']})` : ''}.` : '';
+    return `- ${r.link}: ${r.outcome}${r.stage && r.stage !== 'none' ? ` at ${r.stage}` : ''}${r.reason ? ` (${r.reason})` : ''}.${decoded}`;
   });
   return [
-    `## ${stamp}: ${rows.length} links`,
+    `## ${stamp}: ${rows.length} links, source ${source}`,
     '',
     `Outcomes: ${tally || 'none'}. Full results: results/${csvName}`,
     '',
@@ -172,6 +282,47 @@ function logEntry(stamp, csvName, rows) {
     '',
     '',
   ].join('\n');
+}
+
+/** Summarises every CSV in results/, grouped by source, so no run is mixed with another. */
+function report() {
+  const files = existsSync(resultsDir) ? readdirSync(resultsDir).filter((f) => f.endsWith('.csv')).sort() : [];
+  if (!files.length) {
+    console.log('No results yet. Run the tester first.');
+    return;
+  }
+  const rows = files.flatMap((f) => parseCsv(readFileSync(resolve(resultsDir, f), 'utf8')).map((r) => ({ ...r, run: f })));
+  const count = (list, key) => list.reduce((m, r) => ((m[r[key]] = (m[r[key]] ?? 0) + 1), m), {});
+  const sources = [...new Set(rows.map((r) => r.source))];
+  const out = ['# Compatibility report', '', `Runs: ${files.length} (${files.join(', ')}). Links: ${rows.length}.`, ''];
+  for (const src of sources) {
+    const mine = rows.filter((r) => r.source === src);
+    out.push(`## Source: ${src} (${mine.length} links)`, '');
+    out.push('| Outcome | Links |', '|---|---|');
+    for (const [k, n] of Object.entries(count(mine, 'outcome')).sort()) out.push(`| ${k} | ${n} |`);
+    out.push('', '| Stage | Links |', '|---|---|');
+    for (const [k, n] of Object.entries(count(mine, 'stage')).sort()) out.push(`| ${k} | ${n} |`);
+    out.push('', '| Platform | Links | Works |', '|---|---|---|');
+    const platforms = [...new Set(mine.map((r) => r.platform))];
+    for (const p of platforms.sort()) {
+      const pl = mine.filter((r) => r.platform === p);
+      out.push(`| ${p} | ${pl.length} | ${pl.filter((r) => r.outcome === 'works').length} |`);
+    }
+    const failures = mine.filter((r) => r.outcome !== 'works');
+    if (failures.length) {
+      out.push('', 'Failures (redacted addresses):', '');
+      for (const r of failures) out.push(`- ${r.link} (${r.run}): ${r.outcome}, stage ${r.stage}${r.reason ? `, ${r.reason}` : ''}`);
+    }
+    out.push('');
+  }
+  writeFileSync(resolve(resultsDir, 'report.md'), out.join('\n'));
+  console.log(`Wrote ${resolve(resultsDir, 'report.md')}`);
+}
+
+if (reportOnly) {
+  mkdirSync(resultsDir, { recursive: true });
+  report();
+  process.exit(0);
 }
 
 mkdirSync(resultsDir, { recursive: true });
@@ -184,6 +335,7 @@ if (addresses.length === 0) {
   console.log(`No addresses in ${listFile}. Add one per line; lines starting with # are ignored.`);
   process.exit(1);
 }
+if (source === 'unspecified') console.log('Tip: add --source own-computer or --source cloud so the report can tell the runs apart.');
 
 const stamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
 const csvName = `${stamp}.csv`;
@@ -203,14 +355,25 @@ try {
 
   for (const [i, address] of addresses.entries()) {
     const url = webAddress(address);
-    const base = { link: address, wrapper: '', 'decoded address': '', 'decoded outcome': '', 'decoded reason': '', 'your check': '' };
+    const base = {
+      source,
+      platform: '',
+      link: redact(address),
+      wrapper: '',
+      'decoded address': '',
+      'decoded outcome': '',
+      'decoded stage': '',
+      'decoded reason': '',
+      'your check': '',
+      permission: BUILD,
+    };
     if (!url) {
-      const row = { ...base, outcome: 'not a web address', reason: 'Not an http or https address', seconds: '' };
-      rows.push(row);
-      console.log(`${i + 1}/${addresses.length} not a web address: ${address}`);
+      rows.push({ ...base, outcome: 'not a web address', stage: 'test', reason: 'Not an http or https address', seconds: '' });
+      console.log(`${i + 1}/${addresses.length} not a web address`);
       continue;
     }
 
+    base.platform = platformOf(url);
     base.wrapper = WRAPPER_HOSTS[url.hostname] ?? '';
     const main = await readOne(worker, address);
     const row = { ...base, ...rowFor(main.res, main.seconds) };
@@ -218,22 +381,28 @@ try {
     const decoded = DECODABLE_HOSTS.includes(url.hostname) ? url.searchParams.get('u') : null;
     if (decoded) {
       const inner = await readOne(worker, decoded);
-      row['decoded address'] = decoded;
+      row['decoded address'] = redact(decoded);
       row['decoded outcome'] = outcomeOf(inner.res);
+      row['decoded stage'] = stageOf(inner.res);
       row['decoded reason'] = reasonOf(inner.res);
     }
 
     rows.push(row);
     const note = row.reason ? ` (${row.reason})` : '';
     const wrapped = row.wrapper ? ` [${row.wrapper} link]` : '';
-    console.log(`${i + 1}/${addresses.length} ${row.outcome}${note} in ${row.seconds}s${wrapped}: ${address}`);
+    console.log(`${i + 1}/${addresses.length} ${row.outcome}${note} at ${row.stage} in ${row.seconds}s${wrapped}: ${redact(address)}`);
   }
 } finally {
   await context.close();
 }
 
 const csvPath = resolve(resultsDir, csvName);
-writeCsv(csvPath, rows);
+const outRows = rows.map((r) => {
+  const copy = { ...r };
+  for (const c of COLUMNS) if (!(c in copy)) copy[c] = '';
+  return copy;
+});
+writeCsv(csvPath, outRows);
 
 const logPath = resolve(resultsDir, 'log.md');
 if (!existsSync(logPath)) {
@@ -242,6 +411,6 @@ if (!existsSync(logPath)) {
 appendFileSync(logPath, logEntry(stamp.replace('_', ' '), csvName, rows));
 
 const ok = rows.filter((r) => r.outcome === 'works').length;
-console.log(`\n${ok} of ${rows.length} links read in full.`);
+console.log(`\n${ok} of ${rows.length} links read in full (source: ${source}).`);
 console.log(`Results: ${csvPath}`);
 console.log(`Log: ${logPath}`);

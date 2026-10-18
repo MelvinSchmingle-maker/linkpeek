@@ -123,6 +123,28 @@ describe('failures are never treated as content', () => {
     expect(JSON.stringify(a)).not.toMatch(/Councillors voted seven to five/);
   });
 
+  it('a free page with Piano loader and empty Piano slots (the NPR pattern) is read in full, not called a paywall', () => {
+    const a = judge('npr-piano-mounts.html');
+    expect(a.failure).toBeUndefined();
+    expect(a.evidence).toBe('full');
+    expect(a.extract?.firstSentence).toMatch(/council has approved a new footbridge/);
+  });
+
+  it('a Piano element that holds text is still a paywall, when the page is only a teaser', () => {
+    // Short pages only: a 150-word article is read in full whatever its paywall markers say (looksLikePaywall).
+    const html = `<!doctype html><html><head><title>Story</title></head><body>
+      <article><h1>A short teaser</h1><p>The first paragraph of the story, shown to everyone before the wall.</p></article>
+      <div id="piano-offer">Subscribe to keep reading this story.</div></body></html>`;
+    const a = assessHtml({ requestedUrl: `${SITE}/x`, finalUrl: `${SITE}/x`, status: 200 }, html, extractHtml(html, `${SITE}/x`));
+    expect(a.failure).toBe('paywall');
+  });
+
+  it('a front page (a list of headlines) is not read as an article', () => {
+    const a = judge('front-page-listing.html');
+    expect(a.failure).toBe('extraction-failed');
+    expect(a.extract).toBeUndefined();
+  });
+
   it('an empty JavaScript app shell needs JavaScript, with its description as a preview', () => {
     const a = judge('js-only.html');
     expect(a.failure).toBe('js-rendered-empty');

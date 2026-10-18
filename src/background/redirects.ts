@@ -22,7 +22,10 @@ import type { RedirectCheckResult } from '../content/messages';
 const TIMEOUT_MS = 8_000;
 
 export async function checkRedirects(url: string): Promise<RedirectCheckResult> {
-  const start = destinationOf(resolveLink(url), url);
+  const resolved = resolveLink(url);
+  // Following a wrapper that carries no destination would reach the destination unapproved (see retrieve.ts).
+  if (resolved.kind === 'needs-redirect') return { kind: 'error', reason: 'wrapper' };
+  const start = destinationOf(resolved, url);
   let target: URL;
   try {
     target = new URL(start);
