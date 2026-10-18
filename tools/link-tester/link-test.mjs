@@ -84,9 +84,13 @@ const STAGE = {
 
 const BUILD = 'live check build: every site allowed, so no permission prompts';
 
+/** On X, LinkPeek has no adapter yet, and a post page is built by JavaScript, so reading the page shows nothing. */
+const X_NOTE = 'X adapter not built: LinkPeek reads the post page, which is built by JavaScript (see docs/adapters/x.md)';
+
 const BASE_COLUMNS = [
   'source',
   'platform',
+  'x note',
   'link',
   'wrapper',
   'outcome',
@@ -374,6 +378,7 @@ try {
     }
 
     base.platform = platformOf(url);
+    base['x note'] = base.platform === 'X' ? X_NOTE : '';
     base.wrapper = WRAPPER_HOSTS[url.hostname] ?? '';
     const main = await readOne(worker, address);
     const row = { ...base, ...rowFor(main.res, main.seconds) };

@@ -323,3 +323,11 @@ Not changed, and why:
 - The Verge. Its page says `"isAccessibleForFree": false`. Showing the text when the publisher marks it paid would bypass the paywall, so LinkPeek keeps the publisher's flag. The owner can choose different wording for that case.
 - Ars Technica's opening, which may be a pull quote. It isn't reproduced by a fixture yet.
 
+## D64. X links: an adapter that reads the rendered page, not t.co (18 Oct 2026)
+
+The owner decided to build an X adapter. It reads the post the user has open, in the content script, after X has drawn it. It finds the destination from what the page exposes (for example an expanded link address), validates it, and asks for permission to read the article's own site. It never follows a t.co redirect to find the destination (D62), and it never guesses from link text. Fetching X post pages in the background can't work: their HTML is built by JavaScript. Whether the expanded address is on the page, and where, is not yet known: it needs a capture from a real post (`docs/x/capture-snippet.js`, `docs/adapters/x.md`). Until then, X links show "can't tell where this link goes yet".
+
+## D65. The compatibility lab proposes, and a person approves (18 Oct 2026)
+
+The lab works from a curated, reproducible set of links and fixtures. It records each failure's stage, reason, permission state and evidence level, and it can cluster failures and propose code changes with tests. It does not change production rules, push commits or deploy, and it does not crawl the web or try workarounds for blocked pages. A proposed change is applied only after the owner approves it, and it must come with a reproducing test and the regression results.
+

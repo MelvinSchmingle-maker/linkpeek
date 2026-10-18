@@ -138,7 +138,7 @@ export const FAILURE_MESSAGE: Record<FailureReason, string> = {
   'http-429': `${SITE_BLOCKED} The site is limiting requests right now.`,
   'http-5xx': `${SITE_BLOCKED} The site had an error.`,
   'login-wall': `${SITE_BLOCKED} The site asks you to log in.`,
-  paywall: `${SITE_BLOCKED} It's behind a subscription.`,
+  paywall: "The publisher's metadata indicates this content may have restricted access. Showing the available preview.",
   'bot-challenge': `${SITE_BLOCKED} The site asked for a human check.`,
   'js-rendered-empty': `${SITE_BLOCKED} The page needs to run in a browser tab to show its text.`,
   'extraction-failed': "Couldn't find the article text on this page.",

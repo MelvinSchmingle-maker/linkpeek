@@ -65,7 +65,7 @@ const READ: [string, RegExp][] = [
   ['partial-meta', /Full article unavailable[\s\S]*Residents will discuss the proposed park redesign/],
   ['nothing', /Couldn't find the article text on this page\./],
   ['login', /Couldn't open this article\. The site asks you to log in\./],
-  ['paywall', /It's behind a subscription\.[\s\S]*Members only: a look at the draft budget/],
+  ['paywall', /The publisher's metadata indicates this content may have restricted access\.[\s\S]*Members only: a look at the draft budget/],
   ['js', /needs to run in a browser tab[\s\S]*Rail timetable changes from December/],
   ['challenge', /The site asked for a human check\./],
   ['403', /The site refused the request\./],
