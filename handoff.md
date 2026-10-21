@@ -29,7 +29,7 @@ Round 1, "Open source tools for LinkPeek links" (`docs/research/open-source-tool
 - Redirects: a ClearURLs rule unwraps Facebook's link wrapper on the device (LGPL, so the owner must decide). Google News links need a Google endpoint, so don't call it.
 - PDFs: pdf.js (already in use). Consent walls and bot checks should be shown as failures, not clicked or bypassed.
 
-Round 2, "LinkPeek link reading fixes in depth" (`docs/research/link-reading-fixes-2026-10/`, five notes, one per facet). The report writer's first attempt hit the session usage limit, and a second attempt was started on 21 Oct 2026. Its output goes to `reports/LinkPeek link reading fixes in depth.md`, and it should be copied to `docs/research/link-reading-fixes-2026-10/report.md`. If that copy is missing in a new window, the five notes are enough to write it again. The report brief is below.
+Round 2, "LinkPeek link reading fixes in depth" (`docs/research/link-reading-fixes-2026-10/`, five notes, one per facet). The report is done: `docs/research/link-reading-fixes-2026-10/report.md`. Its main recommendations: test a hidden frame on-device before any server; offer one all-sites permission at the moment a card needs it, after fixing the options-page bug; and handle most other failures with clearer messages and small code changes, which send nothing new. It also lists 21 Chrome tests and 10 fixes that need no research. The report's own claims are mostly from pages read through a summarising tool, so quotes need checking on live pages before anyone cites them.
 
 The five notes:
 - `on_device_rendering.md`: the best on-device route is an offscreen document that loads the article in a hidden iframe, with a content script inside the frame. Blockers: many sites refuse to load in a frame (`X-Frame-Options`, `frame-ancestors`), and stripping those headers would be browser-wide. Every scripted route still needs permission for each site, unless the owner chooses all sites.
@@ -127,6 +127,8 @@ Question: how should LinkPeek fix the three link-reading problems (empty JavaScr
 Read the five notes in `docs/research/link-reading-fixes-2026-10/` and nothing else. Include the code gaps and the Chrome tests above. Lead with the direct answer for each problem. Then the owner's decisions in order. Then what is unknown. Mark unverified claims. Plain language, no em dashes, no bold pseudo-headers.
 
 ## Remaining steps, in order
+
+The round 2 report's order: first the owner's four-link check and its fixes 1 to 5, which need no decision and send nothing off the device. Then Chrome tests 11 to 17 (the options-page bug and the all-sites choice). Then Chrome tests 1 to 10 (the hidden frame). The owner decides on a hidden load only after those tests pass, and on server rendering last. The list below is the earlier order, kept for reference.
 
 1. The owner decides the permission default (decision 1) and the backend question (decision 2). Then implement the chosen permission model and update `docs/permissions.md` and `docs/decisions.md`.
 2. Get the full talkSPORT link and the other three from the owner, and reproduce each one.
