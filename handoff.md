@@ -81,7 +81,7 @@ The owner can test the four Facebook links by hand and send the full URLs, plus 
 - Source card (D46 to D51): article type and primary-source counts come from rough rules. Ownership and independent coverage are not built.
 - Card at 200% zoom: the default card fits above its link with about 3 pixels to spare. A longer reason could push it off screen. That case isn't tested.
 - One browser test (the infinite-feed test) failed once in a full run from a scroll race in its test page. It passes alone and isn't fixed.
-- Live check: 7 of the 10 real URLs returned full article text (`docs/compat/part-04-live.md`).
+- Live check (re-run 22 Oct 2026): 7 of the 10 real URLs returned full article text (`docs/compat/part-04-live.md`). The Times changed from "description only" to a bot challenge from this machine, and the YouTube page still shows "needs a browser tab". Nothing in the code changed between runs.
 
 ## Skills installed (22 Oct 2026)
 
