@@ -83,6 +83,17 @@ The owner can test the four Facebook links by hand and send the full URLs, plus 
 - One browser test (the infinite-feed test) failed once in a full run from a scroll race in its test page. It passes alone and isn't fixed.
 - Live check: 7 of the 10 real URLs returned full article text (`docs/compat/part-04-live.md`).
 
+## Skills installed (22 Oct 2026)
+
+Installed for this project from `vercel-labs/agent-skills` (copies, in `.claude/skills/`, locked in `skills-lock.json`):
+
+- `web-design-guidelines`: reviews UI code against Vercel's web interface rules. For the card design pass and the options and permission pages. It fetches its rules from `vercel-labs/web-interface-guidelines` each time it runs.
+- `writing-guidelines`: reviews prose against Vercel's writing rules. For the failure and permission messages. It fetches its rules from `vercel-labs/writing-guidelines` each time it runs.
+
+Not installed, and why: the React, React Native, view-transition and composition skills (LinkPeek has no React); `deploy-to-vercel` and `vercel-cli-with-tokens` (deploys happen on git push, and the Vercel tools are already connected); `vercel-optimize` (a cost audit that needs deployment metrics, which is worth doing later, once the rendering cost question is settled). The `agent-browser` skill is in another repo and drives a separate browser tool; the Chrome tests in the research report can use Playwright, which the repo already has.
+
+Both skills run with the agent's full permissions. Review any update before accepting it.
+
 ## Commands
 
 - Setup: `npm install`. For the backend: `npm --prefix server install --legacy-peer-deps`. `server/.npmrc` is set up for this.
