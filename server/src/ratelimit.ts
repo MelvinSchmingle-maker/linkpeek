@@ -24,21 +24,36 @@ import { checkRateLimit } from '@vercel/firewall';
 
 export type LimitResult = 'ok' | 'limited' | 'misconfigured';
 
+/**
+ * Which bucket a request counts in, and how many requests it counts as.
+ * Story Search costs several times a summary, so it counts as more than one,
+ * in its own buckets ("story:install:...", "story:ip:...").
+ */
+export interface LimitOptions {
+  scope?: string;
+  weight?: number;
+}
+
 export interface RateLimiter {
-  check(installId: string, request: Request): Promise<LimitResult>;
+  check(installId: string, request: Request, opts?: LimitOptions): Promise<LimitResult>;
 }
 
 export const RULE = 'summarise';
 
 export class VercelFirewallLimiter implements RateLimiter {
-  async check(installId: string, request: Request): Promise<LimitResult> {
+  async check(installId: string, request: Request, opts: LimitOptions = {}): Promise<LimitResult> {
     // Vercel sets x-real-ip on every request. Without it there's no second count, so refuse.
     const ip = request.headers.get('x-real-ip');
     if (!ip) return 'misconfigured';
-    for (const key of [`install:${installId}`, `ip:${ip}`]) {
-      const { rateLimited, error } = await checkRateLimit(RULE, { request, rateLimitKey: key, timeout: 2000 });
-      if (error === 'not-found') return 'misconfigured';
-      if (rateLimited || error === 'blocked') return 'limited';
+    const prefix = opts.scope ? `${opts.scope}:` : '';
+    // One rule, so a heavier request is counted by checking it more than once.
+    const weight = Math.max(1, Math.min(10, Math.floor(opts.weight ?? 1)));
+    for (const key of [`${prefix}install:${installId}`, `${prefix}ip:${ip}`]) {
+      for (let i = 0; i < weight; i++) {
+        const { rateLimited, error } = await checkRateLimit(RULE, { request, rateLimitKey: key, timeout: 2000 });
+        if (error === 'not-found') return 'misconfigured';
+        if (rateLimited || error === 'blocked') return 'limited';
+      }
     }
     return 'ok';
   }
@@ -59,21 +74,24 @@ export class MemoryLimiter implements RateLimiter {
     private readonly now = () => Date.now(),
   ) {}
 
-  async check(installId: string): Promise<LimitResult> {
-    if (!this.take(`install:${installId}`, this.perInstall)) return 'limited';
-    if (!this.take('all', this.overall)) return 'limited';
+  async check(installId: string, _request?: Request, opts: LimitOptions = {}): Promise<LimitResult> {
+    const prefix = opts.scope ? `${opts.scope}:` : '';
+    const weight = Math.max(1, Math.min(10, Math.floor(opts.weight ?? 1)));
+    if (!this.take(`${prefix}install:${installId}`, this.perInstall, weight)) return 'limited';
+    if (!this.take(`${prefix}all`, this.overall, weight)) return 'limited';
     return 'ok';
   }
 
-  private take(key: string, max: number): boolean {
+  private take(key: string, max: number, weight = 1): boolean {
     const t = this.now();
     const w = this.hits.get(key);
     if (!w || t - w.start >= this.windowMs) {
-      this.hits.set(key, { start: t, count: 1 });
+      if (weight > max) return false;
+      this.hits.set(key, { start: t, count: weight });
       return true;
     }
-    if (w.count >= max) return false;
-    w.count++;
+    if (w.count + weight > max) return false;
+    w.count += weight;
     return true;
   }
 }

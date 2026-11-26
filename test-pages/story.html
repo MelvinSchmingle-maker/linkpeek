@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <title>Story Search test page | LinkPeek test pages</title>
+    <meta property="og:title" content="LinkPeek test front page" />
+    <meta property="og:site_name" content="Demo Gazette" />
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 16px; }
+      article { border-bottom: 1px solid #ddd; padding: 12px 0; }
+    </style>
+  </head>
+  <body>
+    <p><strong>Test page.</strong> No real news. Right-click a link and choose "LinkPeek – Story Search". The answers come from the test server's stand-in, never a real search.</p>
+    <form><label>Your comment <input id="typed" value="my-private-typed-text" /></label></form>
+    <main>
+      <article class="story-card">
+        <h2><a data-case="headline" href="/2026/11/25/ferry-strike-called-off-after-late-night-talks?utm_source=home&amp;session=abc123">Ferry strike called off after late-night talks</a></h2>
+        <p class="summary">Harbour Ferries and the crew union reached a deal shortly before midnight.</p>
+      </article>
+      <article class="story-card">
+        <span class="kicker">Local</span>
+        <h3>Unknown harbour wall story from long ago</h3>
+        <p class="summary">Engineers looked at the old harbour wall and found it in poor repair.</p>
+        <a data-case="read-more" href="/p/889123">Read more</a>
+      </article>
+      <article class="story-card">
+        <h3><a data-case="broken" href="/2026/11/25/search-broken-story-about-the-pier">Search broken story about the pier</a></h3>
+      </article>
+      <article class="story-card">
+        <h3><a data-case="possible" href="/2026/11/24/possible-bridge-closure-for-repairs">Possible bridge closure for repairs</a></h3>
+      </article>
+      <div><a data-case="nothing" href="https://example.com/p/12345">Read more</a></div>
+    </main>
+  </body>
+</html>

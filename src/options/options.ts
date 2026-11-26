@@ -5,6 +5,7 @@ import type { SummaryEngine } from '../core/summary/provider';
 import { renderModePicker } from '../ui/mode-picker';
 import { MSG } from '../core/messages';
 import { applyBrand } from '../ui/theme';
+import { CONSENT_KEY, hasStoryConsent, resetStoryConsent } from '../core/story/consent';
 
 applyBrand();
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -14,6 +15,30 @@ void renderModePicker($('#mode-section'));
 void chrome.commands.getAll().then((cmds) => {
   $('#shortcut').textContent = cmds.find((c) => c.name === 'peek-link')?.shortcut || 'not set';
 });
+
+// Story Search: the menu item, and whether to show what's sent before the next search.
+const storyToggle = $<HTMLInputElement>('#story-toggle');
+const storyStatus = $<HTMLElement>('#story-status');
+const consentReset = $<HTMLButtonElement>('#story-consent-reset');
+storyToggle.checked = (await getSettings()).storySearch;
+storyToggle.addEventListener('change', () => void updateSettings({ storySearch: storyToggle.checked }));
+consentReset.addEventListener('click', () => void resetStoryConsent().then(showStoryStatus));
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes[CONSENT_KEY]) void showStoryStatus();
+});
+async function showStoryStatus(): Promise<void> {
+  if (!__STORY_API_URL__) {
+    storyStatus.textContent = 'Not set up in this version of LinkPeek.';
+    consentReset.hidden = true;
+    return;
+  }
+  const consented = await hasStoryConsent();
+  storyStatus.textContent = consented
+    ? 'You agreed to what Story Search sends, so searches start straight away.'
+    : 'Before the first search, LinkPeek shows exactly what it will send and waits for you to press Search.';
+  consentReset.hidden = !consented;
+}
+void showStoryStatus();
 
 const demo = $<HTMLInputElement>('#demo-toggle');
 demo.checked = (await getSettings()).showDemoResults;

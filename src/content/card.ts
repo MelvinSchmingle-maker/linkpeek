@@ -13,6 +13,11 @@ import { toCardView, type CardInput, type CardView } from './view-model';
 import css from './styles.css?inline';
 import type { CorrectionsResult } from '../core/source/corrections';
 import type { SourceLine } from './view-model';
+import { renderStoryCard } from './story-card';
+import { toStoryView, type StoryState } from './story-view';
+
+/** What a card can show: a link preview, or a Story Search. */
+export type AnyCardInput = CardInput | { kind: 'story'; state: StoryState };
 
 /** Closed in the shipped build so page scripts can't reach into our UI. Open for automated tests. */
 const SHADOW_MODE: ShadowRootMode = __E2E__ ? 'open' : 'closed';
@@ -140,6 +145,12 @@ export interface CardCallbacks {
   onAction?: () => void;
   /** The user asked for the site's corrections page. */
   onCorrections?: () => Promise<CorrectionsResult>;
+  /** Story Search: "Search" pressed after seeing what will be sent. */
+  onStoryConfirm?: () => void;
+  /** Story Search: "Not now" pressed. */
+  onStoryCancel?: () => void;
+  /** Story Search: "Try again" pressed. */
+  onStoryRetry?: () => void;
 }
 
 /** Builds the card's DOM from a view. Pure DOM building, no positioning. */
@@ -404,7 +415,7 @@ export class CardController {
   open(
     anchor: HTMLAnchorElement,
     button: HTMLButtonElement,
-    input: CardInput,
+    input: AnyCardInput,
     callbacks: CardCallbacks,
   ): void {
     this.close({ restoreFocus: false });
@@ -444,7 +455,7 @@ export class CardController {
   }
 
   /** Replace the card's content (e.g. loading -> result). */
-  update(input: CardInput): void {
+  update(input: AnyCardInput): void {
     if (!this.root) return;
     const hadFocus = this.root.activeElement !== null;
     this.show(input);
@@ -468,15 +479,26 @@ export class CardController {
     if (restoreFocus) (button?.isConnected ? button : anchor)?.focus();
   }
 
-  private show(input: CardInput): void {
+  private show(input: AnyCardInput): void {
     if (!this.root || !this.anchor) return;
     this.root.querySelector('.card')?.remove();
-    const card = renderCard(toCardView(input), this.anchor.href, {
-      onClose: () => this.close({ restoreFocus: true }),
-      onFeedback: (value) => void this.giveFeedback(value),
-      onAction: () => this.callbacks?.onAction?.(),
-      onCorrections: () => this.callbacks?.onCorrections?.() ?? Promise.resolve({ kind: 'error' }),
-    });
+    const card =
+      input.kind === 'story'
+        ? renderStoryCard(toStoryView(input.state), this.anchor.href, {
+            onClose: () => this.close({ restoreFocus: true }),
+            onConfirm: () => this.callbacks?.onStoryConfirm?.(),
+            onCancel: () => {
+              this.callbacks?.onStoryCancel?.();
+              this.close({ restoreFocus: true });
+            },
+            onRetry: () => this.callbacks?.onStoryRetry?.(),
+          })
+        : renderCard(toCardView(input), this.anchor.href, {
+            onClose: () => this.close({ restoreFocus: true }),
+            onFeedback: (value) => void this.giveFeedback(value),
+            onAction: () => this.callbacks?.onAction?.(),
+            onCorrections: () => this.callbacks?.onCorrections?.() ?? Promise.resolve({ kind: 'error' }),
+          });
     this.root.append(card);
     this.position();
   }
@@ -515,6 +537,9 @@ export class CardController {
     let top = rect.bottom + GAP;
     // Not enough room below: put it above the link if that fits better.
     if (top + height > vh - EDGE && rect.top - GAP - height >= EDGE) top = rect.top - GAP - height;
+    // A Story Search report can be taller than the room on either side: keep it on screen
+    // (it scrolls inside, see styles.css), even if it covers the link.
+    else if (card?.classList.contains('story') && top + height > vh - EDGE) top = Math.max(EDGE, vh - height - EDGE);
     const left = Math.max(EDGE, Math.min(rect.left, vw - width - EDGE));
     setImportant(this.host, { top: `${Math.round(top)}px`, left: `${Math.round(left)}px` });
   };

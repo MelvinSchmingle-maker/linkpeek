@@ -11,6 +11,128 @@ import type {
   LinkRiskLevel,
   SummaryProviderName,
 } from './types';
+import type { PreviewLine } from './story/package';
+import type {
+  ClueSource,
+  DetailLabel,
+  InvestigationConfidence,
+  MatchStatus,
+  ReportNote,
+  SourceKind,
+  StoryErrorCode,
+  StoryStage,
+} from './story/types';
+
+/**
+ * Story Search: investigates a link's story elsewhere on the web, without
+ * opening the link. Never presents a guess, a failed search or a possible
+ * match as an established story.
+ */
+const STORY = {
+  menu: 'LinkPeek – Story Search',
+  title: 'Story Search',
+  cardLabel: 'LinkPeek Story Search',
+  lookingInto: 'Looking into:',
+  stages: {
+    extracting: 'Extracting link information',
+    searching: 'Searching for matching stories',
+    analysing: 'Analysing relevant sources',
+    writing: 'Preparing the report',
+  } satisfies Record<StoryStage, string>,
+  stageDone: 'done',
+  stageNow: 'in progress',
+  confirmIntro:
+    "Story Search finds this story elsewhere on the web, so you don't have to open the link. LinkPeek will send this to its server, which searches the web and asks an AI (Claude, by Anthropic) to write a short report:",
+  confirmNotSent: "Not sent: this page's address, your cookies, or anything you've typed. The link isn't opened.",
+  confirmGo: 'Search',
+  confirmCancel: 'Not now',
+  previewLabel: {
+    headline: 'Headline',
+    'other-headline': 'Also worded',
+    description: 'Description',
+    'nearby-text': 'Nearby text',
+    address: 'Link address',
+    date: 'Date',
+    publisher: 'Publisher',
+    selection: 'Your selection',
+  } satisfies Record<PreviewLine['label'], string>,
+  clueFrom: {
+    'link-text': 'from the link',
+    'link-title': "from the link's title",
+    'image-alt': "from the link's image",
+    'card-heading': 'from the article card',
+    'heading-above': 'from the heading above the link',
+    'card-teaser': 'from the article card',
+    'surrounding-text': 'from the text around the link',
+    'card-label': 'from the article card',
+    caption: 'from a caption',
+    'linked-metadata': "from this page's data about the link",
+    'page-metadata': "from this page's own tags",
+    'url-slug': 'words from the address',
+    'url-date': 'from the address',
+    'page-title': "from this page's title",
+    selection: 'you selected it',
+  } satisfies Record<ClueSource, string>,
+  match: { strong: 'Strong match', possible: 'Possible match', none: 'No reliable match' } satisfies Record<MatchStatus, string>,
+  confidence: {
+    strong: 'Strong evidence',
+    partial: 'Partial evidence',
+    conflicting: 'Conflicting information',
+    insufficient: 'Insufficient information',
+  } satisfies Record<InvestigationConfidence, string>,
+  whatHappened: 'What happened?',
+  keyDetails: 'Key details',
+  detail: { who: 'Who', what: 'What', where: 'Where', when: 'When', why: 'Why' } satisfies Record<DetailLabel, string>,
+  confirmed: 'What is confirmed?',
+  confirmedNote: 'Stated by more than one independent source, or by an official one.',
+  reported: 'Reported by one source',
+  reportedNote: 'Not yet confirmed independently.',
+  unclear: 'What remains unclear?',
+  sources: 'Supporting sources',
+  possibleSources: 'Possibly related sources',
+  kind: {
+    primary: 'Official source',
+    agency: 'News agency',
+    news: 'News',
+    opinion: 'Opinion',
+    social: 'Social media post',
+    other: 'Website',
+  } satisfies Record<SourceKind, string>,
+  original: 'The linked article',
+  possibleTag: 'Possible match',
+  repeats: (n: number) => `Repeats source ${n}`,
+  credits: (agency: string) => `Credits ${agency}`,
+  note: {
+    'single-source': 'Only one independent source was found.',
+    developing: 'This story may still be developing. Details may change.',
+    'snippets-only': 'Only headlines and short snippets were available, not the articles themselves.',
+    'older-story': 'Some results were about an earlier story with similar wording. They were left out.',
+    syndicated: 'Some sources repeat the same report. Repeats count once.',
+  } satisfies Record<ReportNote, string>,
+  possibleOnly: 'These sources may be about a different story. Check them before relying on this.',
+  searchedFor: 'Searched for:',
+  setAside: (n: number) => `${n} search result${n === 1 ? '' : 's'} set aside as not about this story.`,
+  noResults: 'No reports about this story were found.',
+  noMatch: "The search found results, but none clearly about this story. LinkPeek won't guess.",
+  reportFailed: "Couldn't write a report. These sources may be about the same story:",
+  insufficient:
+    "There isn't enough information about this link to search for it. Its text, its address and the page around it don't say what the story is.",
+  notAWebLink: 'Story Search works on links to web pages.',
+  error: {
+    'not-configured': "Story Search isn't set up in this version of LinkPeek.",
+    'search-failed': "The search service didn't answer. Try again in a minute.",
+    'search-timeout': 'The search took too long. Try again.',
+    'rate-limited': "You've run several Story Searches in a short time. Try again in a few minutes.",
+    unavailable: "LinkPeek's server couldn't be reached. Try again later.",
+    'bad-response': "LinkPeek's server sent an answer it couldn't read. Try again later.",
+  } satisfies Record<StoryErrorCode, string>,
+  retry: 'Try again',
+  byAi: "Written by AI (Claude) from web search results, then checked by LinkPeek's rules. Read the sources to check it yourself.",
+  checked: (date: string) => `Checked ${date}.`,
+  sourceRef: (n: number) => `Source ${n}`,
+  openLink: 'Open link',
+  openSource: 'opens in a new tab',
+};
 
 export const MSG = {
   iconLabel: 'Preview this link with LinkPeek',
@@ -59,6 +181,7 @@ export const MSG = {
   feedbackThanks: 'Thanks for the feedback.',
   feedbackFailed: "Couldn't save your feedback.",
   noKnownWarningNote: "This isn't a guarantee of safety.",
+  story: STORY,
 } as const;
 
 /** Shown when LinkPeek may not fetch pages from the link's site yet. */

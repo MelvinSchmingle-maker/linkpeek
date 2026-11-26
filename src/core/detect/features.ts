@@ -55,7 +55,7 @@ export function readLinkFeatures(link: HTMLAnchorElement): LinkFeatures {
   };
 }
 
-function linkText(link: HTMLAnchorElement): string {
+export function linkText(link: HTMLAnchorElement): string {
   // textContent, not innerText: innerText forces a layout per link, which is
   // slow on pages with thousands of links. Skip screen-reader-only text, so
   // "Continue reading <span class=screen-reader-text>Title</span>" reads as

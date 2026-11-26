@@ -18,6 +18,9 @@ Official documentation relied on for decisions. Checked 13 Oct 2026.
 | schema.org `isAccessibleForFree` | https://schema.org/isAccessibleForFree and https://developers.google.com/search/docs/appearance/structured-data/paywalled-content | How publishers mark paywalled pages and paywalled parts (`hasPart`) |
 | Mozilla Readability | https://github.com/mozilla/readability | Article extraction; `parse()` changes the document it's given, so it gets a copy |
 | pdf.js | https://mozilla.github.io/pdf.js/ | PDF text; worker file shipped with the extension, no remote code |
+| Exa search API | https://exa.ai/docs/reference/search and https://exa.ai/pricing (read 26 Nov 2026) | Story Search's default provider: `POST https://api.exa.ai/search`, `x-api-key` header, `numResults`, `type: "auto"`, `category: "news"`, `startPublishedDate`, `contents.highlights` with `query` and `maxCharacters`; results with `title`, `url`, `publishedDate`, `author`, `highlights`; `costDollars.total`. $7 per 1,000 auto searches up to 10 results, $1 per 1,000 pages of highlights, $10 free credit a month |
+| Brave Search API | https://api-dashboard.search.brave.com/app/documentation/news-search/get-started and https://brave.com/search/api/ (read 26 Nov 2026) | Story Search's alternative provider: `GET https://api.search.brave.com/res/v1/news/search`, `X-Subscription-Token` header, `q`, `count` (max 50), `freshness` (custom `YYYY-MM-DDtoYYYY-MM-DD`), `search_lang`, `extra_snippets`. The response schema wasn't on the page read; fields are read defensively. $5 per 1,000 requests, $5 free credit a month. FAQ: storing results needs a custom plan |
+| Claude structured outputs | claude-api skill reference (cached 3 Nov 2026) | Story Search: `output_config.format` with a `json_schema`, objects closed with `additionalProperties: false`; supported on Haiku 5.5; Haiku 5.5 at $0.10 / $0.50 per million tokens, Sonnet 5.5 at $2 / $10 |
 | Testing extensions with Playwright | https://playwright.dev/docs/chrome-extensions | Persistent context, `--load-extension`, `channel: 'chromium'` for headless |
 
 ## Dependencies
@@ -33,5 +36,7 @@ Official documentation relied on for decisions. Checked 13 Oct 2026.
 | pdfjs-dist | Apache-2.0 | Reads text from PDFs (shipped in the extension, worker included as a file) |
 | @anthropic-ai/sdk | MIT | Backend only (`server/`): calls Claude. Not in the extension |
 | @vercel/firewall | Apache-2.0 | Backend only (`server/`): rate limits. Not in the extension |
+
+Story Search added no dependency. The Exa and Brave adapters use `fetch`.
 
 Readability and pdf.js are the only code in the shipped extension that isn't ours. Both are bundled at build time; nothing is loaded from the internet.

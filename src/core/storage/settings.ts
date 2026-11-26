@@ -17,6 +17,11 @@ export interface Settings {
    * backend, which asks Claude (Part 06). Both fall back to extractive.
    */
   summaryEngine: SummaryEngine;
+  /**
+   * Show "LinkPeek – Story Search" in the right-click menu on links. (Whether
+   * the user has agreed to what it sends is kept apart, in story/consent.ts.)
+   */
+  storySearch: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -24,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showDemoResults: true,
   disabledSites: [],
   summaryEngine: 'extractive',
+  storySearch: true,
 };
 
 const KEY = 'settings';

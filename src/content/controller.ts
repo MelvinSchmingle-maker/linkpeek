@@ -26,6 +26,7 @@ import { demoResult, isDemoKey } from './fixtures';
 import type { ContentMessage, ContentResponse, SiteStatus, WorkerMessage } from './messages';
 import type { CorrectionsResult } from '../core/source/corrections';
 import { htmlLinksIn, LinkScanner } from './scanner';
+import { StoryRun } from './story-run';
 
 const DEMO_ATTR = 'data-linkpeek-demo';
 /** Demo results only ever appear on LinkPeek's own local test server. */
@@ -59,6 +60,8 @@ export class PageController {
   private shown?: LinkResult;
   /** Bumped per load, so a slow answer for an older request can't overwrite a newer one. */
   private loadSeq = 0;
+  /** The Story Search shown in the open card, if any. */
+  private storyRun?: StoryRun;
 
   constructor(
     private readonly doc: Document,
@@ -145,7 +148,55 @@ export class PageController {
         this.peekTemporary(link);
         return { ok: true };
       }
+      case 'story': {
+        const link = this.findLink(msg.url);
+        if (!link) return { ok: false };
+        this.openStory(link, msg.selection);
+        return { ok: true };
+      }
     }
+  }
+
+  /**
+   * Right-click > "LinkPeek – Story Search": open a Story Search card on the
+   * link, with a temporary icon if it has none. The link itself is never
+   * opened or fetched.
+   */
+  private openStory(link: HTMLAnchorElement, selection: string | undefined): void {
+    this.storyRun?.cancel();
+    let button = this.buttons.get(link);
+    let remove: (() => void) | undefined;
+    if (!button?.isConnected || !(button.getRootNode() instanceof ShadowRoot)) {
+      const made = attachIcon(link, (b) => this.toggleCard(link, b, remove));
+      button = made.button;
+      remove = () => {
+        if (isOurHost(made.host)) made.host.remove();
+        this.tempIcons.delete(made.host);
+      };
+      this.tempIcons.add(made.host);
+    }
+    const run = new StoryRun(link, selection, (state) => {
+      if (this.storyRun === run && this.cards.openFor === link) this.cards.update({ kind: 'story', state });
+    });
+    this.storyRun = run;
+    this.shown = undefined;
+    this.cards.open(link, button, { kind: 'story', state: { kind: 'progress', stage: 'extracting' } }, {
+      onFeedback: async () => undefined,
+      onClosed: () => {
+        run.cancel();
+        if (this.storyRun === run) this.storyRun = undefined;
+        remove?.();
+      },
+      onStoryConfirm: () => run.confirm(),
+      onStoryCancel: () => run.cancel(),
+      onStoryRetry: () => run.retry(),
+    });
+    // The link isn't drawn, so no card could open.
+    if (this.cards.openFor !== link) {
+      run.cancel();
+      return;
+    }
+    void run.begin();
   }
 
   private get siteDisabled(): boolean {

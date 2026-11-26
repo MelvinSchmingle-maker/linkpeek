@@ -1,7 +1,7 @@
 /** Address helpers for retrieval and caching. */
 
 /** Tracking parameters that don't change which article a link points to. */
-const TRACKING = /^(utm_[a-z]+|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|igshid|ref_src|ocid|cmpid)$/i;
+export const TRACKING = /^(utm_[a-z]+|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|igshid|ref_src|ocid|cmpid)$/i;
 
 /**
  * One key per article: drops the #fragment and tracking parameters, so

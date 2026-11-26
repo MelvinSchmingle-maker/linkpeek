@@ -12,8 +12,14 @@ import { clearCached } from '../core/retrieve/cache';
 import { retrieve, type RetrieveResponse } from './retrieve';
 import { checkSiteCorrections } from './corrections';
 import type { CorrectionsResult } from '../core/source/corrections';
+import { registerStoryPort } from './story';
+import { clearStoryReports } from '../core/story/cache';
+import { STORY_INSTALL_KEY } from '../core/storage/install-id';
+import { MSG } from '../core/messages';
 
 const MENU_ID = 'linkpeek-peek';
+/** Story Search (an addition; the peek item above is unchanged). */
+const STORY_MENU_ID = 'linkpeek-story';
 const PEEK_COMMAND = 'peek-link';
 /** How long a "Turn on" press stays pending while Chrome shows its prompt. */
 const PENDING_TURN_ON_MS = 2 * 60 * 1000;
@@ -30,8 +36,17 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     title: 'Peek at this link with LinkPeek',
     contexts: ['link'],
   });
+  chrome.contextMenus.create({
+    id: STORY_MENU_ID,
+    title: MSG.story.menu,
+    contexts: ['link'],
+    visible: (await getSettings()).storySearch,
+  });
   await syncSiteScripts();
 });
+
+// Story Search's port (see story.ts). Registered at the top level, like every listener.
+registerStoryPort();
 
 chrome.runtime.onStartup.addListener(() => void syncSiteScripts());
 
@@ -124,10 +139,15 @@ chrome.permissions.onRemoved.addListener(() => void syncSiteScripts());
 // Right-click a link > "Peek at this link". The click grants activeTab.
 // The link may be inside a frame, so talk to that frame.
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== MENU_ID || !tab?.id || !info.linkUrl) return;
+  if ((info.menuItemId !== MENU_ID && info.menuItemId !== STORY_MENU_ID) || !tab?.id || !info.linkUrl) return;
   const frameId = info.frameId ?? 0;
   await closeCardsInTab(tab.id);
-  const res = await send(tab.id, frameId, { type: 'peek', url: info.linkUrl });
+  // Story Search uses text the user selected only when they had selected some as they right-clicked.
+  const msg: ContentMessage =
+    info.menuItemId === STORY_MENU_ID
+      ? { type: 'story', url: info.linkUrl, ...(info.selectionText ? { selection: info.selectionText.slice(0, 2000) } : {}) }
+      : { type: 'peek', url: info.linkUrl };
+  const res = await send(tab.id, frameId, msg);
   if (!res?.ok) await showProblem(tab.id);
 });
 
@@ -234,6 +254,16 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (before !== after) void clearCached();
   // The install ID only exists for AI summaries: switching them off deletes it.
   if (before === 'remote' && after !== 'remote') void chrome.storage.local.remove('installId');
+  // Story Search on or off: show or hide its menu item. Off also deletes its install ID and remembered reports.
+  const storyBefore = (change.oldValue as { storySearch?: boolean } | undefined)?.storySearch ?? true;
+  const storyAfter = (change.newValue as { storySearch?: boolean } | undefined)?.storySearch ?? true;
+  if (storyBefore !== storyAfter) {
+    void chrome.contextMenus.update(STORY_MENU_ID, { visible: storyAfter }).catch(() => undefined);
+    if (!storyAfter) {
+      void chrome.storage.local.remove(STORY_INSTALL_KEY);
+      void clearStoryReports();
+    }
+  }
 });
 
 // Test builds only: lets scripts/live-check.mjs run the real reading pipeline

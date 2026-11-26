@@ -60,6 +60,22 @@
           <div id="verdict-definitions"></div>
         </section>
 
+        <section aria-labelledby="story-heading">
+          <h2 id="story-heading">Story Search</h2>
+          <p class="muted">
+            Right-click a link and choose “LinkPeek – Story Search” to find out what the story is without opening it. LinkPeek sends what the page
+            says about that link (its headline, nearby text, and its address without anything after “?”) to LinkPeek's server, which searches
+            the web and asks Claude, by Anthropic, to write a short report with its sources. It never sends this page's address, your cookies or
+            anything you've typed, and nothing is sent until you ask.
+          </p>
+          <label class="toggle">
+            <input type="checkbox" id="story-toggle" />
+            <span>Show Story Search in the right-click menu<br /><span class="muted">Switching it off also deletes its random ID and any reports kept on this computer.</span></span>
+          </label>
+          <p class="muted indent" id="story-status" role="status"></p>
+          <button type="button" class="secondary indent" id="story-consent-reset" hidden>Show me what's sent before the next search</button>
+        </section>
+
         <section aria-labelledby="shortcut-heading">
           <h2 id="shortcut-heading">Keyboard shortcut</h2>
           <p>Peek at the focused link: <kbd id="shortcut">Alt+Shift+P</kbd></p>
@@ -76,7 +92,7 @@
 
         <section>
           <h2>Your data</h2>
-          <p>Nothing goes to LinkPeek or anyone else. When you open a card, LinkPeek fetches that one page from its own website, without your cookies. Settings, your thumbs up/down votes and recent results stay in your browser.</p>
+          <p>Unless you choose LinkPeek's AI for summaries or run a Story Search, nothing goes to LinkPeek or anyone else. When you open a card, LinkPeek fetches that one page from its own website, without your cookies. Settings, your thumbs up/down votes and recent results stay in your browser.</p>
         </section>
       </main>
     </div>

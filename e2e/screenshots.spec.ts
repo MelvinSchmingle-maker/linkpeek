@@ -69,3 +69,47 @@ test('screenshots: popup and settings (Part 03)', async ({ page, context, extens
   await expect(options.getByText('Sites you turned on')).toBeVisible();
   await options.screenshot({ path: `${dir}/settings-light.png`, fullPage: true });
 });
+
+test('screenshots: Story Search', async ({ page, context }) => {
+  const dir = 'docs/screenshots/story-search';
+  const story = (url: string) =>
+    context.serviceWorkers()[0]!.evaluate(async (u) => {
+      const [tab] = await chrome.tabs.query({ url: ['http://127.0.0.1/*'] });
+      await chrome.scripting.executeScript({ target: { tabId: tab!.id!, frameIds: [0] }, files: ['content.js'] });
+      return chrome.tabs.sendMessage(tab!.id!, { type: 'story', url: u }, { frameId: 0 });
+    }, url);
+  const card = page.locator('[data-linkpeek="card"] .card.story');
+  const shoot = async (name: string) => {
+    const c = (await card.boundingBox())!;
+    await page.screenshot({ path: `${dir}/${name}.png`, clip: { x: Math.max(0, c.x - 16), y: Math.max(0, c.y - 16), width: c.width + 32, height: c.height + 32 } });
+  };
+  const headline = `${TEST_SERVER}/2026/11/25/ferry-strike-called-off-after-late-night-talks?utm_source=home&session=abc123`;
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.request.get(`${TEST_SERVER}/hits/reset`);
+    await context.serviceWorkers()[0]!.evaluate(() => chrome.storage.local.remove('storySearchConsent'));
+    await context.serviceWorkers()[0]!.evaluate(() => chrome.storage.session.clear());
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.goto(`${TEST_SERVER}/story.html`);
+    await story(headline);
+    await expect(card.getByRole('button', { name: 'Search' })).toBeVisible();
+    await shoot(`confirm-${scheme}`);
+    await card.getByRole('button', { name: 'Search' }).click();
+    await expect(card.locator('.stage.active')).toContainText('Analysing relevant sources', { timeout: 10_000 });
+    await shoot(`progress-${scheme}`);
+    await expect(card.getByRole('heading', { name: 'What happened?' })).toBeVisible({ timeout: 10_000 });
+    await shoot(`report-${scheme}`);
+    await story(`${TEST_SERVER}/p/889123`);
+    await expect(card).toContainText("LinkPeek won't guess.", { timeout: 10_000 });
+    await shoot(`no-match-${scheme}`);
+    await story(`${TEST_SERVER}/2026/11/24/possible-bridge-closure-for-repairs`);
+    await expect(card.locator('.story-caution')).toBeVisible({ timeout: 10_000 });
+    await shoot(`possible-${scheme}`);
+    await story(`${TEST_SERVER}/2026/11/25/search-broken-story-about-the-pier`);
+    await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible({ timeout: 10_000 });
+    await shoot(`error-${scheme}`);
+    await story('https://example.com/p/12345');
+    await expect(card).toContainText("There isn't enough information");
+    await shoot(`insufficient-${scheme}`);
+  }
+});

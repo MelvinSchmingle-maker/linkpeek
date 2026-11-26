@@ -20,6 +20,7 @@ import { buildManifest } from './manifest.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const DEPLOYED_API_URL = 'https://linkpeek-api.vercel.app/api/summarise';
+const DEPLOYED_STORY_URL = 'https://linkpeek-api.vercel.app/api/story';
 const onDemand = process.argv.includes('--e2e-on-demand');
 const live = process.argv.includes('--live');
 const e2e = onDemand || live || process.argv.includes('--e2e');
@@ -36,6 +37,9 @@ const shared = {
     // otherwise. LINKPEEK_API_URL= (empty) builds without one, and the option is shown greyed out.
     // Test builds use the local test server's stand-in, so no test ever reaches the real one.
     __API_URL__: JSON.stringify(e2e && !live ? 'http://127.0.0.1:4173/api/summarise' : (process.env.LINKPEEK_API_URL ?? DEPLOYED_API_URL)),
+    // Story Search's endpoint, on the same backend. LINKPEEK_STORY_API_URL= (empty) builds without it,
+    // and Story Search then says it isn't set up. Test builds use the test server's stand-in.
+    __STORY_API_URL__: JSON.stringify(e2e && !live ? 'http://127.0.0.1:4173/api/story' : (process.env.LINKPEEK_STORY_API_URL ?? DEPLOYED_STORY_URL)),
   },
 };
 

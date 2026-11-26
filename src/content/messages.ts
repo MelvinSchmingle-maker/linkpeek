@@ -13,7 +13,9 @@ export type ContentMessage =
   /** A card is about to open in another frame of this tab: close ours. */
   | { type: 'close-card' }
   /** Access to a site was just granted: try the open card's link again. */
-  | { type: 'retry' };
+  | { type: 'retry' }
+  /** Right-click > "LinkPeek – Story Search" on the link with this URL. `selection` only if the user had selected text. */
+  | { type: 'story'; url: string; selection?: string };
 
 export interface ContentResponse {
   ok: boolean;
@@ -21,7 +23,7 @@ export interface ContentResponse {
   found?: number;
 }
 
-const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh', 'close-card', 'retry']);
+const TYPES = new Set(['ping', 'scan', 'peek', 'peek-focused', 'refresh', 'close-card', 'retry', 'story']);
 
 export function isContentMessage(msg: unknown): msg is ContentMessage {
   return typeof msg === 'object' && msg !== null && TYPES.has((msg as { type?: unknown }).type as string);

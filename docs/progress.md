@@ -280,3 +280,21 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - Pages that aren't articles still get link counts when their text is long enough (the Hacker News thread shows zero). The paywall page gets no counts, because only its public description was read.
 
 **Your check:** open the source card on five sites you know well. Is anything wrong or misleading? Wrong facts hurt more than missing ones.
+
+## Story Search (26 Nov 2026)
+
+**Built:** "LinkPeek – Story Search" on the right-click menu. It extracts every clue the page gives about a link (on the device), shows what it will send the first time, searches the web through LinkPeek's backend (Exa by default, Brave as an alternative), checks which results are the same story, and shows a short report with sources: what happened, key details, what is confirmed, what's reported by one source, what remains unclear. Details, decisions and limits: `docs/story-search.md`, D52 to D60.
+
+**Tested (actual results, 26 Nov 2026):**
+- `npm run check`: pass. Unit tests 457 pass, 5 skipped (402 before; 55 new for Story Search). Backend 101 pass (41 before; 60 new).
+- Browser tests, Story Search: 11/11 pass (`e2e/story.spec.ts`), against the test server's stand-in backend.
+- Full browser suite with this machine's newer Chromium (build 1243; the project pins Playwright 1.56.1, which expects build 1194, so `e2e/fixtures.ts` now takes `LINKPEEK_CHROMIUM_PATH`): 128 passed, 3 failed, 4 skipped. Before any Story Search change it was 117 passed, 3 failed, 3 skipped. The new skip is the Story Search screenshot test, which only runs with `SCREENSHOTS=1`.
+- The 3 failures, before and after: one is the on-device AI settings test, which fails every time on this Chromium because its built-in AI never reports a status. The other two are a race where a test reaches the service worker before `chrome` exists ("chrome is not defined"); it hits different tests on each run, and each passed when run alone. None involves Story Search code.
+- Screenshots of every Story Search state, light and dark: `docs/screenshots/story-search/`.
+
+**Not verified:**
+- Any live search: no Exa or Brave key was configured. Both adapters are tested only against the shapes in the providers' documentation.
+- Any live Claude call for Story Search: no Anthropic key in this environment.
+- The deployed endpoint: not deployed (this branch isn't `main`).
+- Showing and hiding the menu item from Settings (Playwright can't open Chrome's context menu).
+- A real screen reader, and Chrome by hand.

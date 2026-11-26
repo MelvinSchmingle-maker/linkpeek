@@ -58,8 +58,93 @@ async function standInAi(res, _url, req) {
   return reply(200, { summary: 'A summary from the stand-in AI backend for this test page.', model: 'stand-in', usage: {} });
 }
 
+/** What the stand-in Story Search backend was sent, newest last. */
+const storyBodies = [];
+
+const storySource = (n, title, publisher, url, kind = 'news', extra = {}) => ({ n, title, publisher, url, published: '2026-11-25', kind, match: 'strong', ...extra });
+const storyReport = (patch) => ({
+  status: 'report',
+  match: 'strong',
+  confidence: 'strong',
+  whatHappened: [],
+  details: [],
+  confirmed: [],
+  reported: [],
+  unclear: [],
+  sources: [],
+  setAside: 0,
+  notes: [],
+  searchedFor: '',
+  checkedAt: '2026-11-26T10:00:00.000Z',
+  ...patch,
+});
+
+/**
+ * A stand-in for Story Search (server/api/story.ts), with the same request
+ * and streamed reply shapes. It never searches or calls an AI: the answer
+ * depends on words in the headline, so tests can reach every state. The
+ * stages are a little apart, so a test can watch them change.
+ */
+async function standInStory(res, _url, req) {
+  if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
+  const body = JSON.parse((await readBody(req)) || '{}');
+  storyBodies.push(body);
+  const words = `${body.headline?.text ?? ''} ${body.slug ?? ''} ${body.description?.text ?? ''}`.toLowerCase();
+  const searchedFor = body.headline?.text ?? body.slug ?? '';
+  if (words.includes('rate limited')) return res.writeHead(429, { 'content-type': 'application/json', ...cors }).end(JSON.stringify({ error: 'rate-limited' }));
+  res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8', ...cors });
+  const send = (o) => res.write(`${JSON.stringify(o)}\n`);
+  send({ stage: 'searching' });
+  await wait(250);
+  if (words.includes('search broken')) {
+    send({ error: 'search-failed' });
+    return res.end();
+  }
+  if (words.includes('unknown harbour')) {
+    send({ report: storyReport({ status: 'no-match', match: 'none', confidence: 'insufficient', setAside: 4, notes: ['older-story'], searchedFor }) });
+    return res.end();
+  }
+  send({ stage: 'analysing', found: 3 });
+  await wait(250);
+  send({ stage: 'writing' });
+  await wait(100);
+  if (words.includes('possible bridge')) {
+    send({
+      report: storyReport({
+        match: 'possible',
+        confidence: 'partial',
+        subject: 'Bridge repairs may close the crossing',
+        whatHappened: [{ text: 'A local paper says the old bridge may close for repairs in December 2026.', sources: [1] }],
+        sources: [{ ...storySource(1, 'Bridge could shut', 'Local Gazette', 'http://127.0.0.1:4173/articles/bridge.html'), match: 'possible' }],
+        notes: ['single-source'],
+        searchedFor,
+      }),
+    });
+    return res.end();
+  }
+  send({
+    report: storyReport({
+      subject: 'Ferry strike called off after late-night talks',
+      whatHappened: [{ text: 'Harbour Ferries workers called off a strike planned for 1 December 2026 after talks ended on 25 November.', sources: [1, 2] }],
+      details: [{ label: 'who', text: 'Harbour Ferries and the crew union.', sources: [1] }],
+      confirmed: [{ text: 'The strike planned for 1 December 2026 will not go ahead.', sources: [1, 2] }],
+      reported: [{ text: 'The deal includes a 4% pay rise.', sources: [2] }],
+      unclear: [{ text: 'The full terms of the deal have not been published.', sources: [] }],
+      sources: [
+        storySource(1, 'Ferry strike off after talks', 'Example News', 'http://127.0.0.1:4173/articles/ordinary.html'),
+        storySource(2, 'Union and ferry firm agree deal', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'),
+      ],
+      setAside: 2,
+      searchedFor,
+    }),
+  });
+  res.end();
+}
+
 const routes = {
   '/api/summarise': standInAi,
+  '/api/story': standInStory,
+  '/api/story/sent': (res) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(storyBodies)),
   '/api/summarise/sent': (res) => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(aiBodies)),
   '/status/403': (res) => res.writeHead(403, { 'content-type': html }).end('<h1>Forbidden</h1>'),
   '/status/404': (res) => res.writeHead(404, { 'content-type': html }).end('<h1>Page not found</h1>'),
@@ -107,6 +192,7 @@ const routes = {
   '/hits/reset': (res) => {
     hits.clear();
     aiBodies.length = 0;
+    storyBodies.length = 0;
     res.writeHead(200).end('ok');
   },
 };

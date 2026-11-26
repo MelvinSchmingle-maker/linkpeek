@@ -21,6 +21,9 @@ export const test = base.extend<{ extensionDir: string; context: BrowserContext;
     const extensionPath = fileURLToPath(new URL(`../${extensionDir}`, import.meta.url));
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
+      // Optional: a Chromium that isn't the one this Playwright version downloads
+      // (e.g. a machine with a newer build pre-installed). Unset: Playwright's own.
+      ...(process.env.LINKPEEK_CHROMIUM_PATH ? { executablePath: process.env.LINKPEEK_CHROMIUM_PATH } : {}),
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,

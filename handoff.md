@@ -2,6 +2,14 @@
 
 Read this first in a new window, then `todo.md`. Updated 21 Oct 2026 on `main`, after the package install (`e604861`) and the link-reading research. The research is saved under `docs/research/`, so a new window can read it from the repo.
 
+## Story Search (26 Nov 2026, branch `claude/eloquent-cerf-xnjbmt`)
+
+A new feature, built and tested against stand-ins, not yet run live. Right-click a link > "LinkPeek – Story Search": LinkPeek reads every clue the page gives about the link, shows what it will send the first time, searches the web through a new backend endpoint (`POST /api/story`, Exa by default, Brave as an alternative), checks which results are the same story, and shows a report with sources. Read `docs/story-search.md` first; decisions are D52 to D60.
+
+To make it work live: add `EXA_API_KEY` in Vercel, merge to `main` (which deploys), then try it on 20 to 30 real links. Open owner decisions are listed at the end of `docs/story-search.md` (the privacy change in D53, the model, Brave's storage terms).
+
+This machine's Chromium is newer than the one the pinned Playwright expects. Run browser tests with `LINKPEEK_CHROMIUM_PATH=/opt/pw-browsers/chromium` (see README). With it, 3 existing tests fail from timing before any Story Search change.
+
 ## Where things stand
 
 - Parts 01 to 08 are built and pushed. Parts 09 to 14 are not, apart from basic feedback votes (D12).

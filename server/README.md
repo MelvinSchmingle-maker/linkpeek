@@ -1,17 +1,29 @@
 # LinkPeek summary backend
 
-One endpoint, `POST /api/summarise`, that writes a summary of 20 words or fewer with Claude. It's used only when someone chooses "LinkPeek's AI" in the extension's Settings. Part 06 of the build plan.
+Two endpoints. `POST /api/summarise` writes a summary of 20 words or fewer with Claude. `POST /api/story` is Story Search (below). It's used only when someone chooses "LinkPeek's AI" in the extension's Settings. Part 06 of the build plan.
 
 The Anthropic API key lives here, in an environment variable, and never in the extension: anyone can unpack an extension and read it.
 
 ## What it does and doesn't do
 
 - **Accepts:** the article text (up to 12,000 characters; the extension sends 6,000), the link text, the evidence level, the page language and a random install ID. Anything else is a 400. It never receives the page's address.
-- **Doesn't fetch URLs.** There's no server-side fetching, so there's no SSRF risk yet.
+- **Doesn't fetch URLs.** There's no server-side fetching, so there's no SSRF risk. (Story Search doesn't fetch either; it calls a search API.)
 - **Doesn't store article text.** It logs one line per request: status, error code, timing and token counts. No text, no headline, no install ID.
 - **Rate limits** per install ID and per IP address (`src/ratelimit.ts`). If the rule isn't set up, it refuses requests rather than run unguarded. Nothing caps everyone together: that's the Anthropic Console spend limit.
 - **Article text is untrusted.** It's wrapped in tags, our own tags are stripped from it, and the instructions say nothing inside it is an instruction (`src/prompt.ts`). The extension checks every summary again before showing it.
 - **Model:** `claude-haiku-5-5` by default, at effort "low", with a cached system prompt. Haiku has no server-side refusal fallback, so a refused request gets the extension's free summary instead. On models that have it (Opus 5.5, Sonnet 5.5), `fallbacks: "default"` retries a declined request on Anthropic's recommended fallback model. See `docs/cost/part-06-estimate.md` before changing it.
+
+## Story Search: `POST /api/story`
+
+Investigates a link's story without opening it (`docs/story-search.md` has the full design). The extension sends what the page says about one link; this endpoint searches the web (Exa by default, Brave with `STORY_SEARCH_PROVIDER=brave`), sets aside results that aren't the same story, groups syndicated copies, asks Claude for a report in a fixed JSON shape, and checks it with rules the AI can't overrule (`src/story/report.ts`). The answer streams as JSON lines: `{"stage":"searching"}`, `{"stage":"analysing","found":4}`, `{"stage":"writing"}`, then `{"report":{...}}` or `{"error":"..."}`.
+
+- **Needs** `EXA_API_KEY` (or `BRAVE_SEARCH_API_KEY` with Brave) in Vercel's environment, and the existing `ANTHROPIC_API_KEY`. Without a search key it answers 503 `not-configured`, and the extension says Story Search isn't set up.
+- **Accepts** only the fields in `src/story/contract.ts`: the link's address without a query string or fragment, headline and other wordings, a teaser, up to 700 characters of nearby text, the address's words, a date, publisher, author, section, keywords, the user's selection, the language and an install ID. Anything else is a 400.
+- **Doesn't fetch** the link or any article. The search provider returns the passages.
+- **Rate limit:** the existing `summarise` rule, checked under `story:install:` and `story:ip:` keys, three times per request by default (`STORY_RATE_WEIGHT`), so with 30 per 10 minutes that's 10 Story Searches per install and per address.
+- **Logs** one line per request: outcome, timings, queries, results, model, tokens and estimated cost. Never the link or the search words.
+- **Cost:** about $0.03 to $0.04 a search with Exa, plus about $0.002 for Claude Haiku 5.5 (estimates from list prices, not measured).
+- **Not yet run live**: no search key or Anthropic key was available when it was built. The tests use stand-ins.
 
 ## Run the tests
 
@@ -61,3 +73,4 @@ In a Claude Code cloud environment, add the key under the environment's **Enviro
 - `src/prompt.ts`: the instructions and how the article is wrapped.
 - `src/anthropic.ts`: the Claude call.
 - `src/ratelimit.ts`: Vercel Firewall limits, plus an in-memory version for local runs and tests.
+- `api/story.ts`: the Story Search entry point. Everything else for it is in `src/story/` (`handler.ts`, `contract.ts`, `queries.ts`, `providers/`, `match.ts`, `sources.ts`, `prompt.ts`, `analyse.ts`, `report.ts`, `cache.ts`, `investigate.ts`).

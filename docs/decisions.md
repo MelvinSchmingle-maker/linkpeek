@@ -236,3 +236,30 @@ The check is the one thing in the source card that makes requests to the site, s
 
 ## D51. The card's explainer line (Part 08)
 "What does this mean?" and "About this source" share one line under the reason. The card's height doesn't change when it's closed, which the 200%-zoom browser test depends on. Each panel is built the first time it's opened, and it stays hidden until then. The Close button still comes first in reading order.
+
+## D52. Story Search is a second right-click item, not a change to the card (Story Search)
+The owner's brief asked for Story Search as an addition that leaves the preview, clickbait check and source card alone. So it's a second menu item, "LinkPeek – Story Search", with its own card body in the same Shadow DOM host. "Peek at this link" works exactly as before. Settings can hide the item. Full design in `docs/story-search.md`.
+
+## D53. The backend now receives link addresses and nearby text, for Story Search only
+Story Search has to send what the page says about the link to be searched. That reverses, for this one feature, D24's "no LinkPeek server" and D36's "never the page's address". Limits: only when the user picks the menu item; the first time, only after they've seen exactly what will be sent and pressed "Search"; the link's address without its query string or fragment; never the current page's address, cookies, typed text or hidden text; emails and phone numbers removed. The owner should confirm this trade (`docs/story-search.md`, decision 5). Reversible: remove the menu item, or set `STORY_SEARCH_ENABLED=false`.
+
+## D54. Exa by default, Brave as the alternative, behind one interface
+Both are built as small adapters (`server/src/story/providers/`) and switched with `STORY_SEARCH_PROVIDER`. Exa is the default because one request returns results with short extracted passages, so the server never fetches article pages itself: no server-side fetching of arbitrary addresses (no request forgery risk, no "scrape, proxy" use under Vercel's policy) and nothing that could get round a paywall. Brave is cheaper ($5 against about $7 plus $1 per thousand pages) but gives snippets only, and its FAQ says storing results needs a custom plan. Neither has been run live: no key was configured. The choice should be revisited after the owner's live comparison.
+
+## D55. Stages are streamed, not timed
+The card's four stages follow what really happens: extracting on the device, then the backend streams one JSON line as it starts searching, another while Claude reads the results, and another while the rules check the reply. A timer that moved the stages along would be faking progress (ground rule 4).
+
+## D56. Rules decide "confirmed", not the AI
+Claude marks matches and writes the report, but `server/src/story/report.ts` has the last word: a match needs the rule-based checks too (date, names, shared words); every factual sentence needs a source that survived; "confirmed" means two independent groups of strong matches, or an official source; syndicated copies and agency stories count once; confidence can be lowered, never raised. The same checks run again in the extension before display. This is what stops an older story with similar wording, or ten copies of one report, from being presented as an established story.
+
+## D57. Claude Haiku 5.5 for Story Search, to be measured
+The owner chose Haiku 5.5 for summaries (D37) on cost. Story Search uses it too, with effort "medium" and structured JSON output, at about $0.002 a search. Matching is harder than summarising, so this is a starting point, not a measured choice: `STORY_MODEL=claude-sonnet-5-5` is one setting away.
+
+## D58. Spending limits
+At most five queries of six results; at most five results to the AI, each cut to about 1,600 characters; a broader search only when the first finds fewer than two likely results. One Story Search counts as three requests against the existing rate-limit rule, in its own buckets (`story:install:...`, `story:ip:...`), because Hobby allows one rule. Reports are reused by the backend for 10 minutes (breaking or empty) to 6 hours, and on the device for 30 minutes; a report the AI couldn't write is never reused. Each request logs an estimated cost. The real ceilings are the search provider's prepaid balance and the Anthropic Console limit.
+
+## D59. Story Search's own install ID and consent flag
+Story Search has its own random install ID (`storyInstallId`), so switching AI summaries off doesn't break it and switching Story Search off deletes only its own. The "you've seen what's sent" flag is stored outside the settings object: a settings change makes open pages re-apply their mode, which closes the card, and that would close the very card where the user just pressed "Search".
+
+## D60. Shortened links aren't followed
+Following bit.ly or t.co means a request to the shortener, from the browser (new permission prompts) or the server (server-side fetching of arbitrary addresses). Story Search does neither: it flags the link as shortened, ignores its code, and works from the link's text and surroundings. Known wrappers (Facebook `l.php`, Google `/url?q=`) carry the real address in the link itself and are unwrapped on the device.

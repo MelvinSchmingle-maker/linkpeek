@@ -32,6 +32,10 @@ Limits worth knowing: Chrome never lets extensions run on its own pages or the C
 
 No new permission. LinkPeek's server allows requests from any origin without cookies (CORS), so the extension can call it without site access, and Chrome shows no new warning. Like everything else, the request goes out without cookies or a referrer.
 
+## Story Search
+
+No new permission. The right-click item uses `contextMenus`, and the click grants `activeTab` for that tab, exactly like "Peek at this link". The request to LinkPeek's server comes from the service worker, which may call it without site access because the server allows any origin without cookies. Story Search never fetches the link or any other website from the browser.
+
 ## Reading articles (decided in Part 04)
 
 Reading an article means fetching it, and an extension can only fetch from sites it has access to. See `docs/decisions.md` D24 for the full reasoning. In short:

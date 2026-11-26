@@ -4,3 +4,5 @@ declare const __E2E__: boolean;
 declare const __LIVE__: boolean;
 /** Replaced at build time. LinkPeek's summary backend (Part 06), or '' when this build has none. */
 declare const __API_URL__: string;
+/** Replaced at build time. LinkPeek's Story Search endpoint, or '' when this build has none. */
+declare const __STORY_API_URL__: string;

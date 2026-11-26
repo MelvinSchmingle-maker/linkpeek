@@ -18,6 +18,7 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 06 AI summaries | Done. Deployed at `linkpeek-api.vercel.app`, Claude Haiku 5.5 by default. Measured in `docs/eval/part-06.md` |
 | 07 Clickbait tick, cross or neutral | Built. Headline checks with one reason each, from the headline alone or with the article. Measured on a labelled set and a held-out set (`docs/eval/part-07.md`); the held-out numbers are small, so read them as a first check, not a guarantee |
 | 08 Source card ("About this source") | Built. Publisher, dates, author, article type and links to primary sources, each with where it came from, plus a corrections-page check on request. Measured on the test pages and five real sites (`docs/compat/part-04-live.md`) |
+| Story Search | Built, not yet run live. Right-click a link > "LinkPeek – Story Search": finds the story elsewhere on the web without opening the link, and shows a short report with sources. Needs a search key on the backend before it can search (`docs/story-search.md`) |
 | 09 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
@@ -49,6 +50,8 @@ Then open http://127.0.0.1:4173/news-front.html in Chrome, click the LinkPeek to
 
 http://127.0.0.1:4173/retrieval.html has one link for each thing that can happen when LinkPeek reads a real page: a full article, a short item, a login wall, a paywall, a robot check, error codes, a slow site, a huge page, PDFs and more. These are read for real, not demo data.
 
+http://127.0.0.1:4173/story.html has links for Story Search. With the test build, its answers come from a stand-in on the test server, never a real search.
+
 http://127.0.0.1:4173/clickbait.html has headlines to check against their articles (Part 07), and http://127.0.0.1:4173/source.html has links to articles with source facts, and "About this source" on each card (Part 08).
 
 To refresh the screenshots in `docs/screenshots/`: `npm run screenshots`.
@@ -66,6 +69,9 @@ The app is small enough to change by hand. Each of these is one place:
 | The headline check's patterns and thresholds | `src/core/clickbait/rules.ts` (wording) and `check.ts` (combining) |
 | Which pages count as primary sources, or what counts as sponsored or opinion | `src/core/source/primary.ts` and `article-type.ts` |
 | The addresses the corrections check tries | `src/core/source/corrections.ts` (`CORRECTIONS_PATHS`) |
+| What Story Search reads from a page, and what it sends | `src/core/story/extract.ts` and `package.ts` |
+| Story Search's searches, matching rules and report rules | `server/src/story/queries.ts`, `match.ts`, `report.ts` |
+| Which search provider Story Search uses | `STORY_SEARCH_PROVIDER` on the backend (`server/src/story/providers/`) |
 
 After any change, `npm run build` again, then reload LinkPeek at `chrome://extensions` and try the test pages.
 
@@ -85,7 +91,7 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
 
-The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once.
+The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once. To use a Chromium that's already installed elsewhere instead, set `LINKPEEK_CHROMIUM_PATH` to its executable.
 
 ## Project layout
 
@@ -106,7 +112,7 @@ build-plan/              the staged build plan
 
 ## Configuration
 
-The extension needs none. Production builds use LinkPeek's deployed summary backend (`https://linkpeek-api.vercel.app/api/summarise`) for the optional AI summaries; set `LINKPEEK_API_URL` to use another one, or `LINKPEEK_API_URL=` to build without (`server/README.md`). The backend's own settings, including the Anthropic API key, are in `server/.env.example`. The key never goes in the extension.
+The extension needs none. Story Search calls `https://linkpeek-api.vercel.app/api/story` (set `LINKPEEK_STORY_API_URL` to use another, or empty to build without it); the backend needs a search key for it to work (`docs/story-search.md`). Production builds use LinkPeek's deployed summary backend (`https://linkpeek-api.vercel.app/api/summarise`) for the optional AI summaries; set `LINKPEEK_API_URL` to use another one, or `LINKPEEK_API_URL=` to build without (`server/README.md`). The backend's own settings, including the Anthropic API key, are in `server/.env.example`. The key never goes in the extension.
 
 ## Docs
 
@@ -115,3 +121,4 @@ The extension needs none. Production builds use LinkPeek's deployed summary back
 - `docs/privacy.md`: what data goes where (today: nowhere)
 - `docs/references.md`: official docs relied on
 - `docs/progress.md`: what each part delivered and what was tested
+- `docs/story-search.md`: Story Search, how it works, what it costs and what's verified
