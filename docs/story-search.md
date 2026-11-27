@@ -10,7 +10,8 @@ Built 26 Nov 2026 on branch `claude/eloquent-cerf-xnjbmt`. The existing preview 
 |---|---|
 | Extracting clues from the link and the page | Built and tested (21 unit tests on page shapes and addresses, browser tests on a test page) |
 | Tavily (free backup) | **Run live on 27 Nov 2026** with the owner's key: real searches, and the real search and matching for all five test cases (`docs/eval/story-live-search-only.md`). Live testing changed how it searches (D63). |
-| Exa (default), Brave (paid mode only) | Built and tested against the documented request and response shapes. Exa answered "no key sent" from this environment; **not yet run with a key**. |
+| Exa (default) | **Run live on 27 Nov 2026** with the owner's key: real searches, and the search and matching for all five cases. Each real story found in one search; measured cost $0.007 a search (`docs/eval/story-live-search-only.md`). |
+| Brave (paid mode only) | Built and tested against the documented shapes only. |
 | One search first, targeted follow-ups only when needed | Built and tested with stand-in search results |
 | Free mode: Exa then Tavily, stop with a clear message when both are used up | Built and tested with stand-ins and in the browser |
 | Matching, syndication grouping, report rules | Built and tested with stand-in search results and a stand-in AI |
@@ -132,7 +133,7 @@ Estimates from list prices read 26–27 Nov 2026, not measured. The live test re
 
 | Item | When the first search is enough | With two follow-ups (the most) |
 |---|---|---|
-| Exa (first search: $0.007 + 8 pages of extracts at $0.001; each follow-up: $0.007 + 5 pages) | $0.015 | $0.039 |
+| Exa (measured live: $0.007 a search, page extracts included) | $0.007 | $0.021 |
 | Tavily, if Exa's credit is used up (1 credit a search) | 1 credit | 3 credits |
 | Claude Haiku 5.5 (about 7,000 tokens in, 2,000 out) | about $0.002 | about $0.002 |
 
@@ -140,11 +141,11 @@ Estimates from list prices read 26–27 Nov 2026, not measured. The live test re
 
 | Item | Monthly cost | What it covers |
 |---|---|---|
-| Exa | $0 | $10 free credit: roughly 250 to 650 Story Searches |
+| Exa | $0 | $10 free credit: roughly 475 to 1,400 Story Searches (each real story in the live test took one search) |
 | Tavily | $0 | 1,000 free credits: roughly 330 to 1,000 Story Searches |
 | Vercel Hobby | $0 | Personal, non-commercial testing (see below) |
-| Claude Haiku 5.5 | about $0.002 a Story Search: **at most about $1.30 to $3.30 a month**, because the free searches run out first | Paid from your existing Anthropic account, capped by its monthly limit |
-| **Total** | **$0 for searching; about $1 to $3.30 for Claude** | About 600 to 1,600 Story Searches a month, then it stops until the 1st |
+| Claude Haiku 5.5 | about $0.002 a Story Search: **at most about $1.60 to $4.80 a month**, because the free searches run out first | Paid from your existing Anthropic account, capped by its monthly limit |
+| **Total** | **$0 for searching; a few dollars at most for Claude** | About 800 to 2,400 Story Searches a month, then it stops until the 1st |
 
 Claude is the one part that isn't free: Anthropic has no free API allowance. It's the same account and key the summaries already use.
 
@@ -153,7 +154,7 @@ Claude is the one part that isn't free: Anthropic has no free API allowance. It'
 | Item | Price | Per extra Story Search |
 |---|---|---|
 | Tavily pay-as-you-go | $0.008 a credit | $0.008 to $0.024 |
-| Exa paid credit | as above | $0.015 to $0.039 |
+| Exa paid credit | $0.007 a search (measured) | $0.007 to $0.021 |
 | Brave (needs a card) | $5 per 1,000 searches | $0.005 to $0.015 |
 | Claude | as above | about $0.002 |
 

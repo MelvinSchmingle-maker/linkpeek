@@ -290,3 +290,9 @@ The first real Tavily search, for "Pope Francis dies aged 88" with only a start 
 - **Node and the proxy.** In the cloud session, Node's fetch needs `NODE_USE_ENV_PROXY=1` to go through the proxy that adds the key; the live-test script sets it.
 After the change, the search-and-matching run found the right story for all three real-story cases.
 
+## D64. Matching changes from the live Exa run (27 Nov 2026)
+- **Only headline names are required.** The Louvre "Read more" card's teaser named the "Apollo Gallery", and that counted as a name every result had to contain. Live, good reports whose extracts left it out (two AP stories among them) scored too low, and only one close result survived three searches. Now names in the headline, its other wordings or the selection must appear for a strong match; names only in the teaser or nearby text can raise a result's score but never lower it, and word overlap is measured on the headline's words. After the change: France 24, AP and The Guardian in one search.
+- **A link with no name and no date is at best a possible match.** "Pop star found dead in hotel room" returned Whitney Houston's death in 2012 from three outlets. Nothing in such a link pins down which story it means, so the rules now cap it at "possible", and the card shows its caution.
+- **International organisations count as official sources** (`.int`: Interpol, WHO, the UN agencies), alongside government sites; seen live for the Louvre theft (Interpol, France's Ministry of Culture).
+- **Exa's real price** is $0.007 a search with extracts included (its own cost report), half the earlier estimate.
+

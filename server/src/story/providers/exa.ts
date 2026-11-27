@@ -7,13 +7,10 @@
  * arbitrary addresses, and no attempt to get past paywalls.
  *
  * Request and response shapes from Exa's API reference (POST /search, read
- * 26 Nov 2026). Prices from exa.ai/pricing the same day: an "auto" search is
- * $7 per 1,000 requests with up to 10 results, and highlights are $1 per
- * 1,000 pages. Exa reports what each request cost (costDollars.total), and
- * that figure is logged when present.
- *
- * Not yet run against the live API: no key was configured when this was
- * written. The tests use recorded shapes from the documentation.
+ * 26 Nov 2026). Exa reports what each request cost (costDollars.total), and
+ * that figure is logged. Measured live on 27 Nov 2026: a search as LinkPeek
+ * sends it (8 results with highlights) cost $0.007 in all, highlights
+ * included (costDollars: {"total":0.007,"search":{"neural":0.007}}).
  */
 import type { SearchQuery } from '../queries.js';
 import { isoDay } from '../text.js';
@@ -21,9 +18,9 @@ import { callJson, MAX_PASSAGE_CHARS, MAX_PASSAGES, plain, webUrl, type SearchHi
 
 export const EXA_URL = 'https://api.exa.ai/search';
 const TIMEOUT_MS = 8000;
-/** Estimate when Exa doesn't say: one auto search plus highlights for each result. */
+/** Used only if Exa doesn't report a cost: what one search cost when measured. */
 const SEARCH_USD = 0.007;
-const HIGHLIGHT_USD_PER_PAGE = 0.001;
+const HIGHLIGHT_USD_PER_PAGE = 0;
 
 export class ExaProvider implements SearchProvider {
   readonly name = 'exa';

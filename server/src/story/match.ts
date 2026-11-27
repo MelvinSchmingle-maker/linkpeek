@@ -29,8 +29,19 @@ const EARLIER_DAYS = 30;
 const LATER_DAYS = 120;
 
 export interface LinkProfile {
+  /** Every meaningful word the link's clues give. */
   terms: Set<string>;
+  /** The words that say what the story is: the headline (or its other wordings and the selection). Shares are measured on these. */
+  coreTerms: Set<string>;
+  /** Every name in the clues. */
   names: string[];
+  /**
+   * Names in the headline, its other wordings or the selection: who or what
+   * the story is about. Only these are required of a strong match. A detail
+   * named only in the teaser ("Apollo Gallery") can raise a result's score
+   * but not sink it: live testing found good reports whose extracts left it out.
+   */
+  keyNames: string[];
   date?: string;
 }
 
@@ -39,24 +50,27 @@ export interface Scored {
   score: number;
   wordShare: number;
   namesFound: number;
-  /** How many of the link's multi-word names ("Jamie Rivers", "Grand Meridian Hotel") it mentions: usually people and organisations. */
+  /** How many of the link's multi-word key names ("Jamie Rivers", "Grand Meridian Hotel") it mentions: usually people and organisations. */
   specificFound: number;
   /** The result dates from a different time than the link. */
   dateMismatch: boolean;
 }
 
 export function linkProfile(req: StoryRequest): LinkProfile {
-  const main = [req.headline?.text, ...(req.altHeadlines ?? []).map((a) => a.text), req.description?.text, req.slug, req.selection]
-    .filter(Boolean)
-    .join(' ');
+  const core = [req.headline?.text, ...(req.altHeadlines ?? []).map((a) => a.text), req.selection].filter(Boolean).join(' ');
+  const main = [core, req.description?.text, req.slug].filter(Boolean).join(' ');
   // Nearby text is noisy: only its names count, not its words, unless there's nothing else.
   const wordsFrom = main || req.context?.text || '';
   const nameText = [req.headline?.text, ...(req.altHeadlines ?? []).map((a) => a.text), req.description?.text, req.context?.text, req.selection, ...(req.keywords ?? [])]
     .filter(Boolean)
     .join('. ');
+  const coreTerms = termSet(core);
   return {
     terms: termSet(`${wordsFrom} ${(req.keywords ?? []).join(' ')}`),
+    // Without a headline of at least three words, every clue counts.
+    coreTerms: coreTerms.size >= 3 ? coreTerms : termSet(`${wordsFrom} ${(req.keywords ?? []).join(' ')}`),
     names: names(nameText),
+    keyNames: names([req.headline?.text, ...(req.altHeadlines ?? []).map((a) => a.text), req.selection].filter(Boolean).join('. ')),
     ...(req.date ? { date: req.date } : {}),
   };
 }
@@ -69,12 +83,17 @@ export function scoreHits(profile: LinkProfile, hits: SearchHit[]): Scored[] {
   const scored = hits.map((hit) => {
     const text = hitText(hit);
     const lower = text.toLowerCase();
-    const wordShare = coverage(profile.terms, termSet(text));
-    const found = profile.names.filter((n) => lower.includes(n.toLowerCase()));
-    const namesFound = found.length;
-    const specificFound = found.filter((n) => n.includes(' ')).length;
-    const nameShare = profile.names.length ? namesFound / profile.names.length : undefined;
-    const score = nameShare === undefined ? wordShare : 0.6 * wordShare + 0.4 * nameShare;
+    const wordShare = coverage(profile.coreTerms, termSet(text));
+    const has = (n: string) => lower.includes(n.toLowerCase());
+    const namesFound = profile.names.filter(has).length;
+    const keyFound = profile.keyNames.filter(has);
+    const specificFound = keyFound.filter((n) => n.includes(' ')).length;
+    const others = profile.names.filter((n) => !profile.keyNames.includes(n));
+    let score = wordShare;
+    // Names in the headline count fully, for and against.
+    if (profile.keyNames.length) score = 0.6 * wordShare + 0.4 * (keyFound.length / profile.keyNames.length);
+    // Names only in the teaser or nearby text can only help.
+    else if (others.length) score = Math.max(wordShare, 0.6 * wordShare + 0.4 * (others.filter(has).length / others.length));
     return { hit, score, wordShare, namesFound, specificFound, dateMismatch: false };
   });
   // When the link has no date, the best results' dates stand in for it.
@@ -104,9 +123,12 @@ export function capMatch(ai: MatchStatus, s: Scored, profile: LinkProfile): Matc
   if (ai === 'none' || s.score < MIN_MATCH_SCORE) return 'none';
   if (ai === 'strong') {
     if (s.dateMismatch) return 'possible';
+    // A link that gives no name and no date can't be pinned to one story: "Pop star found dead in hotel room"
+    // fits many (live testing returned Whitney Houston's death in 2012). At best a possible match.
+    if (!profile.names.length && !profile.date) return 'possible';
     if (profile.names.length && s.namesFound === 0) return 'possible';
-    // The link names someone specific: a result that doesn't mention them isn't clearly the same story.
-    if (profile.names.some((n) => n.includes(' ')) && s.specificFound === 0) return 'possible';
+    // The headline names someone specific: a result that doesn't mention them isn't clearly the same story.
+    if (profile.keyNames.some((n) => n.includes(' ')) && s.specificFound === 0) return 'possible';
     if (s.wordShare < 0.2 && s.namesFound === 0) return 'possible';
   }
   return ai;

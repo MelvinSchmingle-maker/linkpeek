@@ -280,6 +280,33 @@ describe('scenarios', () => {
     expect(report!.sources.every((s) => s.match === 'possible')).toBe(true);
   });
 
+  it('10d. a link with no name and no date can only be a possible match, whatever the AI says', async () => {
+    // Live, "Pop star found dead in hotel room" returned Whitney Houston's death in 2012 from three outlets.
+    const whitney = [
+      hit({ url: 'https://www.cbsnews.com/news/whitney-houston-died-in-beverly-hills-hotel-room/', title: 'Whitney Houston died in Beverly Hills hotel room', published: '2012-02-12', passages: ['The pop star was found dead in her hotel room.'] }),
+      hit({ url: 'https://www.npr.org/2012/02/12/146761831/whitney-houston-dies', title: 'Whitney Houston, pop star, found dead in hotel room', published: '2012-02-12', passages: ['Pop star found dead in hotel room in Beverly Hills.'] }),
+    ];
+    const model = new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }], facts: [] }));
+    const vague = req({ headline: { text: 'Pop star found dead in hotel room', from: 'link-text', confidence: 'high' }, slug: undefined, date: undefined, dateFrom: undefined });
+    const { report } = await run(returns(whitney), model, vague);
+    expect(report!.match).toBe('possible');
+    expect(report!.confidence).not.toBe('strong');
+  });
+
+  it('10e. a name only in the teaser can raise a result\'s score but not sink it', async () => {
+    // Live, good Louvre reports whose extracts left out "Apollo Gallery" (named only in the card's teaser) scored too low.
+    const louvre = req({
+      headline: { text: 'Louvre jewel heist: thieves steal crown jewels in daylight raid', from: 'card-heading', confidence: 'high' },
+      description: { text: 'Thieves used a lift to reach the Apollo Gallery and escaped within minutes.', from: 'card-teaser', confidence: 'medium' },
+      slug: undefined,
+      date: '2025-10-19',
+    });
+    const ap = hit({ url: 'https://apnews.com/article/louvre-heist', title: 'Thieves steal crown jewels from the Louvre in a daylight heist', published: '2025-10-19', passages: ['Thieves stole jewels from the Louvre in a raid that lasted minutes.'] });
+    const [scored] = scoreHits(linkProfile(louvre), [ap]);
+    expect(linkProfile(louvre).keyNames).toEqual([]);
+    expect(scored!.score).toBeGreaterThanOrEqual(0.35);
+  });
+
   it('11. conflicting reports: says so, and lists what is unclear', async () => {
     const other = hit({ url: 'https://tabloid.example.co.uk/2026/11/24/jamie-rivers-hotel', title: 'Jamie Rivers found dead in Paris hotel after party', published: '2026-11-24', passages: ['Jamie Rivers was found in a Paris hotel on Sunday night, a source claims.'] });
     const model = new FakeModel(
@@ -460,6 +487,8 @@ describe('source kinds', () => {
     ['https://www.met.police.uk/news/x', 'primary'],
     ['https://www.justice.gov/opa/pr/x', 'primary'],
     ['https://www.gov.uk/government/news/x', 'primary'],
+    ['https://www.interpol.int/en/News-and-Events/x', 'primary'],
+    ['https://www.culture.gouv.fr/actualites/x', 'primary'],
     ['https://x.com/someone/status/1', 'social'],
     ['https://www.reddit.com/r/news/comments/x', 'social'],
     ['https://www.theguardian.com/commentisfree/2026/nov/24/x', 'opinion'],

@@ -48,8 +48,8 @@ const SOCIAL = [
   'substack.com', 'tumblr.com', 'pinterest.com', 'weibo.com',
 ];
 
-/** Government, police, courts, parliaments, international bodies. */
-const PRIMARY_HOST = /(^|\.)(gov|gov\.[a-z]{2}|gouv\.[a-z]{2}|gob\.[a-z]{2}|govt\.nz|mil|police\.uk|nhs\.uk|parliament\.uk|judiciary\.uk|europa\.eu|un\.org|who\.int|nato\.int|uscourts\.gov|supremecourt\.gov)$/i;
+/** Government, police, courts, parliaments, and international organisations (.int: the UN agencies, WHO, NATO, Interpol). */
+const PRIMARY_HOST = /(^|\.)(gov|gov\.[a-z]{2}|gouv\.[a-z]{2}|gob\.[a-z]{2}|govt\.nz|mil|int|police\.uk|nhs\.uk|parliament\.uk|judiciary\.uk|europa\.eu|un\.org|uscourts\.gov|supremecourt\.gov)$/i;
 const PRIMARY_LABEL = /(^|\.)(police|polizei|court|courts|justice|parliament|senate|congress)\./i;
 
 /** A short list of news organisations. Unknown sites are "other", never a negative. */

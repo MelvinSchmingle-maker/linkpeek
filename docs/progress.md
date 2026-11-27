@@ -310,4 +310,5 @@ Strict free mode (D62), one search first with targeted follow-ups, Exa 402 tags 
 ### First live tests (27 Nov 2026)
 
 Owner's Tavily key saved as a network secret. Live: Tavily alone passes (with a stricter "about the death" check); the search-only step found the right story for the three real-story cases and nothing close for the made-up one (`docs/eval/story-live-search-only.md`). Live testing exposed and fixed an open-ended date window and Google News redirects (D63). About 20 of Tavily's 1,000 free credits used. Exa and Claude not yet live-tested.
+Then Exa, with the owner's key: the live Exa test passes; the search-only step with Exa first found Vatican News, Reuters and AP for the Pope Francis case, and after the matching fix in D64, France 24, AP and The Guardian for the Louvre card and CNN, BBC and USA Today from the address alone, one search each at $0.007; nothing close for the made-up story. Claude not yet live-tested.
 

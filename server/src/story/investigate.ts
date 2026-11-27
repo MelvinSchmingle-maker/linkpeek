@@ -92,7 +92,7 @@ export type Investigation = { ok: true; report: StoryReport; metrics: Metrics } 
  * link's time, and naming the person the link names.
  */
 export function assess(scored: Scored[], profile: LinkProfile): Assessment {
-  const specific = profile.names.some((n) => n.includes(' '));
+  const specific = profile.keyNames.some((n) => n.includes(' '));
   const relevant = scored.filter((s) => s.score >= GOOD_SCORE);
   const good = relevant.filter((s) => !s.dateMismatch && (!specific || s.specificFound > 0));
   if (!good.length) {
