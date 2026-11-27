@@ -31,6 +31,13 @@ export interface SearchOptions {
   limit: number;
   /** Only results published on or after this day ("YYYY-MM-DD"), when the link's date is known. */
   since?: string;
+  /**
+   * And on or before this day. Without an end, searches for an older story
+   * drift to the latest coverage of the same people (seen live with Tavily,
+   * 27 Nov 2026: "Pope Francis dies aged 88" returned this week's diary
+   * stories, not his death in April 2025).
+   */
+  until?: string;
   language?: string;
   /** Leave out results from these sites (to find independent reports of a story already found). */
   excludeDomains?: string[];

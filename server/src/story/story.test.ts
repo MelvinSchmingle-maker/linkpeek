@@ -675,9 +675,10 @@ describe('free providers: Exa first, Tavily as backup', () => {
     const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toBe(TAVILY_URL);
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer tvly-k');
+    // With a date window: "general", dates asked for (measured live to find the right outlets for older stories).
     expect(JSON.parse(init.body as string)).toEqual({
-      query: 'Jamie Rivers Paris hotel', topic: 'news', search_depth: 'basic', max_results: 5,
-      include_answer: false, include_raw_content: false, include_usage: true, start_date: '2026-11-10',
+      query: 'Jamie Rivers Paris hotel', topic: 'general', search_depth: 'basic', max_results: 5,
+      include_answer: false, include_raw_content: false, include_usage: true, include_published_date: true, start_date: '2026-11-10',
     });
     expect(out).toEqual({
       ok: true,
@@ -685,6 +686,27 @@ describe('free providers: Exa first, Tavily as backup', () => {
       costUsd: 0.008,
       hits: [{ url: 'https://www.bbc.co.uk/news/x', title: 'Jamie Rivers found dead', published: '2026-11-24', passages: ['French police say Rivers was found.', 'An inquiry is open.'] }],
     });
+  });
+
+  it('Tavily: an undated link searches "news" (recent stories); a window has an end date', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ results: [], usage: { credits: 1 } }));
+    const t = new TavilyProvider('k', fetchImpl as unknown as typeof fetch);
+    await t.search(q, { limit: 5 });
+    await t.search(q, { limit: 5, since: '2025-04-07', until: '2025-05-21' });
+    const bodies = fetchImpl.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
+    expect(bodies[0]).toMatchObject({ topic: 'news' });
+    expect(bodies[0]).not.toHaveProperty('start_date');
+    expect(bodies[1]).toMatchObject({ topic: 'general', start_date: '2025-04-07', end_date: '2025-05-21' });
+  });
+
+  it('the search window runs from 14 days before the link to 30 days after, never past today; redirect links are dropped', async () => {
+    const google = hit({ url: 'https://www.google.com/rss/articles/CBMiabc', title: 'Jamie Rivers found dead in Paris hotel', published: '2026-11-24' });
+    const provider = new FakeProvider(() => ({ ok: true, hits: [google, BBC, GUARDIAN], costUsd: 0.01, provider: 'fake' }));
+    const { out } = await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }] })));
+    expect(provider.options[0]).toMatchObject({ since: '2026-11-10', until: '2026-11-26' });
+    expect(out.ok && out.report.sources.map((s) => s.url)).not.toContain(google.url);
+    await run(provider, new FakeModel(ai({})), req({ date: '2025-04-21' }));
+    expect(provider.options.at(-1)).toMatchObject({ since: '2025-04-07', until: '2025-05-21' });
   });
 
   it('a used-up free credit is "quota" (Exa 402, Tavily 432 and 433)', async () => {

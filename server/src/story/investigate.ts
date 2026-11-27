@@ -2,7 +2,8 @@
  * One Story Search, from request to report:
  *
  *  1. One well-built search first (queries.ts): the headline plus the names
- *     that pin the story down.
+ *     that pin the story down. When the link's date is known, only results
+ *     from 14 days before it to 30 days after it (never past today).
  *  2. Judge what it found (assess). Enough means at least two independent
  *     reports of the same story (syndicated copies count once), or one from
  *     an official source, that mention the person the link names and date
@@ -30,7 +31,7 @@ import { storyUserMessage } from './prompt.js';
 import type { SearchFailure, SearchHit, SearchOptions, SearchProvider } from './providers/types.js';
 import { buildQueries, type QueryPlan, type QueryPurpose, type SearchQuery } from './queries.js';
 import { finalise, noMatch, noResults, reportFailed } from './report.js';
-import { canonicalKey, groupReports, hostOf, publisherName, sourceKind } from './sources.js';
+import { canonicalKey, groupReports, hostOf, isRedirectWrapper, publisherName, sourceKind } from './sources.js';
 import { daysBetween } from './text.js';
 
 /** Results asked for by the first search: enough to see the story from several sites. */
@@ -41,8 +42,10 @@ export const FOLLOW_UP_RESULTS = 5;
 export const DEFAULT_MAX_SEARCHES = 3;
 export const MAX_RESULTS = 12;
 export const MAX_CANDIDATES = 5;
-/** The search looks this far back from the link's date. */
+/** The search looks this far back from the link's date... */
 const LOOKBACK_DAYS = 14;
+/** ...and this far forward (follow-up reporting), never past today. */
+const LOOKAHEAD_DAYS = 30;
 /** Good results this far apart are probably about different events. */
 const SPREAD_DAYS = 90;
 
@@ -139,6 +142,7 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   const searchedFor = plan.main;
   const profile = linkProfile(req);
   const since = req.date ? lookback(req.date) : undefined;
+  const until = req.date ? lookahead(req.date, now) : undefined;
   const maxSearches = Math.max(1, Math.min(5, Math.floor(deps.maxSearches ?? DEFAULT_MAX_SEARCHES)));
 
   onStage({ stage: 'searching' });
@@ -155,6 +159,7 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
     metrics.searchUsd += o.costUsd;
     if (!metrics.providersUsed.includes(o.provider)) metrics.providersUsed.push(o.provider);
     for (const h of o.hits) {
+      if (isRedirectWrapper(h.url)) continue;
       const key = canonicalKey(h.url);
       const prev = merged.get(key);
       // The same page twice: keep the copy with more text.
@@ -164,7 +169,8 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   };
 
   if (!plan.first) return { ok: true, report: noResults(searchedFor, now), metrics };
-  const firstFailure = await runOne(plan.first, { limit: FIRST_RESULTS, ...(since ? { since } : {}) }, plan.first.purpose);
+  const window = { ...(since ? { since } : {}), ...(until ? { until } : {}) };
+  const firstFailure = await runOne(plan.first, { limit: FIRST_RESULTS, ...window }, plan.first.purpose);
   if (firstFailure) return { ok: false, code: failureCode([firstFailure]), metrics };
 
   let scored = scoreHits(profile, [...merged.values()]);
@@ -178,7 +184,7 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
     const found = verdict.shortfall === 'single-source' ? [...new Set(scored.filter((s) => s.score >= GOOD_SCORE).map((s) => hostOf(s.hit.url)))] : [];
     // Looking for the same story elsewhere keeps the date window; looking more widely drops it.
     const keepDate = q.news && verdict.shortfall !== 'nothing-relevant';
-    const failure = await runOne(q, { limit: FOLLOW_UP_RESULTS, ...(keepDate && since ? { since } : {}), ...(found.length ? { excludeDomains: found } : {}) }, `${verdict.shortfall}>${q.purpose}`);
+    const failure = await runOne(q, { limit: FOLLOW_UP_RESULTS, ...(keepDate ? window : {}), ...(found.length ? { excludeDomains: found } : {}) }, `${verdict.shortfall}>${q.purpose}`);
     // A follow-up that fails (allowance used up, service down) ends the searching; what was found still counts.
     if (failure) break;
     scored = scoreHits(profile, [...merged.values()]);
@@ -236,6 +242,14 @@ function failureCode(failures: SearchFailure[]): StoryErrorCode {
   if (real.every((f) => f === 'quota')) return 'out-of-credit';
   if (real.every((f) => f === 'timeout')) return 'search-timeout';
   return 'search-failed';
+}
+
+/** The link's date plus LOOKAHEAD_DAYS (from the end of the month for a month-only date), capped at today. */
+function lookahead(date: string, now: Date): string {
+  const base = /^\d{4}-\d{2}$/.test(date) ? new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0)) : new Date(Date.parse(date));
+  if (Number.isNaN(base.getTime())) return now.toISOString().slice(0, 10);
+  const end = new Date(Math.min(base.getTime() + LOOKAHEAD_DAYS * 86_400_000, now.getTime()));
+  return end.toISOString().slice(0, 10);
 }
 
 function lookback(date: string): string {

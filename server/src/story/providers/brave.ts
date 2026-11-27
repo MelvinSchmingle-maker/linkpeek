@@ -47,7 +47,7 @@ export class BraveProvider implements SearchProvider {
       extra_snippets: 'true',
       safesearch: 'moderate',
     });
-    if (opts.since) params.set('freshness', `${opts.since}to${this.today()}`);
+    if (opts.since || opts.until) params.set('freshness', `${opts.since ?? '2000-01-01'}to${opts.until ?? this.today()}`);
     const lang = opts.language?.slice(0, 2).toLowerCase();
     if (lang && /^[a-z]{2}$/.test(lang)) params.set('search_lang', lang);
     const base = query.news ? BRAVE_NEWS_URL : BRAVE_WEB_URL;

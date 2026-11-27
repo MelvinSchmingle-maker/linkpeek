@@ -307,3 +307,7 @@ Tavily added as a free backup behind Exa (both free monthly, no card), one searc
 
 Strict free mode (D62), one search first with targeted follow-ups, Exa 402 tags read, and a live test harness for real Exa, Tavily and Claude. `npm run check`: pass, 458 unit tests (5 skipped), backend 118 (9 live tests skipped without keys). Story Search browser tests 12/12, including the "free searches used up" message. Live tests: not run yet (no keys). A dry run without keys failed fast with clear messages and cost nothing; both services were reachable from this environment.
 
+### First live tests (27 Nov 2026)
+
+Owner's Tavily key saved as a network secret. Live: Tavily alone passes (with a stricter "about the death" check); the search-only step found the right story for the three real-story cases and nothing close for the made-up one (`docs/eval/story-live-search-only.md`). Live testing exposed and fixed an open-ended date window and Google News redirects (D63). About 20 of Tavily's 1,000 free credits used. Exa and Claude not yet live-tested.
+

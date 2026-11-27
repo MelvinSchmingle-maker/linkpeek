@@ -75,6 +75,21 @@ const NEWS: Record<string, string> = {
 const OPINION_PATH = /\/(opinion|opinions|comment|commentisfree|op-?ed|editorials?|columns?|columnists?|views|letters|blogs?)\//i;
 const OPINION_TITLE = /^(opinion|comment|analysis|view|editorial|column)\s*[:|–—-]/i;
 
+/**
+ * Links that only redirect to a story and hide its publisher (Google News's
+ * article links, seen in Tavily's news results with about 150 characters of
+ * text). Dropped: a source has to say who published it.
+ */
+export function isRedirectWrapper(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    return host === 'news.google.com' || /(^|\.)google\.[a-z.]+$/.test(host) || host === 'l.facebook.com' || host === 't.co';
+  } catch {
+    return true;
+  }
+}
+
 export function hostOf(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^(www|m|amp|mobile|edition|uk|us|eu)\./, '');

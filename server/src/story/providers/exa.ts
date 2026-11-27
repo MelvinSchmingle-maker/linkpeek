@@ -44,6 +44,7 @@ export class ExaProvider implements SearchProvider {
       type: 'auto',
       ...(query.news ? { category: 'news' } : {}),
       ...(opts.since ? { startPublishedDate: `${opts.since}T00:00:00.000Z` } : {}),
+      ...(opts.until ? { endPublishedDate: `${opts.until}T23:59:59.999Z` } : {}),
       ...(opts.excludeDomains?.length ? { excludeDomains: opts.excludeDomains.slice(0, 20) } : {}),
       contents: { highlights: { query: query.text, maxCharacters: 1200 } },
     };

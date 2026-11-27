@@ -281,3 +281,12 @@ The owner's review asked for three changes before any merge.
 - **Live tests before merging**: `server/src/story/live.test.ts`, real services only, in three steps; exhaustion made real by lowering each key's limit in the provider's dashboard. Results go to `docs/eval/story-live-*.md` for the owner to read.
 - **Vercel**: Hobby suits personal testing only; Pro before LinkPeek is offered with the intention of making money, not after the first sale.
 
+## D63. What the first live test changed (27 Nov 2026)
+The first real Tavily search, for "Pope Francis dies aged 88" with only a start date, returned this week's coverage of his diaries, Google News redirect links and LinkedIn pages, not his death in April 2025. The unit tests couldn't have shown this. Measured on the live API, with the owner's key:
+- **A date window with an end.** When the link's date is known, every provider now gets an end date too: 30 days after the link's date, never past today (Exa `endPublishedDate`, Tavily `end_date`, Brave's freshness range).
+- **Tavily "general" with dates for a dated link.** With the window, "news" gave the right story but mostly Google News redirects (about 150 characters, no publisher); "general" with `include_published_date` gave CNN, BBC, NPR, AP and Vatican News with real text. For an undated link "news" stays, because it keeps to recent stories, and on this week's story both found AFP and CNN.
+- **Redirect links dropped.** Google News article links hide the publisher, so results from Google's hosts (and other bare redirectors) are skipped before matching.
+- **Stricter live checks.** The live Tavily and Exa tests now require at least two results about the death itself, not just any mention of Francis.
+- **Node and the proxy.** In the cloud session, Node's fetch needs `NODE_USE_ENV_PROXY=1` to go through the proxy that adds the key; the live-test script sets it.
+After the change, the search-and-matching run found the right story for all three real-story cases.
+

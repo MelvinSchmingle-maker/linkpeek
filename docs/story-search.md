@@ -9,7 +9,8 @@ Built 26 Nov 2026 on branch `claude/eloquent-cerf-xnjbmt`. The existing preview 
 | Part | Status |
 |---|---|
 | Extracting clues from the link and the page | Built and tested (21 unit tests on page shapes and addresses, browser tests on a test page) |
-| Search provider interface: Exa (default), Tavily (free backup), Brave (paid mode only) | Built and tested against the request and response shapes in each provider's documentation. Both services were reached from this environment (they answered "no key"). **Never run with a key**: none configured yet. A live test harness is ready (`npm run test:story-live`). |
+| Tavily (free backup) | **Run live on 27 Nov 2026** with the owner's key: real searches, and the real search and matching for all five test cases (`docs/eval/story-live-search-only.md`). Live testing changed how it searches (D63). |
+| Exa (default), Brave (paid mode only) | Built and tested against the documented request and response shapes. Exa answered "no key sent" from this environment; **not yet run with a key**. |
 | One search first, targeted follow-ups only when needed | Built and tested with stand-in search results |
 | Free mode: Exa then Tavily, stop with a clear message when both are used up | Built and tested with stand-ins and in the browser |
 | Matching, syndication grouping, report rules | Built and tested with stand-in search results and a stand-in AI |
@@ -194,11 +195,14 @@ Nothing else is needed: the defaults are free mode, Exa then Tavily, at most 3 s
 
 `npm run test:story-live` (in `server/src/story/live.test.ts`) runs against the real services, with no imitations, and writes the results to `docs/eval/story-live-<step>.md` for you to read. Three steps:
 
+0. **search-only**: the real searching and matching for every case, without Claude. Shows which sources Story Search would hand to the AI. Run on 27 Nov 2026 with Tavily: right story for all three real-story cases (BBC, Vatican News, AP; Time, France 24; AP, BBC, Time), unrelated deaths for the vague headline, and nothing close for the made-up story.
 1. **normal**: a real Exa search; a real Tavily search on its own; then five Story Searches end to end with real Exa, Tavily and Claude: Pope Francis's death (21 April 2025); the Louvre jewel theft (19 October 2025) from a "Read more" card; the same story from the address alone; a vague "Pop star found dead in hotel room" (for you to judge); and a made-up story that must not produce a report. Checks: real results with page text, a strong sourced report for the real stories, every factual line sourced, and no report for the made-up one.
 2. **exa-exhausted**: lower the Exa key's budget in Exa's dashboard below what it has spent, so the real Exa answers "used up". Checks that Exa reports it, and that Tavily takes over and still produces the report.
 3. **both-exhausted**: also lower the Tavily key's limit. Checks that both report it, and that Story Search answers "out-of-credit" (the browser test checks the message the card shows for that answer).
 
 Then raise both limits again. Estimated use: step 1 about $0.10–0.25 of Exa's free credit, about 10 Tavily credits and about $0.02 of Claude; steps 2 and 3 almost nothing.
+
+In a Claude Code cloud session, Node's built-in fetch ignores the network proxy unless `NODE_USE_ENV_PROXY=1` is set, so the `test:live` script sets it (and `NO_PROXY=api.anthropic.com`, so the Claude call goes direct).
 
 How the keys reach the tests in this cloud session: Exa and Tavily through the secure key form (stored as network secrets, added by the network proxy, never shown to Claude). Claude through a `LINKPEEK_ANTHROPIC_API_KEY` environment variable, the way the summaries evaluation ran, because the proxy route for Anthropic would also affect Claude Code's own connection.
 
@@ -206,7 +210,7 @@ Not yet known: whether Exa's and Tavily's free plans let you set a per-key limit
 
 ## Still open
 
-1. **The live tests haven't run**: no keys yet. Nothing here has searched the real web or asked the real Claude.
+1. **Live tests, partly run**: Tavily is tested live, alone and through the whole search and matching. Still to run: Exa (its key isn't in yet) and Claude (needs `LINKPEEK_ANTHROPIC_API_KEY`), then the full end-to-end step and the two exhaustion steps.
 2. **Per-key limits on the free plans**: needed for the real exhaustion steps; see above.
 3. **Not merged**: `/api/story` exists only on this branch. The production build of the extension points at `linkpeek-api.vercel.app/api/story`, which only exists after the merge. Waiting for your go-ahead.
 4. **Vercel's list of commercial examples** couldn't be read from its page; the rule itself is clear (above).

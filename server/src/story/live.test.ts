@@ -5,6 +5,7 @@
  * Skipped by `npm test`. Run on purpose, in three steps:
  *
  *   npm --prefix server run test:live                              step "normal"
+ *   STORY_LIVE_STEP=search-only npm --prefix server run test:live     real searching and matching, no Claude
  *   STORY_LIVE_STEP=exa-exhausted npm --prefix server run test:live   after lowering the Exa key's budget
  *   STORY_LIVE_STEP=both-exhausted npm --prefix server run test:live  after also lowering the Tavily key's limit
  *
@@ -40,7 +41,11 @@ import { TavilyProvider } from './providers/tavily.js';
 import type { SearchOutcome } from './providers/types.js';
 
 const LIVE = process.env.STORY_LIVE === '1';
-const STEP = (process.env.STORY_LIVE_STEP ?? 'normal') as 'normal' | 'exa-exhausted' | 'both-exhausted';
+const STEP = (process.env.STORY_LIVE_STEP ?? 'normal') as 'normal' | 'search-only' | 'exa-exhausted' | 'both-exhausted';
+/** The window Story Search uses for a link dated 21 April 2025 (14 days before, 30 after). */
+const WINDOW = { since: '2025-04-07', until: '2025-05-21' };
+/** About the death itself, not later coverage that mentions Francis. */
+const ABOUT_DEATH = /\b(dies|died|death|dead)\b/i;
 const proxied = process.env.STORY_LIVE_PROXY_KEYS === '1' ? 'injected-by-proxy' : undefined;
 const exaKey = process.env.EXA_API_KEY?.trim() || proxied;
 const tavilyKey = process.env.TAVILY_API_KEY?.trim() || proxied;
@@ -124,7 +129,11 @@ const CASES: Case[] = [
 const lines: string[] = [];
 const write = (title: string) => {
   mkdirSync('../docs/eval', { recursive: true });
-  writeFileSync(`../docs/eval/story-live-${STEP}.md`, [`# ${title}`, '', `Run on ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC, step "${STEP}", model ${process.env.STORY_MODEL?.trim() || DEFAULT_STORY_MODEL}. Real Exa, Tavily and Claude; nothing imitated.`, '', ...lines, ''].join('\n'));
+  const what =
+    STEP === 'search-only'
+      ? 'Real searches (Exa first, Tavily when Exa has no key or no credit) and LinkPeek’s real matching. Claude is not called; the sources listed are the closest ones Story Search would hand to it. Search costs are list-price estimates; on the free plans they come out of the free credit.'
+      : `Real Exa, Tavily and Claude (${process.env.STORY_MODEL?.trim() || DEFAULT_STORY_MODEL}); nothing imitated.`;
+  writeFileSync(`../docs/eval/story-live-${STEP}.md`, [`# ${title}`, '', `Run on ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC, step "${STEP}". ${what}`, '', ...lines, ''].join('\n'));
 };
 
 function describeOutcome(o: SearchOutcome): string {
@@ -176,22 +185,21 @@ describe.skipIf(!LIVE)('LIVE Story Search (real services)', () => {
     });
 
     it('1. a real Exa search finds real, dated reports with page text', { timeout: TIMEOUT }, async () => {
-      const o = await exa.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 8, since: '2025-04-07' });
-      lines.push('## 1. Exa alone', '', `- ${describeOutcome(o)}`, ...(o.ok ? o.hits.slice(0, 5).map((h) => `  - [${h.title}](${h.url}) · ${h.published ?? 'no date'}`) : []), '');
+      const o = await exa.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 8, ...WINDOW });
+      lines.push('## 1. Exa alone', '', `- ${describeOutcome(o)}`, ...(o.ok ? o.hits.map((h) => `  - [${h.title}](${h.url}) · ${h.published ?? 'no date'}`) : []), '');
       expect(o.ok, describeOutcome(o)).toBe(true);
       if (!o.ok) return;
-      expect(o.hits.length).toBeGreaterThanOrEqual(3);
-      expect(o.hits.some((h) => /francis/i.test(h.title))).toBe(true);
+      expect(o.hits.filter((h) => /francis/i.test(h.title) && ABOUT_DEATH.test(h.title)).length).toBeGreaterThanOrEqual(2);
       expect(o.hits.filter((h) => h.passages.length).length).toBeGreaterThanOrEqual(2);
     });
 
     it('2. a real Tavily search works on its own', { timeout: TIMEOUT }, async () => {
-      const o = await tavily.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 8, since: '2025-04-07' });
-      lines.push('## 2. Tavily alone', '', `- ${describeOutcome(o)}`, ...(o.ok ? o.hits.slice(0, 5).map((h) => `  - [${h.title}](${h.url}) · ${h.published ?? 'no date'}`) : []), '');
+      const o = await tavily.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 8, ...WINDOW });
+      lines.push('## 2. Tavily alone', '', `- ${describeOutcome(o)}`, ...(o.ok ? o.hits.map((h) => `  - [${h.title}](${h.url}) · ${h.published ?? 'no date'}`) : []), '');
       expect(o.ok, describeOutcome(o)).toBe(true);
       if (!o.ok) return;
-      expect(o.hits.length).toBeGreaterThanOrEqual(3);
-      expect(o.hits.some((h) => /francis/i.test(h.title))).toBe(true);
+      expect(o.hits.filter((h) => /francis/i.test(h.title) && ABOUT_DEATH.test(h.title)).length).toBeGreaterThanOrEqual(2);
+      expect(o.hits.filter((h) => h.passages.length).length).toBeGreaterThanOrEqual(2);
     });
 
     describe('5. real stories, end to end (Exa, then Tavily if needed, then Claude)', () => {
@@ -219,6 +227,36 @@ describe.skipIf(!LIVE)('LIVE Story Search (real services)', () => {
     });
 
     it('writes the results for review', () => write('Story Search live test: normal'));
+  }
+
+  if (STEP === 'search-only') {
+    // The real searching and matching, without Claude: which sources Story Search would hand to the AI.
+    const noAi = { name: 'none (search only)', analyse: async () => ({ ok: false as const, code: 'misconfigured' as const }) };
+    describe('real searching and matching for each case (Claude not called)', () => {
+      for (const c of CASES) {
+        it(c.name, { timeout: TIMEOUT }, async () => {
+          const out = await investigate(c.req, { provider: chain, model: noAi });
+          lines.push(`## ${c.name}`, '', `Expected: ${c.expect}`, '');
+          if (!out.ok) {
+            lines.push(`- Failed: ${out.code}, searches ${out.metrics.searchPath.join(' → ')} ${out.metrics.searchErrors.join(', ')}`, '');
+            expect(out.ok, out.code).toBe(true);
+            return;
+          }
+          const r = out.report;
+          const m = out.metrics;
+          lines.push(
+            `- Searches: ${m.queries} (${m.searchPath.join(' → ')}), answered by ${m.providersUsed.join(', ') || 'none'}${m.searchErrors.length ? `, errors ${m.searchErrors.join(', ')}` : ''}`,
+            `- Search cost: $${m.searchUsd.toFixed(4)} (estimate)`,
+            `- Searched for: “${r.searchedFor}”`,
+            `- Results kept: ${m.results}; sent on to the AI: ${m.candidates}; closest shown: ${r.sources.length}`,
+            ...r.sources.map((s) => `  ${s.n}. [${s.title}](${s.url}) · ${s.publisher} · ${s.published ?? 'no date'} · ${s.kind}`),
+            '',
+          );
+          if (c.kind === 'story') expect(r.sources.length, 'close results for a real story').toBeGreaterThanOrEqual(2);
+        });
+      }
+    });
+    it('writes the results for review', () => write('Story Search live test: searching and matching only (no Claude)'));
   }
 
   if (STEP === 'exa-exhausted') {
