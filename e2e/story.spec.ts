@@ -207,13 +207,16 @@ test('a vague link: possible matches only, nobody named as the subject, and the 
     { timeout: 10_000 },
   );
   await expect(card.locator('.story-subject')).toHaveCount(0);
-  await expect(card.locator('.story-tag')).toHaveText(['Possible match', 'Partial evidence']);
-  // The explanation isn't repeated at the end; the older-story note is there.
-  await expect(card.locator('.story-notes li')).toHaveText(['Some results were about an earlier story with similar wording. They were left out.']);
+  await expect(card.locator('.story-tag')).toHaveText(['Possible match', 'Insufficient information']);
+  // Nothing written about any one story, so no old case reads as this one (D68).
+  for (const h of ['What happened?', 'Key details', 'What is confirmed?', 'Reported by one source']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
+  await expect(card).not.toContainText('Written by AI');
+  // The explanation isn't repeated at the end.
+  await expect(card.locator('.story-notes')).toHaveCount(0);
+  // The closest results, each marked possible and with its own date.
   await expect(card.getByRole('heading', { name: 'Possibly related sources' })).toBeVisible();
   await expect(card.locator('.story-source-tag', { hasText: 'Possible match' })).toHaveCount(2);
-  // An old story shows its old date: never presented as current.
-  await expect(card.locator('.story-source-meta').first()).toContainText('12 February 2012');
+  await expect(card.locator('.story-source-meta')).toContainText(['12 February 2012', '22 November 1997']);
   expect(page.url()).toBe(PAGE);
   expect(context.pages()).toHaveLength(pagesBefore);
 });

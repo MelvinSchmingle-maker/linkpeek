@@ -190,6 +190,7 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
   if (r.unclear.length) view.sections.push({ id: 'unclear', heading: S.unclear, kind: 'list', items: items(r.unclear) });
   view.sourcesHeading = r.match === 'possible' ? S.possibleSources : S.sources;
   const day = formatDay(r.checkedAt);
-  view.footnote = day ? `${S.byAi} ${S.checked(day)}` : S.byAi;
+  // "Written by AI" only when something was written; a vague link's card is a list of sources.
+  view.footnote = view.sections.length ? (day ? `${S.byAi} ${S.checked(day)}` : S.byAi) : day ? S.checked(day) : undefined;
   return view;
 }

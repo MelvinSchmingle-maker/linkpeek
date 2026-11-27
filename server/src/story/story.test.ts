@@ -299,10 +299,13 @@ describe('scenarios', () => {
     const vague = req({ headline: { text: 'Pop star found dead in hotel room', from: 'link-text', confidence: 'high' }, slug: undefined, date: undefined, dateFrom: undefined });
     const { report } = await run(returns(whitney), model, vague);
     expect(report!.match).toBe('possible');
-    expect(report!.confidence).not.toBe('strong');
+    expect(report!.confidence).toBe('insufficient');
     // No person put forward as the subject, and the reason given first.
     expect(report!.subject).toBeUndefined();
     expect(report!.notes[0]).toBe('vague-link');
+    // Nothing written about any one of them (D68): the results are listed, each with its date.
+    expect([...report!.whatHappened, ...report!.details, ...report!.confirmed, ...report!.reported]).toEqual([]);
+    expect(report!.sources.map((s) => [s.published, s.match])).toEqual([['2012-02-12', 'possible'], ['2012-02-12', 'possible']]);
   });
 
   it('10e. a name only in the teaser can raise a result\'s score but not sink it', async () => {

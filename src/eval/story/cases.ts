@@ -242,7 +242,7 @@ const vague: E2ECase = {
   covers: ['vague headlines', 'old incident not shown as current'],
   data: 'real',
   expected:
-    'Many deaths fit this headline. LinkPeek must not say who it is about, must not present an old case (the search finds Whitney Houston’s death in 2012) as this story, and must say why: the link gives no name or date. At most a possible match.',
+    'Many deaths fit this headline. LinkPeek must not say who it is about, must not present an old case (the search finds Whitney Houston’s death in 2012) as this story, and must say why: the link gives no name or date. At most a possible match: the closest results listed with their dates, and no report written about any one of them.',
   page: {
     url: 'https://celeb.example.com/',
     body: FEED('<li><a data-case href="https://celeb.example.com/p/1">Pop star found dead in hotel room</a></li><li><a href="https://celeb.example.com/p/2">Ten red-carpet looks from the weekend</a></li>'),
@@ -270,10 +270,13 @@ const vague: E2ECase = {
   expect: {
     outcome: ['report', 'no-match', 'report-failed'],
     match: ['possible', 'none'],
-    confidence: ['partial', 'insufficient'],
+    confidence: ['insufficient'],
     subject: { absent: true },
     notes: ['vague-link'],
+    forbiddenNotes: ['older-story'],
+    empty: ['whatHappened', 'details', 'confirmed', 'reported'],
   },
+  card: { excludes: ['What happened?', 'Written by AI', 'Whitney Houston was found dead'] },
 };
 
 const fabricated: E2ECase = {

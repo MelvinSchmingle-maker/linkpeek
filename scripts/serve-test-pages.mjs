@@ -136,18 +136,17 @@ async function standInStory(res, _url, req) {
     return res.end();
   }
   if (words.includes('pop star found dead')) {
-    // A link with no name and no date (live, the search found a death in 2012): possible only, no subject, and why.
+    // A link with no name and no date (live, the search found deaths from 1997, 2012 and 2024): the closest
+    // results as possible matches, each with its date, no subject, nothing written, and why (D68).
     send({
       report: storyReport({
         match: 'possible',
-        confidence: 'partial',
-        whatHappened: [{ text: 'A singer was found dead in a hotel room in 2012, according to these reports.', sources: [1, 2] }],
-        reported: [{ text: 'Police said there was no sign of foul play.', sources: [2] }],
+        confidence: 'insufficient',
         sources: [
           { ...storySource(1, 'Singer found dead in hotel room', 'Example News', 'http://127.0.0.1:4173/articles/ordinary.html'), published: '2012-02-12', match: 'possible' },
-          { ...storySource(2, 'Police: no foul play in hotel death', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'), published: '2012-02-13', match: 'possible' },
+          { ...storySource(2, 'Rock star found dead in Sydney hotel', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'), published: '1997-11-22', match: 'possible' },
         ],
-        notes: ['vague-link', 'older-story'],
+        notes: ['vague-link'],
         setAside: 3,
         searchedFor,
       }),

@@ -17,6 +17,8 @@
  *   more than snippets to go on.
  * - Sentences with "yesterday", "today" and the like are dropped: on a card
  *   read later they'd be wrong. Links and markup are removed from AI text.
+ * - A link with no name and no date gets no written report at all, only the
+ *   closest results as possible matches, each with its date (D68).
  * - Nothing specific may be added: a sentence (or the subject) that states a
  *   number, a name or a date that none of the kept sources contains is
  *   dropped (grounded()). A date worked out from a source's publication date,
@@ -256,9 +258,29 @@ export function finalise(input: FinaliseInput): StoryReport {
     };
   });
 
+  if (vague) {
+    // A link with no name and no date can't be pinned to one story: live, "Pop star found dead in hotel room"
+    // found deaths from 1997, 2012 and 2024. Write about none of them: a "What happened?" about one would put
+    // a person forward and could read as current news. List what was found instead, each with its date.
+    return {
+      ...base,
+      status: 'report',
+      match: 'possible',
+      confidence: 'insufficient',
+      whatHappened: [],
+      details: [],
+      confirmed: [],
+      reported: [],
+      unclear: [],
+      sources: sources.map((s) => ({ ...s, match: 'possible' as const })),
+      // "Older story left out" and "developing" are judged against a story; here there isn't one.
+      notes: notes.filter((n) => n !== 'older-story' && n !== 'developing'),
+    };
+  }
+
   // The AI's subject must not add a name or number either; with none, the link's own headline stands in.
   const aiSubject = cleanText(ai.subject);
-  const subject = vague ? undefined : aiSubject ? (supported(aiSubject) ? aiSubject : undefined) : req.headline?.text;
+  const subject = aiSubject ? (supported(aiSubject) ? aiSubject : undefined) : req.headline?.text;
   const written = whatHappened.length > 0 || facts.length > 0;
   if (!written) {
     // The AI's report stated things no source says: its matching can't be trusted either. Nothing is shown.
