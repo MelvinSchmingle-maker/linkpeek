@@ -11,6 +11,7 @@ import { clip, jaccard, names, termSet, terms, words } from './text.js';
 
 export type QueryPurpose =
   | 'exact-headline'
+  | 'headline'
   | 'headline-keywords'
   | 'names-and-event'
   | 'alternative-headline'
@@ -56,14 +57,21 @@ function keywords(text: string, max = MAX_KEYWORDS): string {
   return out.join(' ');
 }
 
-export function buildQueries(req: StoryRequest): QueryPlan {
+/**
+ * `exactPhrases`: whether the provider honours exact-wording searches. Exa
+ * and Tavily search by meaning, so for them the headline and its key words
+ * are the same search, and only one is sent.
+ */
+export function buildQueries(req: StoryRequest, { exactPhrases = true }: { exactPhrases?: boolean } = {}): QueryPlan {
   const all: SearchQuery[] = [];
   const add = (text: string | undefined, purpose: QueryPurpose, opts: { exact?: boolean; news?: boolean } = {}) => {
     const t = clip((text ?? '').replace(/["“”]/g, ''), MAX_QUERY_CHARS).replace(/…$/, '');
     if (terms(t).length < 2) return;
-    const q: SearchQuery = { text: t, purpose, news: opts.news ?? true, ...(opts.exact ? { exact: true } : {}) };
-    // The exact-wording query and its keyword version are different searches; everything else must differ in words.
-    if (all.some((o) => o.exact === q.exact && jaccard(termSet(o.text), termSet(q.text)) >= 0.8)) return;
+    const exact = Boolean(opts.exact && exactPhrases);
+    const q: SearchQuery = { text: t, purpose: opts.exact && !exactPhrases ? 'headline' : purpose, news: opts.news ?? true, ...(exact ? { exact: true } : {}) };
+    // With exact wording, the exact query and its keyword version are different searches.
+    // Otherwise every query must differ in its words.
+    if (all.some((o) => (!exactPhrases || Boolean(o.exact) === exact) && jaccard(termSet(o.text), termSet(q.text)) >= 0.8)) return;
     all.push(q);
   };
 

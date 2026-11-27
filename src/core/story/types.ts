@@ -158,5 +158,7 @@ export type StoryErrorCode =
   | 'search-failed'
   | 'search-timeout'
   | 'rate-limited'
+  /** The search service's free credit for this month is used up. */
+  | 'out-of-credit'
   | 'unavailable'
   | 'bad-response';

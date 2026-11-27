@@ -70,6 +70,7 @@ describe('runStorySearch', () => {
     [503, { error: 'disabled' }, 'not-configured'],
     [503, { error: 'not-configured' }, 'not-configured'],
     [404, {}, 'not-configured'],
+    [503, { error: 'out-of-credit' }, 'out-of-credit'],
     [500, { error: 'misconfigured' }, 'unavailable'],
     [400, { error: 'bad-request' }, 'unavailable'],
   ])('HTTP %i %j is "%s"', async (status, body, code) => {

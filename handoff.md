@@ -6,7 +6,7 @@ Read this first in a new window, then `todo.md`. Updated 21 Oct 2026 on `main`, 
 
 A new feature, built and tested against stand-ins, not yet run live. Right-click a link > "LinkPeek – Story Search": LinkPeek reads every clue the page gives about the link, shows what it will send the first time, searches the web through a new backend endpoint (`POST /api/story`, Exa by default, Brave as an alternative), checks which results are the same story, and shows a report with sources. Read `docs/story-search.md` first; decisions are D52 to D60.
 
-To make it work live: add `EXA_API_KEY` in Vercel, merge to `main` (which deploys), then try it on 20 to 30 real links. Open owner decisions are listed at the end of `docs/story-search.md` (the privacy change in D53, the model, Brave's storage terms).
+Decided 27 Nov 2026 at the owner's request, all free (D61): Exa first, Tavily as free backup, Claude Haiku 5.5, Vercel Hobby. To make it work live: the owner makes free Exa and Tavily accounts (no card), adds `EXA_API_KEY` and `TAVILY_API_KEY` in Vercel, then this branch is merged to `main` (which deploys) and tried on 20 to 30 real links. Steps and price breakdown: `docs/story-search.md`, "Setup: the free way".
 
 This machine's Chromium is newer than the one the pinned Playwright expects. Run browser tests with `LINKPEEK_CHROMIUM_PATH=/opt/pw-browsers/chromium` (see README). With it, 3 existing tests fail from timing before any Story Search change.
 

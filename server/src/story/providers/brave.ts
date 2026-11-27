@@ -1,5 +1,7 @@
 /**
- * Brave Search API (https://brave.com/search/api/), the alternative provider.
+ * Brave Search API (https://brave.com/search/api/), an optional provider.
+ * Not in the default setup: since 2026 even its free monthly credit needs a
+ * credit card at sign-up.
  * News queries use the News Search endpoint, broader ones Web Search. Each
  * result carries a description and up to five extra snippets, but not page
  * text, so reports from Brave rest on snippets.
@@ -26,6 +28,7 @@ const REQUEST_USD = 0.005;
 
 export class BraveProvider implements SearchProvider {
   readonly name = 'brave';
+  readonly exactPhrases = true;
 
   constructor(
     private readonly apiKey: string | undefined,
@@ -76,6 +79,6 @@ export class BraveProvider implements SearchProvider {
         passages: extra.slice(0, MAX_PASSAGES).map((p) => p.slice(0, MAX_PASSAGE_CHARS)),
       });
     }
-    return { ok: true, hits, costUsd: REQUEST_USD };
+    return { ok: true, hits, costUsd: REQUEST_USD, provider: this.name };
   }
 }

@@ -117,6 +117,7 @@ async function httpError(res: Response): Promise<StoryErrorCode> {
   const data = (await res.json().catch(() => undefined)) as { error?: unknown } | undefined;
   const code = typeof data?.error === 'string' ? data.error : '';
   if (res.status === 429 || code === 'rate-limited') return 'rate-limited';
+  if (code === 'out-of-credit') return 'out-of-credit';
   if (code === 'not-configured' || code === 'disabled' || res.status === 404) return 'not-configured';
   if (code === 'search-timeout' || res.status === 504) return 'search-timeout';
   if (code === 'search-failed') return 'search-failed';
@@ -139,6 +140,7 @@ function lineEvent(v: unknown): StoryEvent | undefined {
       'search-failed': 'search-failed',
       'search-timeout': 'search-timeout',
       'rate-limited': 'rate-limited',
+      'out-of-credit': 'out-of-credit',
     };
     return { kind: 'error', code: map[o.error] ?? 'unavailable' };
   }

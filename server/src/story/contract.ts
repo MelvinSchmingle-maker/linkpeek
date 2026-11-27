@@ -133,6 +133,8 @@ export type StoryErrorCode =
   | 'not-configured'
   | 'search-failed'
   | 'search-timeout'
+  /** The search service's free credit for this month is used up. */
+  | 'out-of-credit'
   | 'misconfigured';
 
 // ---------- Validation ----------

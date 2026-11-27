@@ -14,6 +14,8 @@ import { handleStory, type StoryDeps } from './handler.js';
 import { investigate } from './investigate.js';
 import { BraveProvider, BRAVE_NEWS_URL } from './providers/brave.js';
 import { EXA_URL, ExaProvider } from './providers/exa.js';
+import { ProviderChain, searchProviderFor } from './providers/index.js';
+import { TAVILY_URL, TavilyProvider } from './providers/tavily.js';
 import type { SearchHit, SearchOutcome, SearchProvider } from './providers/types.js';
 import { buildQueries, type SearchQuery } from './queries.js';
 import { groupReports, sourceKind } from './sources.js';
@@ -80,7 +82,7 @@ class FakeProvider implements SearchProvider {
     return this.answer(q, this.calls.length);
   }
 }
-const returns = (hits: SearchHit[]) => new FakeProvider(() => ({ ok: true, hits, costUsd: 0.01 }));
+const returns = (hits: SearchHit[]) => new FakeProvider(() => ({ ok: true, hits, costUsd: 0.01, provider: 'fake' }));
 
 class FakeModel implements StoryModel {
   readonly name = 'fake-model';
@@ -302,7 +304,7 @@ describe('scenarios', () => {
   });
 
   it('13b. one query failing while another works still gives a report', async () => {
-    const provider = new FakeProvider((_q, n) => (n === 1 ? { ok: false, code: 'upstream' } : { ok: true, hits: [BBC, GUARDIAN], costUsd: 0.01 }));
+    const provider = new FakeProvider((_q, n) => (n === 1 ? { ok: false, code: 'upstream' } : { ok: true, hits: [BBC, GUARDIAN], costUsd: 0.01, provider: 'fake' }));
     const { report } = await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }] })));
     expect(report!.status).toBe('report');
   });
@@ -447,6 +449,7 @@ describe('Exa adapter', () => {
     });
     expect(out).toEqual({
       ok: true,
+      provider: 'exa',
       costUsd: 0.009,
       hits: [{ url: 'https://www.bbc.co.uk/news/x', title: 'Jamie Rivers found dead', published: '2026-11-24', author: 'BBC News', passages: ['French police say Rivers was found.'] }],
     });
@@ -487,6 +490,7 @@ describe('Brave adapter', () => {
     expect((init.headers as Record<string, string>)['x-subscription-token']).toBe('key-9');
     expect(out).toEqual({
       ok: true,
+      provider: 'brave',
       costUsd: 0.005,
       hits: [{ url: 'https://www.bbc.co.uk/news/x', title: 'Jamie Rivers found dead', publisher: 'www.bbc.co.uk', published: '2026-11-24', description: 'Police say the "singer" was found.', passages: ['An inquiry is open.'] }],
     });
@@ -598,5 +602,90 @@ describe('POST /api/story', () => {
     expect(all).not.toContain('paper.example.org');
     expect(lines[0]).toMatchObject({ at: 'story', outcome: 'report', provider: 'fake', queries: 3, candidates: 2 });
     expect(typeof lines[0]!.costUsd).toBe('number');
+  });
+});
+
+describe('free providers: Exa first, Tavily as backup', () => {
+  const q: SearchQuery = { text: 'Jamie Rivers Paris hotel', purpose: 'headline', news: true };
+  const status = (n: number) => (async () => new Response('{}', { status: n })) as unknown as typeof fetch;
+
+  it('Tavily: sends the documented request and reads the documented response', async () => {
+    const fetchImpl = vi.fn(async () =>
+      Response.json({
+        query: 'x',
+        results: [
+          { title: 'Jamie Rivers found dead', url: 'https://www.bbc.co.uk/news/x', content: 'French police say Rivers was found. [...] An inquiry is open.', score: 0.9, published_date: 'Mon, 24 Nov 2026 09:00:00 GMT' },
+          { title: 'No address', url: 'ftp://x' },
+        ],
+        response_time: 1.1,
+        usage: { credits: 1 },
+      }),
+    );
+    const out = await new TavilyProvider('tvly-k', fetchImpl as unknown as typeof fetch).search(q, { limit: 5, since: '2026-11-10' });
+    const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe(TAVILY_URL);
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer tvly-k');
+    expect(JSON.parse(init.body as string)).toEqual({
+      query: 'Jamie Rivers Paris hotel', topic: 'news', search_depth: 'basic', max_results: 5,
+      include_answer: false, include_raw_content: false, include_usage: true, start_date: '2026-11-10',
+    });
+    expect(out).toEqual({
+      ok: true,
+      provider: 'tavily',
+      costUsd: 0.008,
+      hits: [{ url: 'https://www.bbc.co.uk/news/x', title: 'Jamie Rivers found dead', published: '2026-11-24', passages: ['French police say Rivers was found.', 'An inquiry is open.'] }],
+    });
+  });
+
+  it('a used-up free credit is "quota" (Exa 402, Tavily 432 and 433)', async () => {
+    expect(await new ExaProvider('k', status(402)).search(q, { limit: 1 })).toEqual({ ok: false, code: 'quota' });
+    expect(await new TavilyProvider('k', status(432)).search(q, { limit: 1 })).toEqual({ ok: false, code: 'quota' });
+    expect(await new TavilyProvider('k', status(433)).search(q, { limit: 1 })).toEqual({ ok: false, code: 'quota' });
+  });
+
+  it('when Exa’s free credit runs out, Tavily answers', async () => {
+    const tavily = vi.fn(async () => Response.json({ results: [{ title: 'T', url: 'https://t.example/a', content: 'x' }], usage: { credits: 1 } }));
+    const chain = new ProviderChain([new ExaProvider('k', status(402)), new TavilyProvider('k', tavily as unknown as typeof fetch)]);
+    expect(await chain.search(q, { limit: 5 })).toMatchObject({ ok: true, provider: 'tavily' });
+  });
+
+  it('both out of credit: Story Search says so plainly, not "try again in a minute"', async () => {
+    const chain = new ProviderChain([new ExaProvider('k', status(402)), new TavilyProvider('k', status(432))]);
+    expect((await run(chain, new FakeModel(ai({})))).out).toMatchObject({ ok: false, code: 'out-of-credit' });
+  });
+
+  it('one out of credit, the other only down: a passing problem, so trying again may work', async () => {
+    const chain = new ProviderChain([new ExaProvider('k', status(402)), new TavilyProvider('k', status(500))]);
+    expect((await run(chain, new FakeModel(ai({})))).out).toMatchObject({ ok: false, code: 'search-failed' });
+  });
+
+  it('a provider without a key is skipped; with no keys at all, it is "not configured"', async () => {
+    const tavily = vi.fn(async () => Response.json({ results: [], usage: { credits: 1 } }));
+    expect(await new ProviderChain([new ExaProvider(undefined), new TavilyProvider('k', tavily as unknown as typeof fetch)]).search(q, { limit: 5 })).toMatchObject({ ok: true });
+    expect((await run(new ProviderChain([new ExaProvider(undefined), new TavilyProvider(undefined)]), new FakeModel(ai({})))).out).toMatchObject({ ok: false, code: 'not-configured' });
+  });
+
+  it('the default setup is Exa then Tavily', () => {
+    expect(searchProviderFor({}).name).toBe('exa+tavily');
+    expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'brave' }).name).toBe('brave');
+    expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'tavily, exa' }).name).toBe('tavily+exa');
+  });
+
+  it('with a meaning-based provider, the headline is searched once, not twice', async () => {
+    const meaning = new FakeProvider(() => ({ ok: true, hits: [BBC, GUARDIAN, POLICE], costUsd: 0.012, provider: 'exa' }));
+    Object.assign(meaning, { exactPhrases: false });
+    await run(meaning, new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })) })));
+    expect(meaning.calls.map((c) => c.purpose)).toEqual(['headline', 'names-and-event']);
+    expect(meaning.calls.some((c) => c.exact)).toBe(false);
+    // A provider that honours exact wording still gets both.
+    expect(buildQueries(req(), { exactPhrases: true }).initial.map((c) => c.purpose)).toEqual(['exact-headline', 'headline-keywords', 'names-and-event']);
+  });
+
+  it('a report built on Brave results is not kept by the server', async () => {
+    const brave = new FakeProvider(() => ({ ok: true, hits: [BBC, GUARDIAN], costUsd: 0.005, provider: 'brave' }));
+    const d = deps({ provider: brave });
+    await (await handleStory(post(req()), d)).text();
+    await (await handleStory(post(req()), d)).text();
+    expect(brave.calls.length).toBe(6);
   });
 });

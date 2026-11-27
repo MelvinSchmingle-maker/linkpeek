@@ -298,3 +298,7 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 - The deployed endpoint: not deployed (this branch isn't `main`).
 - Showing and hiding the menu item from Settings (Playwright can't open Chrome's context menu).
 - A real screen reader, and Chrome by hand.
+
+### Free setup (27 Nov 2026)
+
+Tavily added as a free backup behind Exa (both free monthly, no card), one search instead of two for meaning-based services, and a plain "free searches used up" message (D61). `npm run check`: pass, 458 unit tests (5 skipped), backend 110. Story Search browser tests 11/11. Tavily, like Exa, is tested only against its documented request and response shapes; neither has run live.

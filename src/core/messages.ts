@@ -123,6 +123,7 @@ const STORY = {
     'search-failed': "The search service didn't answer. Try again in a minute.",
     'search-timeout': 'The search took too long. Try again.',
     'rate-limited': "You've run several Story Searches in a short time. Try again in a few minutes.",
+    'out-of-credit': "Story Search has used this month's free searches. It works again when they renew at the start of next month.",
     unavailable: "LinkPeek's server couldn't be reached. Try again later.",
     'bad-response': "LinkPeek's server sent an answer it couldn't read. Try again later.",
   } satisfies Record<StoryErrorCode, string>,

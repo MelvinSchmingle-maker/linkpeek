@@ -51,7 +51,7 @@ Email addresses and phone numbers are removed from all of that first. LinkPeek n
 - anything you've typed into the page, form fields or editable areas, or hidden text
 - the whole page
 
-LinkPeek's server turns these into search queries and sends the queries to a web search service (Exa by default, or Brave Search), which sees the queries but not you. It then sends what was sent plus the search results to Anthropic, whose Claude model compares them and writes the report, under Anthropic's API terms. The link itself is never opened, by your browser or by the server.
+LinkPeek's server turns these into search queries and sends the queries to a web search service (Exa, or Tavily when Exa can't answer), which sees the queries but not you. It then sends what was sent plus the search results to Anthropic, whose Claude model compares them and writes the report, under Anthropic's API terms. The link itself is never opened, by your browser or by the server.
 
 The server doesn't log what you searched for: one line per request with the outcome, timings, counts and estimated cost. It keeps the finished report (not your request, and not the search service's raw results) in its own memory for 10 minutes to 6 hours, so someone else asking about the same link gets it without a second search. Vercel sees your IP address, as for summaries, and it's used only for the rate limit. The Story Search install ID is separate from the summaries one: 128 random bits, replaced every 30 days, deleted when you switch Story Search off in Settings.
 

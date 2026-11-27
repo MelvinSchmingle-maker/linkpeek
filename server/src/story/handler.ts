@@ -51,6 +51,7 @@ const STATUS: Record<StoryErrorCode, number> = {
   'not-configured': 503,
   'search-failed': 502,
   'search-timeout': 504,
+  'out-of-credit': 503,
   misconfigured: 500,
 };
 
@@ -125,7 +126,9 @@ export async function handleStory(request: Request, deps: StoryDeps): Promise<Re
         if (result.ok) {
           outcome = result.report.status;
           // The AI being down is a passing problem: not cached, so trying again tries again.
-          if (result.report.status !== 'report-failed') deps.cache.set(key, result.report, ttlFor(result.report, new Date()));
+          // Brave's terms reserve storing results for custom plans, so a report built on Brave results isn't kept.
+          const brave = result.metrics.providersUsed.includes('brave');
+          if (result.report.status !== 'report-failed' && !brave) deps.cache.set(key, result.report, ttlFor(result.report, new Date()));
           send({ report: result.report });
         } else {
           outcome = result.code;

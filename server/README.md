@@ -15,14 +15,14 @@ The Anthropic API key lives here, in an environment variable, and never in the e
 
 ## Story Search: `POST /api/story`
 
-Investigates a link's story without opening it (`docs/story-search.md` has the full design). The extension sends what the page says about one link; this endpoint searches the web (Exa by default, Brave with `STORY_SEARCH_PROVIDER=brave`), sets aside results that aren't the same story, groups syndicated copies, asks Claude for a report in a fixed JSON shape, and checks it with rules the AI can't overrule (`src/story/report.ts`). The answer streams as JSON lines: `{"stage":"searching"}`, `{"stage":"analysing","found":4}`, `{"stage":"writing"}`, then `{"report":{...}}` or `{"error":"..."}`.
+Investigates a link's story without opening it (`docs/story-search.md` has the full design). The extension sends what the page says about one link; this endpoint searches the web (Exa, then Tavily when Exa can't answer or its free credit is used up; Brave optional), sets aside results that aren't the same story, groups syndicated copies, asks Claude for a report in a fixed JSON shape, and checks it with rules the AI can't overrule (`src/story/report.ts`). The answer streams as JSON lines: `{"stage":"searching"}`, `{"stage":"analysing","found":4}`, `{"stage":"writing"}`, then `{"report":{...}}` or `{"error":"..."}`.
 
-- **Needs** `EXA_API_KEY` (or `BRAVE_SEARCH_API_KEY` with Brave) in Vercel's environment, and the existing `ANTHROPIC_API_KEY`. Without a search key it answers 503 `not-configured`, and the extension says Story Search isn't set up.
+- **Needs** `EXA_API_KEY` and `TAVILY_API_KEY` (both free, no card; either one alone also works) in Vercel's environment, and the existing `ANTHROPIC_API_KEY`. Without a search key it answers `not-configured`, and the extension says Story Search isn't set up. When every free credit is used up it answers `out-of-credit`.
 - **Accepts** only the fields in `src/story/contract.ts`: the link's address without a query string or fragment, headline and other wordings, a teaser, up to 700 characters of nearby text, the address's words, a date, publisher, author, section, keywords, the user's selection, the language and an install ID. Anything else is a 400.
 - **Doesn't fetch** the link or any article. The search provider returns the passages.
 - **Rate limit:** the existing `summarise` rule, checked under `story:install:` and `story:ip:` keys, three times per request by default (`STORY_RATE_WEIGHT`), so with 30 per 10 minutes that's 10 Story Searches per install and per address.
 - **Logs** one line per request: outcome, timings, queries, results, model, tokens and estimated cost. Never the link or the search words.
-- **Cost:** about $0.03 to $0.04 a search with Exa, plus about $0.002 for Claude Haiku 5.5 (estimates from list prices, not measured).
+- **Cost:** free up to roughly 900 Story Searches a month (Exa's $10 and Tavily's 1,000 credits), plus about $0.002 each for Claude Haiku 5.5. Price breakdown in `docs/story-search.md`.
 - **Not yet run live**: no search key or Anthropic key was available when it was built. The tests use stand-ins.
 
 ## Run the tests

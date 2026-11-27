@@ -19,10 +19,11 @@ export interface SearchHit {
   passages: string[];
 }
 
-export type SearchFailure = 'misconfigured' | 'busy' | 'timeout' | 'upstream';
+/** "quota": the account's credit or plan limit is used up (on a free plan, until it renews). */
+export type SearchFailure = 'misconfigured' | 'quota' | 'busy' | 'timeout' | 'upstream';
 
 export type SearchOutcome =
-  | { ok: true; hits: SearchHit[]; costUsd: number }
+  | { ok: true; hits: SearchHit[]; costUsd: number; provider: string }
   | { ok: false; code: SearchFailure };
 
 export interface SearchOptions {
@@ -35,6 +36,12 @@ export interface SearchOptions {
 
 export interface SearchProvider {
   readonly name: string;
+  /**
+   * Whether the provider honours "exact wording" searches. Exa and Tavily
+   * search by meaning, so a headline and its key words find the same
+   * results: one query is sent instead of two, which halves the cost.
+   */
+  readonly exactPhrases?: boolean;
   search(query: SearchQuery, opts: SearchOptions): Promise<SearchOutcome>;
 }
 
@@ -82,6 +89,8 @@ export async function callJson(
   try {
     const res = await fetchImpl(url, { ...init, signal: controller.signal });
     if (res.status === 401 || res.status === 403) return { ok: false, code: 'misconfigured' };
+    // 402: payment required. 432 and 433: Tavily's plan and pay-as-you-go limits.
+    if (res.status === 402 || res.status === 432 || res.status === 433) return { ok: false, code: 'quota' };
     if (res.status === 429) return { ok: false, code: 'busy' };
     if (!res.ok) return { ok: false, code: 'upstream' };
     try {

@@ -1,5 +1,7 @@
 /**
- * Exa (https://exa.ai), the default provider. One request returns the
+ * Exa (https://exa.ai), the default provider. Free: $10 of credit a month,
+ * no card needed, so it can't be charged; when the credit runs out, Tavily
+ * takes over (index.ts). One request returns the
  * results and short highlights from each page, so LinkPeek's server never
  * fetches or scrapes article pages itself: no server-side fetching of
  * arbitrary addresses, and no attempt to get past paywalls.
@@ -25,6 +27,7 @@ const HIGHLIGHT_USD_PER_PAGE = 0.001;
 
 export class ExaProvider implements SearchProvider {
   readonly name = 'exa';
+  readonly exactPhrases = false;
 
   constructor(
     private readonly apiKey: string | undefined,
@@ -73,6 +76,6 @@ export class ExaProvider implements SearchProvider {
     }
     const reported = Number(data.costDollars?.total);
     const costUsd = Number.isFinite(reported) && reported >= 0 ? reported : SEARCH_USD + HIGHLIGHT_USD_PER_PAGE * hits.length;
-    return { ok: true, hits, costUsd };
+    return { ok: true, hits, costUsd, provider: this.name };
   }
 }

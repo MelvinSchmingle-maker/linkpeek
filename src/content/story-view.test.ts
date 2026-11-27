@@ -105,6 +105,9 @@ describe('story view', () => {
     expect(toStoryView({ kind: 'error', code: 'not-configured' })).toMatchObject({ message: "Story Search isn't set up in this version of LinkPeek." });
     expect(toStoryView({ kind: 'error', code: 'not-configured' }).retry).toBeUndefined();
     expect(toStoryView({ kind: 'insufficient' }).message).toMatch(/isn't enough information/);
+    // Out of free searches: says when it works again, and offers no pointless retry.
+    expect(toStoryView({ kind: 'error', code: 'out-of-credit' })).toMatchObject({ message: expect.stringMatching(/free searches.*renew/) });
+    expect(toStoryView({ kind: 'error', code: 'out-of-credit' }).retry).toBeUndefined();
   });
 
   it('dates read as dates, and a month alone never gains a day', () => {

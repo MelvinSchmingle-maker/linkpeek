@@ -16,8 +16,9 @@
  * before the first query, "analysing" while Claude reads the results, and
  * "writing" while the rules check its reply.
  *
- * Search spend is bounded: at most 4 queries of 6 results each, and the AI
- * sees at most 5 results, each cut to about 1,600 characters.
+ * Search spend is bounded: at most 5 queries of 5 results each (8 when only
+ * one runs first), and the AI sees at most 5 results, each cut to about
+ * 1,600 characters. With Exa or Tavily, usually 1 or 2 queries in all.
  */
 import { aiCostUsd, type StoryModel } from './analyse.js';
 import type { SourceKind, StoryErrorCode, StoryReport, StoryRequest } from './contract.js';
@@ -28,7 +29,10 @@ import { buildQueries, type SearchQuery } from './queries.js';
 import { finalise, noMatch, noResults, reportFailed } from './report.js';
 import { canonicalKey, groupReports, publisherName, sourceKind } from './sources.js';
 
-export const RESULTS_PER_QUERY = 6;
+/** Results asked for per query. Exa includes up to 10 in its price but charges per page of highlights. */
+export const RESULTS_PER_QUERY = 5;
+/** When only one query runs first, it asks for a few more, so one syndicated story can't fill every slot. */
+export const RESULTS_SINGLE_QUERY = 8;
 export const MAX_RESULTS = 12;
 export const MAX_CANDIDATES = 5;
 /** How many results must look like the story before no broader search is needed. */
@@ -47,6 +51,8 @@ export interface InvestigateDeps {
 /** What the log line records. Counts and money only, never what was searched for. */
 export interface Metrics {
   provider: string;
+  /** Which providers actually answered (with a chain, the backup may have). */
+  providersUsed: string[];
   queries: number;
   results: number;
   candidates: number;
@@ -62,8 +68,8 @@ export type Investigation = { ok: true; report: StoryReport; metrics: Metrics } 
 
 export async function investigate(req: StoryRequest, deps: InvestigateDeps, onStage: (s: Stage) => void = () => undefined): Promise<Investigation> {
   const now = deps.now?.() ?? new Date();
-  const plan = buildQueries(req);
-  const metrics: Metrics = { provider: deps.provider.name, queries: 0, results: 0, candidates: 0, searchUsd: 0, aiUsd: 0 };
+  const plan = buildQueries(req, { exactPhrases: deps.provider.exactPhrases ?? true });
+  const metrics: Metrics = { provider: deps.provider.name, providersUsed: [], queries: 0, results: 0, candidates: 0, searchUsd: 0, aiUsd: 0 };
   const searchedFor = plan.main;
   const profile = linkProfile(req);
   const since = req.date ? lookback(req.date) : undefined;
@@ -72,10 +78,9 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   const merged = new Map<string, SearchHit>();
   const failures: SearchFailure[] = [];
   const run = async (queries: SearchQuery[], withSince: boolean) => {
+    const limit = queries.length === 1 ? RESULTS_SINGLE_QUERY : RESULTS_PER_QUERY;
     const outcomes = await Promise.all(
-      queries.map((q) =>
-        deps.provider.search(q, { limit: RESULTS_PER_QUERY, ...(withSince && since ? { since } : {}), ...(req.language ? { language: req.language } : {}) }),
-      ),
+      queries.map((q) => deps.provider.search(q, { limit, ...(withSince && since ? { since } : {}), ...(req.language ? { language: req.language } : {}) })),
     );
     metrics.queries += queries.length;
     for (const o of outcomes) {
@@ -84,6 +89,7 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
         continue;
       }
       metrics.searchUsd += o.costUsd;
+      if (!metrics.providersUsed.includes(o.provider)) metrics.providersUsed.push(o.provider);
       for (const h of o.hits) {
         const key = canonicalKey(h.url);
         const prev = merged.get(key);
@@ -150,8 +156,10 @@ function pickCandidates(scored: Scored[]): Scored[] {
 }
 
 function failureCode(failures: SearchFailure[]): StoryErrorCode {
-  if (failures.includes('misconfigured')) return 'not-configured';
-  if (failures.every((f) => f === 'timeout')) return 'search-timeout';
+  if (failures.every((f) => f === 'misconfigured')) return 'not-configured';
+  const real = failures.filter((f) => f !== 'misconfigured');
+  if (real.every((f) => f === 'quota')) return 'out-of-credit';
+  if (real.every((f) => f === 'timeout')) return 'search-timeout';
   return 'search-failed';
 }
 

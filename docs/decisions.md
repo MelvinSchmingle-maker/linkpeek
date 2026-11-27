@@ -263,3 +263,12 @@ Story Search has its own random install ID (`storyInstallId`), so switching AI s
 
 ## D60. Shortened links aren't followed
 Following bit.ly or t.co means a request to the shortener, from the browser (new permission prompts) or the server (server-side fetching of arbitrary addresses). Story Search does neither: it flags the link as shortened, ignores its code, and works from the link's text and surroundings. Known wrappers (Facebook `l.php`, Google `/url?q=`) carry the real address in the link itself and are unwrapped on the device.
+
+## D61. The free setup: Exa, then Tavily (27 Nov 2026)
+The owner asked for everything to be free or the cheapest option, and for the decisions to be made for them. So:
+- **Search:** Exa first, Tavily as an automatic backup (`STORY_SEARCH_PROVIDER=exa,tavily`, the default). Both have a free monthly allowance with no card (Exa $10, Tavily 1,000 credits), which together cover roughly 900 Story Searches a month, and without a card neither can charge. When one fails or runs out, the next answers. When all are out of credit, the card says so plainly and that it works again when they renew. Brave is no longer in the default: since 2026 its free credit needs a card. It's still available.
+- **Fewer searches:** Exa and Tavily search by meaning, so the headline and its key words are one search, not two. A typical Story Search now makes one or two searches, not two or three, and asks for 5 results each (8 when only one runs). About $0.015–0.024 at Exa's list price instead of $0.03–0.04.
+- **Model:** Claude Haiku 5.5 (D57), about $0.002 a search.
+- **Hosting:** Vercel Hobby, free, while LinkPeek is non-commercial. Pro ($20 a month) only when it makes money.
+- **Privacy:** D53 as built.
+Reversible: each is one environment variable. Price breakdown in `docs/story-search.md`.
