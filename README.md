@@ -18,7 +18,7 @@ A Chrome extension that helps you decide whether a link is worth opening.
 | 06 AI summaries | Done. Deployed at `linkpeek-api.vercel.app`, Claude Haiku 5.5 by default. Measured in `docs/eval/part-06.md` |
 | 07 Clickbait tick, cross or neutral | Built. Headline checks with one reason each, from the headline alone or with the article. Measured on a labelled set and a held-out set (`docs/eval/part-07.md`); the held-out numbers are small, so read them as a first check, not a guarantee |
 | 08 Source card ("About this source") | Built. Publisher, dates, author, article type and links to primary sources, each with where it came from, plus a corrections-page check on request. Measured on the test pages and five real sites (`docs/compat/part-04-live.md`) |
-| Story Search | Built, not yet run live. Right-click a link > "LinkPeek – Story Search": finds the story elsewhere on the web without opening the link, and shows a short report with sources. Needs a search key on the backend before it can search (`docs/story-search.md`) |
+| Story Search | Built; searching and matching run live on real news, Claude's reports not yet. Right-click a link > "LinkPeek – Story Search": finds the story elsewhere on the web without opening the link, and shows a short report with sources. Needs a search key on the backend before it can search (`docs/story-search.md`) |
 | 09 onward | Not started |
 
 The build plan is in `build-plan/`. Each file there is one stage.
@@ -89,7 +89,11 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md`. Also checks the headline check on `eval/headlines.json` and `eval/headlines-holdout.json`, writing `docs/eval/part-07.md` |
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
-| `npm run test:story-live` | Story Search against the real Exa, Tavily and Claude. **Uses free search credit and a little Claude.** Needs keys; writes `docs/eval/story-live-normal.md`. See `docs/story-search.md`, "Live tests" |
+| `npm run test:story-e2e` | Story Search end to end, from a link on a page to the card, on recorded real search results and synthetic cases. Offline and free; also part of `npm test` |
+| `npm run test:story-e2e:record` | Records real Exa/Tavily results for real cases that have none yet. **Uses free search credit, once per case** |
+| `npm run test:story-e2e:live` | The same cases with the real Claude. **Costs a little** (stops before $0.25). Needs `LINKPEEK_ANTHROPIC_API_KEY` |
+| `npm run test:story-e2e:report` | Runs every suite and writes `docs/eval/story-live-e2e.md`. See `docs/story-search.md`, "Testing and evaluation" |
+| `npm run test:story-live` | A quick look at the real Exa, Tavily and Claude, without recordings. **Uses free search credit and a little Claude** |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once. To use a Chromium that's already installed elsewhere instead, set `LINKPEEK_CHROMIUM_PATH` to its executable.

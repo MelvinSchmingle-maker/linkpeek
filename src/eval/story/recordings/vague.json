@@ -1,0 +1,106 @@
+{
+  "case": "vague",
+  "recordedAt": "2026-11-27T18:50:24.710Z",
+  "today": "2026-11-27",
+  "note": "Real Exa/Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Pop star found dead in hotel room",
+          "numResults": 8,
+          "type": "auto",
+          "category": "news",
+          "contents": {
+            "highlights": {
+              "query": "Pop star found dead in hotel room",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Whitney Houston died in Beverly Hills hotel room - CBS News",
+            "url": "https://www.cbsnews.com/news/whitney-houston-died-in-beverly-hills-hotel-room/",
+            "publishedDate": "2012-02-12T07:33:04.000Z",
+            "highlights": [
+              "# Whitney Houston died in Beverly Hills hotel room February 12, 2012 / 2:33 AM EST / CBS/AP Updated Feb. 12, 2012, 2:01 AM ET LOS ANGELES - Beverly Hills, Calif., police say detectives are investigating after pop icon Whitney Houston died in her room on the fourth floor of the Beverly Hilton. Beverly Hills police Lt.…"
+            ]
+          },
+          {
+            "title": "Whitney Houston Drowned, Coroner Says",
+            "url": "https://www.nytimes.com/2012/03/23/arts/music/whitney-houston-drowned-coroner-says.html",
+            "publishedDate": "2012-03-22T22:59:14.000Z",
+            "highlights": [
+              "LOS ANGELES — The singer Whitney Houston, who was found dead in her hotel room on the eve of the Grammy Awards last month, accidentally drowned in a bathtub, the Los Angeles County coroner said on Thursday. Cocaine and heart disease also played a role in her death, the coroner said. Ms. Houston, 48, was found…"
+            ]
+          },
+          {
+            "title": "Whitney Houston, A 'Perfect Instrument,' Dies : NPR",
+            "url": "https://www-s1.npr.org/2012/02/12/146761831/whitney-houston-a-perfect-instrument-has-died",
+            "publishedDate": "2012-02-12T13:09:00.000Z",
+            "author": "Karen Grigsby Bates",
+            "highlights": [
+              "Pop diva Whitney Houston was found dead in her Beverly Hills hotel room on the eve of the 54th Grammy Awards. ... Pop diva Whitney Houston was found dead in her Beverly Hills hotel room on the eve of the 54th Grammy Awards. On the eve of the 54th Grammy Awards in Los Angeles, the conversation was all about Whitney…"
+            ]
+          },
+          {
+            "title": "BBC News | World | INXS singer found dead",
+            "url": "http://news.bbc.co.uk/2/hi/33774.stm",
+            "publishedDate": "1997-11-22T00:00:00.000Z",
+            "highlights": [
+              "Saturday, November 22, 1997 Published at 15:11 GMT World INXS singer found dead INXS: Sold millions of albums The Australian rock star, Michael Hutchence, lead singer with the pop group INXS, has been found dead in an exclusive hotel in Sydney. Reports say the star was found dead in his room at the Ritz Carlton Hotel,…"
+            ]
+          },
+          {
+            "title": "Vesta Williams: '80s R&B diva found dead in a hotel room at 53 - Los Angeles Times",
+            "url": "https://www.latimes.com/archives/blogs/ministry-of-gossip/story/2011-09-23/vesta-williams-80s-r-b-diva-found-dead-in-a-hotel-room-at-53",
+            "publishedDate": "2011-09-23T19:48:41.000Z",
+            "author": "Christie D’Zurilla",
+            "highlights": [
+              "# Vesta Williams: ‘80s R&B diva found dead in a hotel room at 53 By Christie D’Zurilla Staff Writer Follow Sept. 23, 2011 12:48 PM PT This article was originally on a blog post platform and may be missing photos, graphics or links. See About archive blog posts. Vesta Williams, the R&B singer who rose to fame in the…"
+            ]
+          },
+          {
+            "title": "Smashed hotel room, narcotics found as Liam Payne death probe unfolds | Reuters",
+            "url": "https://www.reuters.com/world/americas/argentina-police-say-found-total-disorder-search-liam-paynes-hotel-room-2024-10-17/",
+            "publishedDate": "2024-10-17T14:09:05.000Z",
+            "author": "Eliana Raszewski",
+            "highlights": [
+              "By Eliana Raszewski October 17, 2024 8:27 PM UTC Updated October 17, 2024 ... BUENOS AIRES, Oct 17 (Reuters) - One Direction pop star Liam Payne died of multiple traumas and internal bleeding after plunging from a hotel balcony in Buenos Aires, prosecutors said on Thursday, adding an initial search suggested the fall…"
+            ]
+          },
+          {
+            "title": "INXS Singer Found Dead In Sydney Hotel Room",
+            "url": "https://www.rollingstone.com/music/music-news/inxs-singer-found-dead-in-sydney-hotel-room-77945/",
+            "publishedDate": "1997-11-22T05:00:00.000Z",
+            "author": "Isaac Josephson",
+            "highlights": [
+              "### Isaac Josephson November 22, 1997 INXS lead singer Michael Hutchence was found dead in a Sydney, Australia hotel room shortly before noon local time on Saturday, Nov. 22. After Hutchence failed to appear for a morning appointment with the Australian Broadcasting Corporation, a Ritz Carlton employee entered and…"
+            ]
+          },
+          {
+            "title": "Music world stunned at Whitney Houston's death - ABC News",
+            "url": "https://www.abc.net.au/news/2012-02-12/tribute-planned-for-whitney-houston/3825682",
+            "publishedDate": "2012-02-12T10:16:15.000Z",
+            "highlights": [
+              "A tribute to Whitney Houston is planned at the Grammys, after the award-winning singer and actress died suddenly in a US hotel on the eve of the music awards ceremony. Houston died aged 48 on Saturday (local time), triggering shock and a wave of tributes as music stars gathered in Los Angeles for their annual big…"
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    }
+  ]
+}

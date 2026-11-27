@@ -1,0 +1,108 @@
+{
+  "case": "pope",
+  "recordedAt": "2026-11-27T18:50:15.259Z",
+  "today": "2026-11-27",
+  "note": "Real Exa/Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Pope Francis dies aged 88",
+          "numResults": 8,
+          "type": "auto",
+          "category": "news",
+          "startPublishedDate": "2025-04-07T00:00:00.000Z",
+          "endPublishedDate": "2025-05-21T23:59:59.999Z",
+          "contents": {
+            "highlights": {
+              "query": "Pope Francis dies aged 88",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Pope Francis has died on Easter Monday aged 88 - Vatican News",
+            "url": "https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-dies-on-easter-monday-aged-88.html",
+            "publishedDate": "2025-04-21T07:58:00.000Z",
+            "highlights": [
+              "# Pope Francis has died on Easter Monday aged 88 Pope Francis died on Easter Monday, April 21, 2025, at the age of 88 at his residence in the Vatican's Casa Santa Marta. By Devin Watkins At 9:45 AM, Cardinal Kevin Farrell, Camerlengo of the Holy Roman Church, announced the death of Pope Francis from the Casa Santa…"
+            ]
+          },
+          {
+            "title": "Pope Francis, first Latin American pontiff, dies after stroke and cardiac arrest | Reuters",
+            "url": "https://www.reuters.com/world/pope-francis-has-died-vatican-says-video-statement-2025-04-21/",
+            "publishedDate": "2025-04-21T07:55:50.000Z",
+            "author": "Joshua McElwee, Crispian Balmer",
+            "highlights": [
+              "VATICAN CITY, April 21 (Reuters) - Pope Francis, the first Latin American leader of the Roman Catholic Church, died on Monday after suffering a stroke and cardiac arrest, the Vatican said, ending an often turbulent reign in which he sought to overhaul an ancient and divided institution. He was 88, and had suffered…"
+            ]
+          },
+          {
+            "title": "Pope Francis, first Latin American pontiff, dies at 88 | AP News",
+            "url": "https://apnews.com/article/vatican-pope-francis-dead-01ca7d73c3c48d25fd1504ba076e2e2a",
+            "publishedDate": "2025-04-21T07:57:28.000Z",
+            "author": "Nicole Winfield",
+            "highlights": [
+              "Updated 2:14 PM AKST, April 21, 2025 VATICAN CITY (AP) — Pope Francis, history’s first Latin American pontiff who charmed the world with his humble style and concern for the poor but alienated conservatives with critiques of capitalism and climate change, died Monday. He was 88. The Vatican said Francis died of a…"
+            ]
+          },
+          {
+            "title": "Declaration of the death of His Holiness Francis",
+            "url": "https://press.vatican.va/content/salastampa/en/bollettino/pubblico/2025/04/21/250421d.html",
+            "publishedDate": "2025-04-21T00:00:00.000Z",
+            "highlights": [
+              "Declaration of the death of His Holiness Francis Declaration of the death of His Holiness Francis, 21.04.2025 Vatican City, 21 April 2025 DECLARATION OF DEATH OF HIS HOLINESS FRANCIS I hereby certify that His Holiness Francis (Jorge Mario Bergoglio) born in Buenos Aires (Argentina) on December 17, 1936, resident in…"
+            ]
+          },
+          {
+            "title": "Pope Francis died from a stroke followed by heart failure, Vatican says | Pope Francis | The Guardian",
+            "url": "https://www.theguardian.com/world/2025/apr/21/pope-francis-died-from-a-stroke-followed-by-heart-failure-vatican-says",
+            "publishedDate": "2025-04-21T18:58:27.000Z",
+            "author": "Angela Giuffrida",
+            "highlights": [
+              "The 88-year-old pope, revered by millions of Catholics around the world, died at 7.35am in his apartment at Casa Santa Marta on Monday. His cause of death was confirmed through an ECG test, the Vatican said."
+            ]
+          },
+          {
+            "title": "In Memoriam: Pope Francis (1936-2025) | National Archives",
+            "url": "https://www.archives.gov/news/articles/pope-francis-memoriam",
+            "publishedDate": "2025-04-21T19:50:09.000Z",
+            "highlights": [
+              "# In Memoriam: Pope Francis (1936-2025) ... Pope Francis died at age 88 on April 21, 2025, in Vatican City. He was born on December 17, 1936, in Buenos Aires, Argentina, and had been head of the Roman Catholic Church since March 13, 2013."
+            ]
+          },
+          {
+            "title": "Pope's death due to stroke and irreversible cardiocirculatory collapse - Vatican News",
+            "url": "https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-death-due-to-stroke-and-irreversible-cardiocircula.html",
+            "publishedDate": "2025-04-21T18:02:00.000Z",
+            "highlights": [
+              "# Pope's death due to stroke and irreversible cardiocirculatory collapse The Director of the Directorate of Health and Hygiene of the Vatican City State, Dr. Andrea Arcangeli, releases the official medical report on the death of Pope Francis, which was confirmed through electrocardiographic thanatography. By Vatican…"
+            ]
+          },
+          {
+            "title": "Pope Francis, Advocate for Economic and Social Justice, Dies at 88",
+            "url": "https://www.wsj.com/world/pope-francis-advocate-for-economic-and-social-justice-dies-at-88-103eeff3",
+            "publishedDate": "2025-04-21T08:11:00.000Z",
+            "author": "Francis X. Rocca",
+            "highlights": [
+              "refocus the Catholic Church on promoting social and economic justice rather than traditional moral teachings but presided over growing divisions in the church and struggled with the lingering scandal of clerical sex abuse, has died. He was 88."
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    }
+  ]
+}

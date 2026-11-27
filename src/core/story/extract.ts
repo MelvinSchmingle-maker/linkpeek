@@ -70,7 +70,9 @@ export function extractStoryClues(link: HTMLAnchorElement, opts: ExtractOptions 
 
   // A. The link itself.
   const text = clean(visibleLinkText(link), MAX_HEADLINE);
-  if (text) clues.linkText = clue(text, 'link-text', isDescriptive(text) ? 'high' : 'low');
+  // Link text that is just an address ("https://paper.example.org/2025/10/19/louvre-…", common on social media)
+  // isn't a headline: its words are read from the address itself, as the slug.
+  if (text) clues.linkText = clue(text, 'link-text', isDescriptive(text) && !looksLikeAddress(text) ? 'high' : 'low');
   const title = clean(link.getAttribute('title') ?? '', MAX_HEADLINE);
   const alt = clean([...link.querySelectorAll('img[alt]')].map((i) => i.getAttribute('alt') ?? '').join(' '), MAX_HEADLINE);
   if (facts.slugWords) clues.slug = clue(facts.slugWords, 'url-slug', 'medium');
@@ -156,6 +158,12 @@ export function extractStoryClues(link: HTMLAnchorElement, opts: ExtractOptions 
 }
 
 // ---------- Clues ----------
+
+/** "https://site/path", "www.site.org/path" or "site.org/path/more": an address, not words. */
+function looksLikeAddress(text: string): boolean {
+  const t = text.trim();
+  return /^(https?:\/\/|www\.)\S+$/i.test(t) || /^[\w-]+(\.[\w-]+)+\/\S*$/.test(t);
+}
 
 function clue(text: string, from: ClueSource, confidence: Confidence): Clue {
   return { text, from, confidence };

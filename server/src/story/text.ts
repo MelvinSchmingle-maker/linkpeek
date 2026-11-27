@@ -55,13 +55,15 @@ export function termSet(text: string): Set<string> {
  * headline in Title Case, where every word is capitalised and names can't be
  * told apart.
  */
-export function names(text: string): string[] {
+export function names(text: string, { allowTitleCase = false }: { allowTitleCase?: boolean } = {}): string[] {
   const out = new Set<string>();
   for (const sentence of text.split(/(?<=[.!?:;])\s+|\n+/)) {
     const tokens = sentence.split(/\s+/).map((raw) => ({ raw, w: raw.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').replace(/['’]s$/, '') }));
     const letters = tokens.filter((t) => /^\p{L}/u.test(t.w));
     const capped = letters.filter((t) => isCapitalised(t.w));
-    if (letters.length >= 4 && capped.length / letters.length >= 0.7) continue;
+    // A headline in Title Case says nothing about which words are names. (Short sentences the AI wrote, like
+    // "Mayor Pieter Holm of Zarnwick.", are checked with allowTitleCase: there, capitals do mean names.)
+    if (!allowTitleCase && letters.length >= 4 && capped.length / letters.length >= 0.7) continue;
     let run: string[] = [];
     let runStart = 0;
     const flush = () => {

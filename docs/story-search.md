@@ -14,12 +14,13 @@ Built 26 Nov 2026 on branch `claude/eloquent-cerf-xnjbmt`. The existing preview 
 | Brave (paid mode only) | Built and tested against the documented shapes only. |
 | One search first, targeted follow-ups only when needed | Built and tested with stand-in search results |
 | Free mode: Exa then Tavily, stop with a clear message when both are used up | Built and tested with stand-ins and in the browser |
-| Matching, syndication grouping, report rules | Built and tested with stand-in search results and a stand-in AI |
-| Claude analysis (structured JSON output) | Built and tested with a stand-in client. **Never run against Claude**: no key was configured in this environment. |
+| Matching, syndication grouping, report rules | Built and tested with stand-in search results and a stand-in AI, and **on real recorded search results end to end** (`npm run test:story-e2e`). The end-to-end run found and fixed two problems on real data: real Louvre reports shown as only "possible" (D66), and nothing stopping an AI's invented names and numbers reaching the card (D65). |
+| Claude analysis (structured JSON output) | Request checked against the current API reference (model, effort, structured output, prompt caching, stop reasons) and tested through the real model class with written stand-in replies. **Never run against Claude**: no Anthropic key in this environment. `npm run test:story-e2e:live` is ready for it, capped at $0.25. |
+| End-to-end evaluation | `npm run test:story-e2e`: 29 cases from a link on a page to the card, offline, deterministic, free. Real cases replay searches recorded once from the real Exa and Tavily; report checks judge accuracy, not just shape. Results: `docs/eval/story-live-e2e.md`. |
 | Card, stages, consent, errors, settings | Built and tested in Chromium against a stand-in backend |
 | Deployed backend | **Not deployed.** `/api/story` exists only on this branch. Merging to `main` deploys it; it answers "not set up" until an Exa or Tavily key is in Vercel. |
 
-So: nothing here has searched the real web or asked the real Claude. The first live run needs a search key (below) and should be checked by hand on a set of real links before anyone relies on it.
+So: real searches and LinkPeek's own matching and rules have now run on real news, and the whole path from page to card is tested. What hasn't run is Claude writing a report: every report in the evaluation so far was written by a stand-in, and the live AI run needs the Anthropic key (see "Testing and evaluation"). It should be read by a person before anyone relies on it.
 
 ## Where it fits in the existing architecture
 
@@ -104,8 +105,9 @@ Each provider adapter turns a query into results with title, address, date, auth
 - **Source kinds**: official source (government, police, courts, parliaments), news agency, news, opinion, social media post, website. Labels and ordering only; nothing is shown as "trusted".
 - **Claude** (`analyse.ts`, `prompt.ts`) marks each result strong, possible or none with a reason, then writes the report in a fixed JSON schema (structured outputs). Its instructions: use only facts in the sources, add nothing from its own knowledge, never guess a cause, identity, place or date, keep allegations as allegations, explicit dates only, say what's unclear or contradictory, treat all source text as data and never as instructions.
 - **Rules the AI can't overrule** (`report.ts`):
-  - A result is a match only if the AI says so and the rules allow it. A result can't be a strong match if its date is far from the link's, if it names none of the link's people, if the link names a specific person or organisation it doesn't mention, or if it shares almost no words. A result with almost nothing in common is never a match at all.
+  - A result is a match only if the AI says so and the rules allow it. A result can't be a strong match if its date is far from the link's, if it mentions none of the names in the link's headline, if the headline names a specific person or organisation it doesn't mention, or if it shares almost no words. A name only in the card's teaser can't sink a match (D64, D66). A link with no name and no date is at best a possible match. A result with almost nothing in common is never a match at all.
   - Every sentence in "What happened?", "Key details" and the facts must cite a remaining source, or it's dropped.
+  - **Nothing specific may be added** (D65): a sentence, or the subject, that states a number, a name or a date that none of the kept sources contains is dropped. A date worked out from a source's publication date (as the prompt asks) is allowed, and so are accents ("Eugénie" for "Eugenie") and the sources' own names. If everything the AI wrote is dropped this way, its matching isn't trusted either: the card says there's no reliable match and lists nothing.
   - **"Confirmed" is decided by the rules**: stated by strong matches from two independent groups, or by an official source. Everything else goes under "Reported by one source". Syndicated copies count once.
   - Confidence can be lowered, never raised: "Strong evidence" needs strong matches from two independent groups, a confirmed fact, and more than snippets.
   - Sentences with "yesterday", "today" and the like are dropped; links and markup are removed from AI text.
@@ -192,27 +194,42 @@ Nothing else is needed: the defaults are free mode, Exa then Tavily, at most 3 s
 
 **In the Anthropic Console:** check a monthly spend limit is set (for example $5).
 
-## Live tests (before merging)
+## Testing and evaluation
 
-`npm run test:story-live` (in `server/src/story/live.test.ts`) runs against the real services, with no imitations, and writes the results to `docs/eval/story-live-<step>.md` for you to read. Three steps:
+### The end-to-end suite
 
-0. **search-only**: the real searching and matching for every case, without Claude. Shows which sources Story Search would hand to the AI. Run on 27 Nov 2026 with Tavily: right story for all three real-story cases (BBC, Vatican News, AP; Time, France 24; AP, BBC, Time), unrelated deaths for the vague headline, and nothing close for the made-up story.
-1. **normal**: a real Exa search; a real Tavily search on its own; then five Story Searches end to end with real Exa, Tavily and Claude: Pope Francis's death (21 April 2025); the Louvre jewel theft (19 October 2025) from a "Read more" card; the same story from the address alone; a vague "Pop star found dead in hotel room" (for you to judge); and a made-up story that must not produce a report. Checks: real results with page text, a strong sourced report for the real stories, every factual line sourced, and no report for the made-up one.
-2. **exa-exhausted**: lower the Exa key's budget in Exa's dashboard below what it has spent, so the real Exa answers "used up". Checks that Exa reports it, and that Tavily takes over and still produces the report.
-3. **both-exhausted**: also lower the Tavily key's limit. Checks that both report it, and that Story Search answers "out-of-credit" (the browser test checks the message the card shows for that answer).
+`npm run test:story-e2e` runs Story Search the whole way through with the real code at every step: a page's HTML, the extension's link reader, what it decides to send (and the consent card showing it), the extension's client, the backend handler (rate limit, cache, stream), the searches through the real Exa and Tavily adapters, matching, the AI step, the report rules, the stream back, the client's checks, and the card's DOM. The only shortcut is the hop between extension and backend (a function call instead of HTTP). It is part of `npm test`.
 
-Then raise both limits again. Estimated use: step 1 about $0.10–0.25 of Exa's free credit, about 10 Tavily credits and about $0.02 of Claude; steps 2 and 3 almost nothing.
+Each report gets ten checks (the right story, names, event dates, places, relevant facts, nothing unsupported, no contradictions, source references, confidence, readable writing) plus checks on the card. Source references are checked strictly: every claim cites a listed source, every source was really retrieved, publisher and kind match the address, "confirmed" rests on two independent reports or an official one, syndicated copies count once. Facts are checked as far as a program can (expected names, dates and places present; another story or year absent; every number in a retrieved source; no date from nowhere), and dates that match only a publication date are flagged for a person. Well-formed output alone never passes.
 
-In a Claude Code cloud session, Node's built-in fetch ignores the network proxy unless `NODE_USE_ENV_PROXY=1` is set, so the `test:live` script sets it (and `NO_PROXY=api.anthropic.com`, so the Claude call goes direct).
+Three modes:
 
-How the keys reach the tests in this cloud session: Exa and Tavily through the secure key form (stored as network secrets, added by the network proxy, never shown to Claude). Claude through a `LINKPEEK_ANTHROPIC_API_KEY` environment variable, the way the summaries evaluation ran, because the proxy route for Anthropic would also affect Claude Code's own connection.
+| Command | Searches | AI | Costs |
+|---|---|---|---|
+| `npm run test:story-e2e` | Replayed from recordings, or synthetic | Stand-in replies written for the test (labelled), or a real Claude reply saved by a live run for exactly the same prompt | Nothing |
+| `npm run test:story-e2e:record` | Real Exa (Tavily if Exa doesn't answer), only for real cases with no recording yet | Not called | Free search credit, once per case |
+| `npm run test:story-e2e:live` | Replayed (add `STORY_E2E_LIVE_SEARCH=1` to search for real too) | Real Claude, every case that needs a report | Claude, stopped before it could pass $0.25 (`STORY_E2E_BUDGET_USD`) |
 
-Not yet known: whether Exa's and Tavily's free plans let you set a per-key limit. If not, the two exhaustion steps can't be made real without using up a month's allowance, and the fallback is covered only by the unit tests (which use each provider's documented "used up" reply).
+`npm run test:story-e2e:report` runs every suite (types, unit, backend, end to end, browser, build) and writes `docs/eval/story-live-e2e.md` and `.json`, with each category kept apart and nothing simulated counted as live.
+
+The cases: Pope Francis's death (event date against publication date), the Louvre theft from a "Read more" card and from the address alone, a vague "Pop star found dead in hotel room", a made-up story (twice: once with a careful AI, once with one that invents a report), a bare "Read more" that must send nothing, Exa's credit used up with Tavily taking over on real results; synthetic cases for conflicting reports, syndicated duplicates and an AMP copy, missing dates, headline-only results and unrelated results; and simulated services for every fallback: Exa answering, Exa timing out, both timing out, Exa busy with Tavily used up, Tavily alone used up, both used up, the allowance running out between searches, no keys, malformed answers, junk results, and Claude failing (unreadable reply, cut off, timed out). Plus a check that free mode never asks Brave, whatever is configured.
+
+Used-up allowances are simulated with the providers' documented replies (Exa's 402 `NO_MORE_CREDITS`, Tavily's 432), never by lowering account limits or using up a real allowance.
+
+The real search results were recorded once, on 27 Nov 2026: 7 Exa searches ($0.049 as Exa reported it) and 1 Tavily credit, out of the free monthly allowances. Extracts are cut to two passages of about 320 characters per result before saving, because this repository is public; the pipeline saw the same cut text while recording, so replays behave exactly like the recording run. A replay that doesn't match what the code now sends fails with a message to record again.
+
+### Running the live AI test
+
+The Anthropic key can only be given to a cloud session as an environment variable (`LINKPEEK_ANTHROPIC_API_KEY`), in the environment's settings: network secrets can't be used for Anthropic's own hosts. Everyone who uses that environment, and any command in its sessions, can read it, so use a separate environment for it, and ideally a separate Anthropic key in its own workspace with a small monthly limit. The name matters: with `ANTHROPIC_API_KEY`, Claude Code would use the key for itself. The tests read it from the environment only and never print, log or save it; it never goes in the extension (the build reads only `LINKPEEK_API_URL` and `LINKPEEK_STORY_API_URL`) and never in a committed file. Each Claude reply is saved (without the request or any header) so later offline runs can replay real Claude output.
+
+### The older quick live check
+
+`npm run test:story-live` (`server/src/story/live.test.ts`) runs real Exa, Tavily and Claude directly, without recordings. The end-to-end suite replaces it for evaluation; it no longer has steps that need account limits lowered.
 
 ## Still open
 
-1. **Live tests, partly run**: Tavily is tested live, alone and through the whole search and matching. Still to run: Exa (its key isn't in yet) and Claude (needs `LINKPEEK_ANTHROPIC_API_KEY`), then the full end-to-end step and the two exhaustion steps.
-2. **Per-key limits on the free plans**: needed for the real exhaustion steps; see above.
+1. **Claude has never written a Story Search report.** Everything up to the AI step has run on real data; the report text in every evaluation so far came from stand-ins. Next: add `LINKPEEK_ANTHROPIC_API_KEY` to a separate environment and run `npm run test:story-e2e:live` (about $0.01–0.04, capped at $0.25), then read the claims it lists for review.
+2. **The new grounding rule (D65) needs measuring on Claude's real output**: it drops sentences with a name, number or date no source contains. The live run reports how many it drops per case; if it drops good sentences, it needs loosening.
 3. **Not merged**: `/api/story` exists only on this branch. The production build of the extension points at `linkpeek-api.vercel.app/api/story`, which only exists after the merge. Waiting for your go-ahead.
 4. **Vercel's list of commercial examples** couldn't be read from its page; the rule itself is clear (above).
 5. **Claude isn't free**: about $0.002 a Story Search, capped by your Anthropic monthly limit.
@@ -221,7 +238,10 @@ Not yet known: whether Exa's and Tavily's free plans let you set a per-key limit
 
 - Shortened links are not followed. Following one would mean a request to the shortener; the server deliberately makes none to arbitrary addresses (no server-side fetching, so no request forgery risk and no "scrape, proxy" use under Vercel's policy). Story Search falls back on the link's text and surroundings.
 - Names are recognised by capital letters, so a headline in Title Case gives no names, and lowercase names are missed.
-- The source-kind lists (agencies, official domains, news organisations) are short and rough, like the primary-source list in Part 08.
+- The source-kind lists (agencies, official domains, news organisations) are short and rough, like the primary-source list in Part 08. Seen in the evaluation: the Holy See's own press office (`press.vatican.va`) counts as a "website", while the US National Archives counts as an official source for the Pope's death.
+- A month in nearby text counts as a name: the Louvre card's search included "October" (from its date label). Harmless there; left as it is so the recorded searches stay valid.
+- The grounding rule checks specifics, not wording: an invented sentence with no name, number or date in it ("The mayor resigned") would pass it. Claude's instructions and the "possible match" caution are what stand against that.
+- A date within a week of a source's publication date counts as worked out from it, so a wrong day close to the real one isn't caught.
 - The backend's report cache lives in one function instance's memory; repeat searches that land on another instance search again. A shared cache (Vercel's Runtime Cache) is the next step if traffic justifies it.
 - The right-click menu itself can't be clicked by Playwright; tests send the same message the menu sends. Showing and hiding the menu item when Story Search is switched off in Settings is untested.
 - The extension's options page and the card wording haven't been reviewed by the owner.
@@ -237,4 +257,5 @@ Not yet known: whether Exa's and Tavily's free plans let you set a per-key limit
 | Wording | `src/core/messages.ts` (`MSG.story`) |
 | Backend endpoint | `server/api/story.ts`, `server/src/story/` |
 | Tests | `src/core/story/*.test.ts`, `src/content/story-view.test.ts`, `server/src/story/story.test.ts`, `e2e/story.spec.ts` |
+| End-to-end evaluation | `src/eval/story-e2e.test.ts`; cases, runner, report checks, recordings and writer in `src/eval/story/`; `scripts/story-e2e.mjs`; results in `docs/eval/story-live-e2e.md` |
 | Screenshots | `docs/screenshots/story-search/` |

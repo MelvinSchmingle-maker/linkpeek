@@ -37,6 +37,8 @@ export interface StoryDeps {
   spending?: string;
   log?: (line: Record<string, unknown>) => void;
   now?: () => number;
+  /** The date the investigation treats as today (for date windows and the AI's <today>). Tests fix it so recordings replay. */
+  clock?: () => Date;
 }
 
 const CORS = {
@@ -125,7 +127,11 @@ export async function handleStory(request: Request, deps: StoryDeps): Promise<Re
       let metrics: Metrics | undefined;
       let outcome = 'error';
       try {
-        const result = await investigate(req, { provider: deps.provider, model: deps.model, ...(deps.maxSearches ? { maxSearches: deps.maxSearches } : {}) }, send);
+        const result = await investigate(
+          req,
+          { provider: deps.provider, model: deps.model, ...(deps.maxSearches ? { maxSearches: deps.maxSearches } : {}), ...(deps.clock ? { now: deps.clock } : {}) },
+          send,
+        );
         metrics = result.metrics;
         if (result.ok) {
           outcome = result.report.status;

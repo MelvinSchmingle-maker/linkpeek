@@ -92,6 +92,8 @@ async function standInStory(res, _url, req) {
   const words = `${body.headline?.text ?? ''} ${body.slug ?? ''} ${body.description?.text ?? ''}`.toLowerCase();
   const searchedFor = body.headline?.text ?? body.slug ?? '';
   if (words.includes('rate limited')) return res.writeHead(429, { 'content-type': 'application/json', ...cors }).end(JSON.stringify({ error: 'rate-limited' }));
+  // The backend itself failing (a crash, a bad deploy): not a stream at all.
+  if (words.includes('server down')) return res.writeHead(500, { 'content-type': 'text/html', ...cors }).end('<h1>Internal Server Error</h1>');
   res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8', ...cors });
   const send = (o) => res.write(`${JSON.stringify(o)}\n`);
   send({ stage: 'searching' });
@@ -104,6 +106,10 @@ async function standInStory(res, _url, req) {
     send({ error: 'out-of-credit' });
     return res.end();
   }
+  if (words.includes('nothing turned up')) {
+    send({ report: storyReport({ status: 'no-results', match: 'none', confidence: 'insufficient', searchedFor }) });
+    return res.end();
+  }
   if (words.includes('unknown harbour')) {
     send({ report: storyReport({ status: 'no-match', match: 'none', confidence: 'insufficient', setAside: 4, notes: ['older-story'], searchedFor }) });
     return res.end();
@@ -112,6 +118,64 @@ async function standInStory(res, _url, req) {
   await wait(250);
   send({ stage: 'writing' });
   await wait(100);
+  if (words.includes('ai down')) {
+    // Claude didn't answer: the closest results only, as possible matches, and no claims.
+    send({
+      report: storyReport({
+        status: 'report-failed',
+        match: 'possible',
+        confidence: 'insufficient',
+        sources: [
+          { ...storySource(1, 'Dock cranes to be replaced', 'Example News', 'http://127.0.0.1:4173/articles/ordinary.html'), match: 'possible' },
+          { ...storySource(2, 'New cranes for the docks', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'), match: 'possible' },
+        ],
+        setAside: 1,
+        searchedFor,
+      }),
+    });
+    return res.end();
+  }
+  if (words.includes('pop star found dead')) {
+    // A link with no name and no date (live, the search found a death in 2012): possible only, no subject, and why.
+    send({
+      report: storyReport({
+        match: 'possible',
+        confidence: 'partial',
+        whatHappened: [{ text: 'A singer was found dead in a hotel room in 2012, according to these reports.', sources: [1, 2] }],
+        reported: [{ text: 'Police said there was no sign of foul play.', sources: [2] }],
+        sources: [
+          { ...storySource(1, 'Singer found dead in hotel room', 'Example News', 'http://127.0.0.1:4173/articles/ordinary.html'), published: '2012-02-12', match: 'possible' },
+          { ...storySource(2, 'Police: no foul play in hotel death', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'), published: '2012-02-13', match: 'possible' },
+        ],
+        notes: ['vague-link', 'older-story'],
+        setAside: 3,
+        searchedFor,
+      }),
+    });
+    return res.end();
+  }
+  if (words.includes('many sources')) {
+    const long = 'Harbour festival returns with tall ships, a night market and fireworks over the old quay after a three-year break, organisers confirm';
+    send({
+      report: storyReport({
+        subject: 'Harbour festival returns after a three-year break',
+        whatHappened: [{ text: 'The harbour festival will return on 12 June 2027 after a three-year break, organisers said.', sources: [1, 2, 3] }],
+        confirmed: [{ text: 'The festival returns on 12 June 2027.', sources: [1, 3] }],
+        reported: [{ text: 'Fireworks will be launched from the old quay.', sources: [4] }],
+        sources: [
+          { ...storySource(1, 'Harbour festival is back', 'Demo Gazette', 'http://127.0.0.1:4173/2026/11/25/many-sources-story-about-the-harbour-festival'), original: true },
+          storySource(2, `${long} (wire report)`, 'Example Wire', 'http://127.0.0.1:4173/articles/ordinary.html', 'agency', { via: 'Example Wire' }),
+          storySource(3, 'Festival dates announced', 'Example News', 'http://127.0.0.1:4173/articles/cycle-lanes.html', 'news', { copyOf: 2, via: 'Example Wire' }),
+          storySource(4, 'Night market plans for the quay', 'Demo Times', 'http://127.0.0.1:4173/articles/bridge.html', 'news'),
+          storySource(5, 'Why the festival matters', 'Demo Times', 'http://127.0.0.1:4173/articles/opinion.html', 'opinion'),
+          { ...storySource(6, 'Can’t wait for the fireworks!', 'social.example', 'http://127.0.0.1:4173/articles/post.html', 'social'), match: 'possible' },
+        ],
+        notes: ['syndicated'],
+        searchedFor,
+      }),
+    });
+    return res.end();
+  }
   if (words.includes('possible bridge')) {
     send({
       report: storyReport({

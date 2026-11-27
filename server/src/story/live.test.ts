@@ -2,12 +2,15 @@
  * LIVE Story Search tests: real Exa, real Tavily, real Claude, real news.
  * No stand-ins anywhere in the searching or the report.
  *
- * Skipped by `npm test`. Run on purpose, in three steps:
+ * Skipped by `npm test`. Run on purpose:
  *
  *   npm --prefix server run test:live                              step "normal"
  *   STORY_LIVE_STEP=search-only npm --prefix server run test:live     real searching and matching, no Claude
- *   STORY_LIVE_STEP=exa-exhausted npm --prefix server run test:live   after lowering the Exa key's budget
- *   STORY_LIVE_STEP=both-exhausted npm --prefix server run test:live  after also lowering the Tavily key's limit
+ *
+ * The full evaluation is now the end-to-end suite (src/eval/story-e2e.test.ts,
+ * `npm run test:story-e2e`, `:record`, `:live`): it replays these searches
+ * from recordings instead of paying for them again, and checks the reports'
+ * accuracy. Use this file only for a quick look at the live services.
  *
  * Each step writes its results to docs/eval/story-live-<step>.md for a person
  * to read: the automatic checks can say a report is well formed and sourced,
@@ -18,22 +21,21 @@
  * STORY_LIVE_PROXY_KEYS=1 and the proxy adds them. Claude: LINKPEEK_ANTHROPIC_API_KEY
  * (the same name the summaries evaluation uses).
  *
- * Exhaustion is real, not imitated: lower the key's own limit in the
- * provider's dashboard (Exa: the key's budget; Tavily: the key's usage limit)
- * so the real service answers "used up", run the step, then raise it again.
+ * Used-up allowances are NOT tested here: the owner asked that account
+ * limits and billing settings are never changed, and free allowances never
+ * deliberately used up. The end-to-end suite simulates those answers instead
+ * (cases fallback-*: Exa's 402 NO_MORE_CREDITS, Tavily's 432, timeouts, both
+ * used up), using the providers' documented error replies.
  *
- * Costs (estimates from list prices): step "normal" uses roughly $0.10–0.25
- * of Exa's free monthly credit, about 10 of Tavily's 1,000 free credits, and
- * about $0.02 of Claude. The exhaustion steps use almost nothing.
+ * Costs (estimates from list prices): step "normal" uses roughly $0.05–0.10
+ * of Exa's free monthly credit ($0.007 a search, as Exa reports it), a few of
+ * Tavily's 1,000 free credits, and about $0.01 of Claude.
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { MemoryLimiter } from '../ratelimit.js';
 import { AnthropicStoryModel, DEFAULT_STORY_MODEL } from './analyse.js';
-import { MemoryReportCache } from './cache.js';
-import type { StoryEvent, StoryReport, StoryRequest } from './contract.js';
-import { handleStory } from './handler.js';
+import type { StoryReport, StoryRequest } from './contract.js';
 import { investigate, type Metrics } from './investigate.js';
 import { ExaProvider } from './providers/exa.js';
 import { ProviderChain } from './providers/index.js';
@@ -41,7 +43,7 @@ import { TavilyProvider } from './providers/tavily.js';
 import type { SearchOutcome } from './providers/types.js';
 
 const LIVE = process.env.STORY_LIVE === '1';
-const STEP = (process.env.STORY_LIVE_STEP ?? 'normal') as 'normal' | 'search-only' | 'exa-exhausted' | 'both-exhausted';
+const STEP = (process.env.STORY_LIVE_STEP ?? 'normal') as 'normal' | 'search-only';
 /** The window Story Search uses for a link dated 21 April 2025 (14 days before, 30 after). */
 const WINDOW = { since: '2025-04-07', until: '2025-05-21' };
 /** About the death itself, not later coverage that mentions Francis. */
@@ -257,44 +259,5 @@ describe.skipIf(!LIVE)('LIVE Story Search (real services)', () => {
       }
     });
     it('writes the results for review', () => write('Story Search live test: searching and matching only (no Claude)'));
-  }
-
-  if (STEP === 'exa-exhausted') {
-    it('3. Exa really reports its limit reached, and Tavily takes over', { timeout: TIMEOUT }, async () => {
-      const e = await exa.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 5 });
-      lines.push('## 3. Exa exhausted, Tavily takes over', '', `- Exa: ${describeOutcome(e)}`);
-      expect(e).toMatchObject({ ok: false, code: 'quota' });
-      const out = await investigate(CASES[0]!.req, { provider: chain, model: model() });
-      if (out.ok) lines.push(...reportMarkdown(out.report, out.metrics));
-      else lines.push(`- Failed: \`${out.code}\``);
-      lines.push('');
-      expect(out.ok).toBe(true);
-      if (!out.ok) return;
-      expect(out.metrics.providersUsed).toEqual(['tavily']);
-      expect(out.report.status).toBe('report');
-      write('Story Search live test: Exa exhausted');
-    });
-  }
-
-  if (STEP === 'both-exhausted') {
-    it('4. both really report their limits reached: Story Search stops and says so', { timeout: TIMEOUT }, async () => {
-      const e = await exa.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 5 });
-      const t = await tavily.search({ text: 'Pope Francis dies aged 88', purpose: 'best', news: true }, { limit: 5 });
-      lines.push('## 4. Both exhausted', '', `- Exa: ${describeOutcome(e)}`, `- Tavily: ${describeOutcome(t)}`);
-      expect(e).toMatchObject({ ok: false, code: 'quota' });
-      expect(t).toMatchObject({ ok: false, code: 'quota' });
-      const res = await handleStory(new Request('https://local.test/api/story', { method: 'POST', body: JSON.stringify(CASES[0]!.req) }), {
-        provider: chain,
-        model: model(),
-        limiter: new MemoryLimiter(100, 1000),
-        cache: new MemoryReportCache(),
-        enabled: true,
-        log: () => undefined,
-      });
-      const events = (await res.text()).split('\n').filter(Boolean).map((l) => JSON.parse(l) as StoryEvent);
-      lines.push(`- What the extension receives: ${events.map((e2) => JSON.stringify(e2)).join(' then ')}`, '- The extension shows: "Story Search has used this month\'s free searches. It works again when they renew at the start of next month." (checked by the browser test for this answer)', '');
-      expect(events.at(-1)).toEqual({ error: 'out-of-credit' });
-      write('Story Search live test: both exhausted');
-    });
   }
 });

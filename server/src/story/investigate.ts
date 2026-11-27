@@ -82,6 +82,10 @@ export interface Metrics {
   aiFailure?: string;
   inputTokens?: number;
   outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  /** Sentences (and subjects) dropped for stating a name, number or date no kept source contains. */
+  ungroundedDropped?: number;
 }
 
 export type Investigation = { ok: true; report: StoryReport; metrics: Metrics } | { ok: false; code: StoryErrorCode; metrics: Metrics };
@@ -208,7 +212,8 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
 
   // The AI call is the long part: it decides which results are the story, then writes. The checks after it are quick.
   const ai = await deps.model.analyse(storyUserMessage(req, candidates, grouping, now.toISOString().slice(0, 10), kinds, publishers));
-  metrics.model = deps.model.name;
+  // The model that actually answered (the API reports it), else the one configured.
+  metrics.model = ai.ok ? ai.model : deps.model.name;
   if (!ai.ok) {
     metrics.aiFailure = ai.code;
     return { ok: true, report: reportFailed(req, candidates, grouping, kinds, publishers, setAside, searchedFor, now, GOOD_SCORE), metrics };
@@ -217,7 +222,11 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   metrics.aiUsd = aiCostUsd(ai.model, ai.usage);
   metrics.inputTokens = ai.usage.inputTokens;
   metrics.outputTokens = ai.usage.outputTokens;
-  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, snippetsOnly, searchedFor, now });
+  metrics.cacheReadTokens = ai.usage.cacheReadTokens;
+  metrics.cacheWriteTokens = ai.usage.cacheWriteTokens;
+  const stats = { ungrounded: 0 };
+  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, snippetsOnly, searchedFor, now, stats });
+  metrics.ungroundedDropped = stats.ungrounded;
   return { ok: true, report, metrics };
 }
 

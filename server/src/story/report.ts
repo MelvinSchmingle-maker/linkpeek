@@ -17,12 +17,20 @@
  *   more than snippets to go on.
  * - Sentences with "yesterday", "today" and the like are dropped: on a card
  *   read later they'd be wrong. Links and markup are removed from AI text.
+ * - Nothing specific may be added: a sentence (or the subject) that states a
+ *   number, a name or a date that none of the kept sources contains is
+ *   dropped (grounded()). A date worked out from a source's publication date,
+ *   as the prompt asks, counts as supported. This is what stops an AI that
+ *   invents a story ("the mayor of Zarnwick resigned...") from getting its
+ *   invention onto the card, even as a "possible" match. Wording is not
+ *   checked: paraphrase is normal, and would make the rule drop good claims.
  */
 import type { AiReport } from './analyse.js';
 import type { Claim, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
 import { capMatch, type LinkProfile, type Scored } from './match.js';
+import type { SearchHit } from './providers/types.js';
 import { canonicalKey, type Grouping } from './sources.js';
-import { clip, daysBetween } from './text.js';
+import { clip, daysBetween, names } from './text.js';
 
 const RELATIVE_DATE = /\b(yesterday|today|tonight|tomorrow|last night|this (morning|afternoon|evening))\b/i;
 const MAX_SENTENCE = 320;
@@ -45,6 +53,74 @@ export interface FinaliseInput {
   snippetsOnly: boolean;
   searchedFor: string;
   now: Date;
+  /** Filled in: how many sentences (and subjects) were dropped for stating what no kept source says. */
+  stats?: { ungrounded: number };
+}
+
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const NOT_NAMES = new Set([...MONTHS, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+const MONTH = MONTHS.join('|');
+const DATE = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH})(?:,?\\s+(\\d{4}))?\\b|\\b(${MONTH})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`, 'gi');
+/** A date this many days either side of a kept source's publication date may have been worked out from it. */
+const WORKED_OUT_DAYS = 7;
+
+/** Lower case without accents, so "Eugénie" matches "Eugenie". */
+function fold(s: string): string {
+  return s.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase();
+}
+
+function digitRuns(s: string): string[] {
+  return (s.match(/\d+/g) ?? []).flatMap((d) => [d, String(Number(d))]);
+}
+
+/** What the kept sources say, as the words and numbers a claim's specifics are checked against. */
+export interface Evidence {
+  words: Set<string>;
+  digits: Set<string>;
+  /** Publication dates, as days since 1970. */
+  days: number[];
+}
+
+export function evidenceOf(hits: SearchHit[], extra: string[] = []): Evidence {
+  const text = fold([...hits.flatMap((h) => [h.title, h.description ?? '', h.author ?? '', ...h.passages]), ...extra].join(' \n '));
+  const digits = new Set(digitRuns(text));
+  const days: number[] = [];
+  for (const h of hits) {
+    if (!h.published) continue;
+    for (const part of h.published.split('-')) for (const d of digitRuns(part)) digits.add(d);
+    const t = Date.parse(h.published.length === 7 ? `${h.published}-15` : h.published);
+    if (!Number.isNaN(t)) days.push(Math.round(t / 86_400_000));
+  }
+  return { words: new Set(text.split(/[^\p{L}\p{N}]+/u).filter(Boolean)), digits, days };
+}
+
+/**
+ * The numbers, names and dates in a sentence that the kept sources don't
+ * contain: what the AI added. Empty when everything specific is supported.
+ * `linkNames`: the names the link itself gives. They're checked wherever they
+ * appear, even first in a sentence, because echoing the link's own names is
+ * exactly how an invented report would look ("Zarnwick's mayor resigned").
+ */
+export function ungrounded(sentence: string, ev: Evidence, linkNames: string[] = []): string[] {
+  const out: string[] = [];
+  // Dates first: in the sources' text, or within a week of a publication date (worked out from it).
+  const rest = sentence.replace(DATE, (whole, d1, m1, y1, m2, d2, y2) => {
+    const day = Number(d1 ?? d2);
+    const month = MONTHS.indexOf(String(m1 ?? m2).toLowerCase());
+    const year = y1 ?? y2;
+    const inText = ev.words.has(MONTHS[month]!) && ev.digits.has(String(day)) && (!year || ev.digits.has(year));
+    const near = ev.days.some((p) => {
+      const years = year ? [Number(year)] : [new Date(p * 86_400_000).getUTCFullYear()];
+      return years.some((y) => Math.abs(Math.round(Date.UTC(y, month, day) / 86_400_000) - p) <= WORKED_OUT_DAYS);
+    });
+    if (!inText && !near) out.push(whole);
+    return ' ';
+  });
+  for (const d of rest.match(/\d+/g) ?? []) if (!ev.digits.has(d) && !ev.digits.has(String(Number(d)))) out.push(d);
+  const said = new Set(fold(rest).split(/[^\p{L}\p{N}]+/u));
+  const words = [...names(rest, { allowTitleCase: true }), ...linkNames].flatMap((n) => fold(n).split(/[^\p{L}\p{N}]+/u));
+  for (const w of new Set(words)) if (w && said.has(w) && !NOT_NAMES.has(w) && !/^\d+$/.test(w) && !ev.words.has(w)) out.push(w);
+  return out;
 }
 
 function cleanText(s: string): string | undefined {
@@ -64,6 +140,17 @@ export function finalise(input: FinaliseInput): StoryReport {
   });
   const kept = candidates.map((_, i) => i).filter((i) => status[i] !== 'none');
   const number = new Map(kept.map((i, k) => [i + 1, k + 1]));
+  // Everything the kept sources say (their sites and credited agencies too, so "the Associated Press said" is supported).
+  const evidence = evidenceOf(
+    kept.map((i) => candidates[i]!.hit),
+    kept.flatMap((i) => [publishers[i] ?? '', grouping.via[i] ?? '']),
+  );
+  const stats = input.stats ?? { ungrounded: 0 };
+  const supported = (text: string): boolean => {
+    if (!ungrounded(text, evidence, profile.names).length) return true;
+    stats.ungrounded++;
+    return false;
+  };
   const strongIdx = new Set(kept.filter((i) => status[i] === 'strong'));
   const rejectedOlder = candidates.some((c, i) => status[i] === 'none' && c.dateMismatch) || input.olderSetAside;
   const setAside = input.setAsideEarly + (candidates.length - kept.length);
@@ -96,7 +183,7 @@ export function finalise(input: FinaliseInput): StoryReport {
     for (const c of list) {
       const text = cleanText(c.text);
       const sources = cite(c.sources);
-      if (text && sources.length) out.push({ text, sources });
+      if (text && sources.length && supported(text)) out.push({ text, sources });
       if (out.length >= max) break;
     }
     return out;
@@ -105,7 +192,7 @@ export function finalise(input: FinaliseInput): StoryReport {
   const seenLabels = new Set<string>();
   const details = ai.details
     .map((d) => ({ label: d.label, text: cleanText(d.text), sources: cite(d.sources) }))
-    .filter((d): d is Claim & { label: typeof d.label } => Boolean(d.text) && d.sources.length > 0 && !seenLabels.has(d.label) && Boolean(seenLabels.add(d.label)))
+    .filter((d): d is Claim & { label: typeof d.label } => Boolean(d.text) && d.sources.length > 0 && !seenLabels.has(d.label) && supported(d.text!) && Boolean(seenLabels.add(d.label)))
     .slice(0, 5);
   const facts = factual(ai.facts, 6);
   const unclear = ai.unclear
@@ -139,6 +226,10 @@ export function finalise(input: FinaliseInput): StoryReport {
 
   // 5. Notes.
   const notes: ReportNote[] = [];
+  // A link with no name and no date can't be pinned to one story (match.ts caps it at "possible"):
+  // say so first, and don't put a name forward as its subject.
+  const vague = !profile.names.length && !profile.date;
+  if (vague) notes.push('vague-link');
   if (keptGroups.size === 1) notes.push('single-source');
   if (kept.some((i) => grouping.copyOf[i] !== undefined)) notes.push('syndicated');
   const newest = kept.map((i) => candidates[i]!.hit.published).filter((d): d is string => Boolean(d)).sort().pop();
@@ -165,14 +256,24 @@ export function finalise(input: FinaliseInput): StoryReport {
     };
   });
 
-  const subject = cleanText(ai.subject) ?? req.headline?.text;
+  // The AI's subject must not add a name or number either; with none, the link's own headline stands in.
+  const aiSubject = cleanText(ai.subject);
+  const subject = vague ? undefined : aiSubject ? (supported(aiSubject) ? aiSubject : undefined) : req.headline?.text;
   const written = whatHappened.length > 0 || facts.length > 0;
+  if (!written) {
+    // The AI's report stated things no source says: its matching can't be trusted either. Nothing is shown.
+    if (stats.ungrounded > 0) {
+      return { ...base, setAside: input.setAsideEarly + candidates.length, status: 'no-match', match: 'none', confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources: [], notes: rejectedOlder ? ['older-story'] : [] };
+    }
+    // Nothing usable was written: the closest sources are listed as possible matches, with no claims at all.
+    return { ...base, status: 'report-failed', match, confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources, notes };
+  }
   return {
     ...base,
-    status: written ? 'report' : 'report-failed',
+    status: 'report',
     ...(subject ? { subject: clip(subject, 140) } : {}),
     match,
-    confidence: written ? confidence : 'insufficient',
+    confidence,
     whatHappened,
     details,
     confirmed,

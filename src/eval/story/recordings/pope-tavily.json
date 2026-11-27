@@ -1,0 +1,83 @@
+{
+  "case": "pope-tavily",
+  "recordedAt": "2026-11-27T18:50:29.493Z",
+  "today": "2026-11-27",
+  "note": "Real Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "tavily",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Pope Francis dies aged 88",
+          "topic": "general",
+          "search_depth": "basic",
+          "max_results": 8,
+          "include_answer": false,
+          "include_raw_content": false,
+          "include_usage": true,
+          "include_published_date": true,
+          "start_date": "2025-04-07",
+          "end_date": "2025-05-21"
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Vatican announces death of Pope Francis aged 88",
+            "url": "https://www.bbc.com/news/articles/cqj42vd1rxlo",
+            "published_date": "Mon, 21 Apr 2025 08:11:48 GMT",
+            "content": "A statement continued: \"He taught us to live the values ​​of the Gospel with fidelity, courage and universal love, especially in favour of the poorest and most marginalised.\" The Vatican later confirmed Francis died after suffering a stroke and subsequent irreversible heart failure at abut 07:35 local time (05:30 GMT;… [...] In his final testament, released by the Vatican late on Monday, he asked to be buried in Rome's Basilica of St Mary Major. Many of his predecessors instead chose St Peter's Basilica in the Vatican. He wrote: \"The tomb should be in the ground; simple, without particular ornamentation, bearing only the inscription:…"
+          },
+          {
+            "title": "Pope Francis has died at 88 : NPR",
+            "url": "https://www.npr.org/2025/04/21/1013050313/pope-francis-dead",
+            "published_date": "Mon, 21 Apr 2025 00:00:00 GMT",
+            "content": "The Vatican later said the cause of death was a stroke, followed by a coma and heart failure. He had recently left the hospital after bouts of pneumonia, bronchitis and other medical problems. Francis was one of the most popular popes in decades and a towering figure on the world stage, addressing not just Catholics… [...] Pope Francis waves to thousands of followers as he arrives at the Philippines' Manila Cathedral on Jan. 16, 2015. During his papacy, Francis strove to reach out to what he called the \"periphery\" of the world in Asia, Africa and Latin America. Lisa Maree Williams/Getty Images hide caption Lisa Maree Williams/Getty…"
+          },
+          {
+            "title": "Pope Francis, Advocate for Economic and Social Justice, Dies at 88 - WSJ",
+            "url": "https://www.wsj.com/world/pope-francis-advocate-for-economic-and-social-justice-dies-at-88-103eeff3",
+            "published_date": "Mon, 21 Apr 2025 08:11:00 GMT",
+            "content": "The pope’s death came after he spent weeks in the hospital earlier this year to treat a serious bout of pneumonia. His health remained fragile after he returned to his residence in the Vatican. The cause of death was a stroke and cardiac arrest, according to a medical bulletin released by the Vatican. [...] VATICAN CITY—Pope Francis, who sought to refocus the Catholic Church on promoting social and economic justice rather than traditional moral teachings but presided over growing divisions in the church and struggled with the lingering scandal of clerical sex abuse, has died. He was 88."
+          },
+          {
+            "title": "Pope Francis has died on Easter Monday aged 88 - Vatican News",
+            "url": "https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-dies-on-easter-monday-aged-88.html",
+            "published_date": "Mon, 21 Apr 2025 07:58:00 GMT",
+            "content": "Pope Francis was admitted to the Agostino Gemelli Polyclinic Hospital on Friday, February 14, 2025, after suffering from a bout of bronchitis for several days. The Pope’s clinical situation gradually worsened, and his doctors diagnosed bilateral pneumonia on Tuesday, February 18. After 38 days in hospital, the late… [...] Seals were placed on the papal apartment on the third floor of the Apostolic Palace and on the apartment on the second floor of the Casa Santa Marta, where Pope Francis lived. Mr. Bruni told journalists that, as of Monday evening, Pope Francis' closest collaborators have begun to pay their respects to the late Pope.…"
+          },
+          {
+            "title": "Pope Francis dies at age 88",
+            "url": "https://www.youtube.com/watch?v=e5XRzHdFJgA",
+            "published_date": "Mon, 21 Apr 2025 00:00:00 GMT",
+            "content": "# Pope Francis dies at age 88 Pope Francis has died at the age of 88, the Vatican announced a day after Easter. Francis experienced a number of health issues in recent years. He was recently hospitalized for five weeks in February and March 2025 with bronchitis that developed into pneumonia in both lungs. He marked… [...] Argentina. Instead, he became one of the oldest popes in history, having traveled to more than 60 countries and keeping a busy schedule until the final days of his life. But he wasn't immune to health issues, using a wheelchair since 2022 and spending weeks in the hospital in 2023. The toll of the papacy, raising…"
+          },
+          {
+            "title": "Pope Francis, first Latin American pontiff, dies at 88 | AP News",
+            "url": "https://apnews.com/article/vatican-pope-francis-dead-01ca7d73c3c48d25fd1504ba076e2e2a",
+            "published_date": "Mon, 21 Apr 2025 07:57:28 GMT",
+            "content": "In his final will, Francis confirmed he will be buried in St. Mary Major Basilica in a simple underground tomb with only “Franciscus” written on it. The basilica, which sits outside the Vatican, is home to Francis’ favorite icon of the Virgin Mary, to whom Francis was particularly devoted. ## Reforming the Vatican [...] Around this time, he suffered from pneumonia, which led to the removal of part of his right lung. His frail health prevented him from becoming a missionary, and his less-than-robust lung capacity was perhaps responsible for his whisper of a voice and reluctance to sing at Mass."
+          },
+          {
+            "title": "The New York Times on Facebook: \"Pope Francis died at 88, the Vatican announced Monday, ending a groundbreaking pontificate that soug…\"",
+            "url": "https://www.facebook.com/nytimes/posts/pope-francis-died-at-88-the-vatican-announced-monday-ending-a-groundbreaking-pon/1064904195492043",
+            "published_date": "Mon, 21 Apr 2025 08:35:05 GMT",
+            "content": "- Robert Leichtle: With deep sorrow, we bid farewell to Pope Francis, a man of faith, compassion, and hope. As a bridge-builder between religions, an advocate for the poor, and a voice for peace and justice, he left a lasting mark on the Church and the world. His courage for change, humility in office, and warmth… [...] - Kiernan Majerus-Collins: Francis will be remembered as a pope who lifted up the poor and cared for the planet. His message represented Catholicism at its best, and our world is better for his having been part of it. - Jackie Gillespie Becker: I really hope they replace him with a progressive man like himself. RIP."
+          },
+          {
+            "title": "SPECIAL REPORT: Pope Francis dies at 88",
+            "url": "https://www.youtube.com/watch?v=aYj5rul1d8k",
+            "published_date": "Mon, 21 Apr 2025 00:00:00 GMT",
+            "content": ">>> FROM NBC NEWS, THIS IS A SPECIAL REPORT. HERE'S SAVANNAH GUTHRIE AND CRAIG MELVIN. >> MOOI, EVERYONE, GOOD MORNING AND WE ECOME ON THE AIR EARLY THIS MORNING WITH THE BREAKING NEWS FROM THE VATICAN, POPE FRANCIS HAS DIED. THE 88-YEAR-OLD PONTIFF PASSED AWAY JUST HOURS AFTER HE SURPRISED MANY ADDRESSING THE EASTER… [...] WE LOVED. HE LOVED BEING AMONG THE PEOPLE. HE NEVER THOUGHT OF HIMSELF AS A MONARCH OR ANYONE SPECIAL BUT AS A PASTOR BRINGING GOD'S WORD TO THE PEOPLE. >> AND YOU SAW HIM DOING THE VISITS TO PRISON INMATES AT A PRISON NEAR ROME. TALK ABOUT WHAT'S NEXT. A LOT OF THE PLANS HAVE BEEN IN PLACE FOR YEARS. THERE IS A…"
+          }
+        ],
+        "usage": {
+          "credits": 1
+        }
+      }
+    }
+  ]
+}

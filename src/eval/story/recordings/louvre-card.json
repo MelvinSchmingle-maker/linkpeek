@@ -1,0 +1,108 @@
+{
+  "case": "louvre-card",
+  "recordedAt": "2026-11-27T18:50:21.443Z",
+  "today": "2026-11-27",
+  "note": "Real Exa/Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Louvre jewel heist: thieves steal crown jewels in daylight raid Apollo Gallery October",
+          "numResults": 8,
+          "type": "auto",
+          "category": "news",
+          "startPublishedDate": "2025-10-05T00:00:00.000Z",
+          "endPublishedDate": "2025-11-18T23:59:59.999Z",
+          "contents": {
+            "highlights": {
+              "query": "Louvre jewel heist: thieves steal crown jewels in daylight raid Apollo Gallery October",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Thieves rob priceless jewels from Paris' Louvre in brazen heist | Reuters",
+            "url": "https://www.reuters.com/world/europe/thieves-steal-jewels-louvre-paris-media-reports-2025-10-19/",
+            "publishedDate": "2025-10-19T10:24:25.000Z",
+            "author": "Sybille De La Hamaide, Gabriel Stargardter",
+            "highlights": [
+              "PARIS, Oct 19 (Reuters) - Thieves in balaclavas broke into Paris' Louvre museum on Sunday, using a crane to smash an upstairs window, then stealing priceless objects from an area that houses the French crown jewels before escaping on motorbikes, officials said. ... ## ROBBERY WAS 'VERY PROFESSIONAL' WITH NO VIOLENCE…"
+            ]
+          },
+          {
+            "title": "How the Louvre museum robbery happened in video, photographs and maps  | Paris | The Guardian",
+            "url": "https://www.theguardian.com/world/2025/oct/20/louvre-museum-robbery-thieves-stolen-jewellery",
+            "publishedDate": "2025-10-19T00:00:00.000Z",
+            "highlights": [
+              "Thieves ... ## How did thieves break in? In a highly professional raid, four balaclava-wearing thieves pulled up outside the Louvre on a road along the Seine River. At about 9.30am – half an hour after visitors began entering via the front of the museum – the robbers positioned themselves at the south side of the…"
+            ]
+          },
+          {
+            "title": "Informations relatives au vol par effraction survenu ce dimanche 19 octobre au musée du Louvre - Espace presse du musée du Louvre",
+            "url": "https://presse.louvre.fr/informations-relatives-au-vol-par-effraction-survenu-ce-dimanche-19-octobre-au-musee-du-louvre/?lang=fr",
+            "publishedDate": "2025-10-19T00:00:00.000Z",
+            "author": "Celine Dauvergne",
+            "highlights": [
+              "# Informations relatives au vol par effraction survenu ce dimanche 19 octobre au musée du Louvre 19 octobre 2025 Ce dimanche 19 octobre, le musée du Louvre a connu un vol par effraction dans la galerie d'Apollon qui abrite la collection royale de gemmes et les diamants de la Couronne. Deux vitrines de haute sécurité…"
+            ]
+          },
+          {
+            "title": "A timeline of the jewel heist at the Louvre in Paris | AP News",
+            "url": "https://apnews.com/article/louvre-heist-jewels-paris-timeline-a072c2a5aba6ab5eeb429a280266a799",
+            "publishedDate": "2025-10-22T15:26:35.000Z",
+            "author": "Sylvie Corbet",
+            "highlights": [
+              "PARIS (AP) — Thieves took less than eight minutes to steal 88 million euros ($102 million) worth of crown jewels in a weekend heist at the world’s most visited museum, the Louvre, shocking the world. French officials have described how the intruders rode a basket lift up the Louvre’s facade, forced open a window,…"
+            ]
+          },
+          {
+            "title": "Thieves steal French crown jewels from Louvre in daytime raid",
+            "url": "https://www.france24.com/en/live-news/20251019-thieves-steal-french-crown-jewels-from-louvre-in-daytime-raid",
+            "publishedDate": "2025-10-19T19:53:18.000Z",
+            "highlights": [
+              "Paris (AFP) – Thieves raided Paris's Louvre museum in broad daylight Sunday, taking just seven minutes to grab some of France's priceless crown jewels, but dropping a gem-encrusted crown as they fled, officials and sources said."
+            ]
+          },
+          {
+            "title": "How the Louvre Jewelry Heist Unfolded - The New York Times",
+            "url": "https://www.nytimes.com/interactive/2025/10/20/world/europe/louvre-robbery-jewelry-heist-photos-maps.html?partner=IFTTT",
+            "publishedDate": "2025-10-20T16:26:50.000Z",
+            "highlights": [
+              "Once inside, the thieves smashed two display cases and snatched eight precious objects, ... The high-security display cases targeted in the robbery were toward the middle of the 200-foot-long gallery, recent videos of the interior indicate. The thieves"
+            ]
+          },
+          {
+            "title": "Louvre Robbery: What Was Stolen - The New York Times",
+            "url": "https://www.nytimes.com/2025/10/19/world/europe/louvre-heist-items.html?smid=tw-share",
+            "publishedDate": "2025-10-19T19:21:52.000Z",
+            "highlights": [
+              "In an audacious raid, thieves stole eight items of jewelry over the weekend from the Louvre Museum in Paris. On Tuesday, officials put the value of the haul at about 88 million euros, or $102 million. The gang targeted the Louvre’s Apollo Gallery, which contains France’s historic collection of crown jewels. The…"
+            ]
+          },
+          {
+            "title": "Louvre closed after historic jewels stolen in daylight | AP News",
+            "url": "https://apnews.com/article/louvre-closed-jewel-heist-2cc473fc178ae6a3513daa0c71b43409",
+            "publishedDate": "2025-10-20T12:19:56.000Z",
+            "author": "Sylvie Corbet",
+            "highlights": [
+              "Officials said the heist lasted less than eight minutes in total, including less than four minutes inside the Louvre. ... windows, they knew exactly what they wanted. They were very efficient.” ... 1,300 diamonds, was later found outside the museum,"
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    }
+  ]
+}

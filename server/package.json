@@ -7,7 +7,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --reporter=verbose",
-    "test:live": "NODE_USE_ENV_PROXY=1 NO_PROXY=api.anthropic.com STORY_LIVE=1 vitest run --reporter=verbose src/story/live.test.ts",
+    "test:live": "NODE_USE_ENV_PROXY=1 STORY_LIVE=1 vitest run --reporter=verbose src/story/live.test.ts",
     "dev": "node --experimental-strip-types src/local.ts"
   },
   "engines": {

@@ -108,6 +108,8 @@ const STORY = {
     'snippets-only': 'Only headlines and short snippets were available, not the articles themselves.',
     'older-story': 'Some results were about an earlier story with similar wording. They were left out.',
     syndicated: 'Some sources repeat the same report. Repeats count once.',
+    'vague-link':
+      "This link doesn't say who was involved or when, so LinkPeek can't tell which story it means. The reports below are possible matches only and may be about a different story.",
   } satisfies Record<ReportNote, string>,
   possibleOnly: 'These sources may be about a different story. Check them before relying on this.',
   searchedFor: 'Searched for:',

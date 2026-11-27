@@ -1,0 +1,257 @@
+{
+  "case": "fabricated",
+  "recordedAt": "2026-11-27T18:50:27.898Z",
+  "today": "2026-11-27",
+  "note": "Real Exa/Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+          "numResults": 8,
+          "type": "auto",
+          "category": "news",
+          "startPublishedDate": "2026-11-06T00:00:00.000Z",
+          "endPublishedDate": "2026-11-27T23:59:59.999Z",
+          "contents": {
+            "highlights": {
+              "query": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "10-year-old bridge collapses on Patiala bypass, probe ordered | Hindustan Times",
+            "url": "https://www.hindustantimes.com/cities/chandigarh-news/10yearold-bridge-collapses-on-patiala-bypass-probe-ordered-101795111749798.html",
+            "publishedDate": "2026-11-20T02:02:00.000Z",
+            "author": "Karam Prakash",
+            "highlights": [
+              "## Two trucks trapped, driver hospitalised after the collapse of 60-metre steel truss bridge over Bhakra canal; traffic diverted Published on: Nov 20, 2026, 07:32:00 IST By Karam Prakash, Patiala A 60-metre-long steel truss bridge over the Bhakra Main Line Canal near Pasiana village on the Patiala-Sangrur highway…"
+            ]
+          },
+          {
+            "title": "Two trucks left hanging as bridge collapses over canal; Punjab min seeks safety audit | Chandigarh News - The Times of India",
+            "url": "https://timesofindia.indiatimes.com/city/chandigarh/two-trucks-left-hanging-as-bridge-collapses-over-canal-punjab-min-seeks-safety-audit/articleshow/136003913.cms",
+            "publishedDate": "2026-11-19T19:39:00.000Z",
+            "author": "Bharat Khanna",
+            "highlights": [
+              "Bharat Khanna / Nov 20, 2026, 01:09 IST The collapse occurred around 5.30am near Pasiana village on the Sangrur-bound carriageway as the trucks crossed side by side from the new bus stand Patiala/Chandigarh: A portion of an iron truss bridge over the Bhakra canal on the Patiala-Sangrur bypass (NH-7) collapsed early…"
+            ]
+          },
+          {
+            "title": "Llangollen canal bank breached in Shropshire and homes flooded after pipe collapse - BBC News",
+            "url": "https://www.bbc.co.uk/news/articles/cq33gvpdnvz2o",
+            "publishedDate": "2026-11-13T10:12:39.000Z",
+            "author": "Eleanor Lawson, Chloe Hughes, Chris Steers, Charlie Stubbs",
+            "highlights": [
+              "13 November 2026 A canal bank has been breached, flooding two homes, after a pipe carrying water underneath it collapsed. The Canal and River Trust (CRT) said it was responding to an incident on the Llangollen Canal at Hampton Bank in Shropshire following the collapse of the pipe, known as a culvert."
+            ]
+          },
+          {
+            "title": "Traffic diverted on NH-7 after Bhakra canal bridge collapse | Chandigarh News - The Times of India",
+            "url": "https://timesofindia.indiatimes.com/city/chandigarh/traffic-diverted-on-nh-7-after-bhakra-canal-bridge-collapse/articleshow/136037644.cms",
+            "publishedDate": "2026-11-21T01:21:00.000Z",
+            "author": "Bharat Khanna",
+            "highlights": [
+              "Patiala: Traffic was diverted on National Highway-7 after a steel truss bridge over Bhakra main canal on Patiala Southern Bypass collapsed early Thursday, trapping two truck-trailers and injuring their drivers. One driver required hospitalisation."
+            ]
+          },
+          {
+            "title": "Punjab: Bridge collapses in Patiala, two trucks fall into damaged structure; driver injured – ThePrint – PTIFeed",
+            "url": "https://theprint.in/india/punjab-bridge-collapses-in-patiala-two-trucks-fall-into-damaged-structure-driver-injured/3103155/",
+            "publishedDate": "2026-11-19T10:20:38.000Z",
+            "author": "PTI",
+            "highlights": [
+              "19 November, 2026 03:50 pm IST Patiala, Nov 19 (PTI) A 60-metre-long bridge over the Bhakra Main Line canal on the Patiala bypass in Punjab collapsed on Thursday morning, sending two trucks plunging into the damaged structure, with one vehicle catching fire and a driver injured in the incident. The steel truss bridge…"
+            ]
+          },
+          {
+            "title": "Punjab: Bridge collapses near Patiala 2 years after repairs, 2 trucks fall, driver injured - India Today",
+            "url": "https://www.indiatoday.in/india/story/punjab-patiala-bypass-bridge-collapse-trucks-bhakra-canal-nhai-inquiry-ptag-3042280-2026-11-19",
+            "publishedDate": "2026-11-19T16:15:27.000Z",
+            "author": "India Today News Desk",
+            "highlights": [
+              "## A 60-metre bridge over the Bhakra Main Line canal on a national highway in Punjab collapsed on Thursday morning, sending two trucks plunging into the damaged structure and leaving one driver injured. ... Patiala, Nov 19, 2026 21:45 IST A 60-metre-long bridge over the Bhakra Main Line canal on a national highway in…"
+            ]
+          },
+          {
+            "title": "Mayor of Ste-Anne-des-Lacs, Que., resigns following alcohol theft accusations | CBC News",
+            "url": "https://www.cbc.ca/news/canada/montreal/mayor-of-ste-anne-des-lacs-que-resigns-following-alcohol-theft-accusations-9.7413623",
+            "publishedDate": "2026-11-07T17:16:57.000Z",
+            "author": "CBC News",
+            "highlights": [
+              "CBC News · Posted: Nov 07, 2026 12:16 PM EST | Last Updated: 23 minutes ago ... The mayor of Ste-Anne-des-Lacs, Que., has resigned following allegations that he stole alcohol. John Dalzell first served as a councilor for the municipality, about an hour north west of Montreal, and then as a mayor for the past year. He…"
+            ]
+          },
+          {
+            "title": "At least 3 killed, 14 injured after under-construction building collapses near Karachi's Baloch Colony - Pakistan - DAWN.COM",
+            "url": "https://www.dawn.com/news/2046989/at-least-3-killed-14-injured-after-under-construction-building-collapses-near-karachis-baloch-colony",
+            "publishedDate": "2026-11-25T09:23:46.000Z",
+            "author": "Imtiaz Ali",
+            "highlights": [
+              "## At least 3 killed, 14 injured after under-construction building collapses near Karachi's Baloch Colony Imtiaz Ali Published November 25, 2026 Updated November 25, 2026 10:11pm ... KARACHI: At least three people were killed and 14 injured on Wednesday when an under-construction building collapsed in Karachi…"
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    },
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "zarnwick mayor resigns canal bridge",
+          "numResults": 5,
+          "type": "auto",
+          "category": "news",
+          "contents": {
+            "highlights": {
+              "query": "zarnwick mayor resigns canal bridge",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Seoul mayor resigns over bridge collapse - UPI Archives",
+            "url": "https://www.upi.com/Archives/1994/11/01/Seoul-mayor-resigns-over-bridge-collapse/2295783666000/",
+            "publishedDate": "1994-11-01T05:00:00.000Z",
+            "highlights": [
+              "UPI Archives Nov. 1, 1994 # Seoul mayor resigns over bridge collapse SEOUL, Nov. 1 -- Seoul Mayor Woo Myoung-kyu, who was just appointed to the post 12 days ago, resigned Tuesday holding himself morally responsible for the collapse late last month of a major bridge spanning the Han River flowing through the capital.…"
+            ]
+          },
+          {
+            "title": "Kerala canal tragedy : Protests intensifies demanding the resignation of mayor Arya Rajendran | Kerala News - News9live",
+            "url": "https://www.news9live.com/state/kerala/kerala-canal-tragedy-protests-erupt-demanding-the-resignation-of-mayor-arya-rajendran-2621416",
+            "publishedDate": "2024-07-17T14:41:18.000Z",
+            "author": "Vivek Narayanan",
+            "highlights": [
+              "# Kerala canal tragedy : Protests erupt demanding the resignation of mayor Arya Rajendran ## The BJP councillors in the capital city held a sit-in protest outside the Mayor’s office today demanding her resignation over the alleged mismanagement and inability to clean and clear the solid waste that was accumulated in…"
+            ]
+          },
+          {
+            "title": "Enterprize Canal board member demands Ririe mayor's resignation | Local News | postregister.com",
+            "url": "https://www.postregister.com/news/local/enterprize-canal-board-member-demands-ririe-mayors-resignation/article_a74b127e-3b2d-55a1-8a81-dfb1d0c5384d.html",
+            "publishedDate": "2022-02-18T00:00:00.000Z",
+            "author": "Ririe city council recording screenshot",
+            "highlights": [
+              "- By JAKOB THORINGTON jthorington@postregister.com - Feb 17, 2022 ... An Enterprize Canal Company board member has taken objection to Ririe Mayor Larry Lovell’s actions of misrepresenting the city’s opposition against a planned Enterprize gravel pit and demanded his resignation. “You have been nothing but a disgrace…"
+            ]
+          },
+          {
+            "title": "Lewisham mayor quits charity at centre of Millwall FC land case | Third Sector",
+            "url": "https://www.thirdsector.co.uk/lewisham-mayor-quits-charity-centre-millwall-fc-land-case/governance/article/1424338",
+            "publishedDate": "2017-02-15T12:26:19.000Z",
+            "author": "Liam Kay",
+            "highlights": [
+              "The mayor of the London borough of Lewisham has resigned as a trustee of a sports charity at the heart of a controversial £1bn regeneration scheme in south-east London, which had threatened the home of Millwall Football Club. Sir Steve Bullock quit the"
+            ]
+          },
+          {
+            "title": "Carver resigns as mayor - Morrow County Sentinel",
+            "url": "https://www.morrowcountysentinel.com/2026/11/11/carver-resigns-as-mayor/",
+            "publishedDate": "2026-11-11T13:15:00.000Z",
+            "author": "Staff Reports",
+            "highlights": [
+              "Mount Gilead Mayor Donna Carver gave her resignation to Village Council during its Nov. 2 meeting. ... As part of her report, Fiscal Officer Cathy Davis did a third reading and made a motion to pass an ordinance to consent to replacing the bridge structure for ODOT (Ohio Department of Transportation) over state Route…"
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    },
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+          "numResults": 5,
+          "type": "auto",
+          "contents": {
+            "highlights": {
+              "query": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Seoul mayor resigns over bridge collapse - UPI Archives",
+            "url": "https://www.upi.com/Archives/1994/11/01/Seoul-mayor-resigns-over-bridge-collapse/2295783666000/",
+            "publishedDate": "1994-11-01T05:00:00.000Z",
+            "highlights": [
+              "UPI Archives Nov. 1, 1994 # Seoul mayor resigns over bridge collapse SEOUL, Nov. 1 -- Seoul Mayor Woo Myoung-kyu, who was just appointed to the post 12 days ago, resigned Tuesday holding himself morally responsible for the collapse late last month of a major bridge spanning the Han River flowing through the capital.…"
+            ]
+          },
+          {
+            "title": "List of bridge failures",
+            "url": "https://en.wikipedia.org/wiki/List_of_bridge_failures",
+            "publishedDate": "2026-11-18T17:18:17.000Z",
+            "highlights": [
+              "and Ship Canal and surrounding heavy industry | East Chicago, Indiana | United States | 15 April 1982 | Indiana State Route 912 | ... | Seongsu Bridge disaster | Seoul | South Korea | 21 October 1994 | Cantilever bridge crossing Han River | Structural"
+            ]
+          },
+          {
+            "title": "Moscow park chief fired after bridge collapse injures 13 | AP News",
+            "url": "https://apnews.com/travel-general-news-89f8312889764b52a8e33d0205bb2f97",
+            "publishedDate": "2019-01-01T17:51:58.000Z",
+            "highlights": [
+              "# Moscow park chief fired after bridge collapse injures 13 MOSCOW (AP) — The mayor of Moscow has fired the director of the city’s renowned Gorky Park after 13 people were"
+            ]
+          },
+          {
+            "title": "[Korea History] Bridge collapse lays bare dark side of 'Han River miracle’ - The Korea Herald",
+            "url": "https://www.koreaherald.com/article/3175790",
+            "publishedDate": "2023-07-26T06:25:38.000Z",
+            "author": "Yoon Min-sik",
+            "highlights": [
+              "Published : July 26, 2023 - 15:25:38 Yoon Min-sik Fatal 1994 Seongsu Bridge collapse brought to light lax regulations and lack of safety awareness ... It was a regular Friday morning on Oct. 21, 1994. The 1.2-kilometer Seongnsu Bridge over the Han River in Seoul was bustling with commuting cars as usual, amid light…"
+            ]
+          },
+          {
+            "title": "10-year-old bridge collapses on Patiala bypass, probe ordered | Hindustan Times",
+            "url": "https://www.hindustantimes.com/cities/chandigarh-news/10yearold-bridge-collapses-on-patiala-bypass-probe-ordered-101795111749798.html",
+            "publishedDate": "2026-11-20T02:02:00.000Z",
+            "author": "Karam Prakash",
+            "highlights": [
+              "# 10-year-old bridge collapses on Patiala bypass, probe ordered ## Two trucks trapped, driver hospitalised after the collapse of 60-metre steel truss bridge over Bhakra canal; traffic diverted Published on: Nov 20, 2026, 07:32:00 IST By Karam Prakash, Patiala A 60-metre-long steel truss bridge over the Bhakra Main…"
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    }
+  ]
+}

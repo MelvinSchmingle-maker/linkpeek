@@ -145,7 +145,8 @@ export function toStoryView(state: StoryState): StoryView {
 function reportView(view: StoryView, r: StoryReport): StoryView {
   view.searchedFor = r.searchedFor || undefined;
   if (r.setAside > 0) view.setAside = S.setAside(r.setAside);
-  view.notes = r.notes.map((n) => S.note[n]);
+  // A vague link's explanation goes at the top, as the caution, not among the notes at the end.
+  view.notes = r.notes.filter((n) => n !== 'vague-link').map((n) => S.note[n]);
 
   if (r.status === 'no-results' || r.status === 'no-match') {
     view.tags.push({ text: S.match.none, tone: 'none' });
@@ -176,7 +177,8 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
   view.subject = r.subject;
   view.tags.push({ text: S.match[r.match], tone: r.match });
   view.tags.push({ text: S.confidence[r.confidence], tone: r.confidence === 'strong' ? 'strong' : r.confidence === 'conflicting' ? 'conflicting' : 'neutral' });
-  if (r.match === 'possible') view.caution = S.possibleOnly;
+  if (r.notes.includes('vague-link')) view.caution = S.note['vague-link'];
+  else if (r.match === 'possible') view.caution = S.possibleOnly;
 
   const items = (list: { text: string; sources: number[] }[]) => list.map((c) => ({ text: c.text, refs: c.sources }));
   if (r.whatHappened.length) view.sections.push({ id: 'what-happened', heading: S.whatHappened, kind: 'paragraph', items: items(r.whatHappened) });

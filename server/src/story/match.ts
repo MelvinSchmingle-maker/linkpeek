@@ -50,6 +50,8 @@ export interface Scored {
   score: number;
   wordShare: number;
   namesFound: number;
+  /** How many of the link's key names (from the headline, its other wordings or the selection) it mentions. */
+  keyFound: number;
   /** How many of the link's multi-word key names ("Jamie Rivers", "Grand Meridian Hotel") it mentions: usually people and organisations. */
   specificFound: number;
   /** The result dates from a different time than the link. */
@@ -94,7 +96,7 @@ export function scoreHits(profile: LinkProfile, hits: SearchHit[]): Scored[] {
     if (profile.keyNames.length) score = 0.6 * wordShare + 0.4 * (keyFound.length / profile.keyNames.length);
     // Names only in the teaser or nearby text can only help.
     else if (others.length) score = Math.max(wordShare, 0.6 * wordShare + 0.4 * (others.filter(has).length / others.length));
-    return { hit, score, wordShare, namesFound, specificFound, dateMismatch: false };
+    return { hit, score, wordShare, namesFound, keyFound: keyFound.length, specificFound, dateMismatch: false };
   });
   // When the link has no date, the best results' dates stand in for it.
   const reference = profile.date ?? clusterDate(scored);
@@ -126,7 +128,10 @@ export function capMatch(ai: MatchStatus, s: Scored, profile: LinkProfile): Matc
     // A link that gives no name and no date can't be pinned to one story: "Pop star found dead in hotel room"
     // fits many (live testing returned Whitney Houston's death in 2012). At best a possible match.
     if (!profile.names.length && !profile.date) return 'possible';
-    if (profile.names.length && s.namesFound === 0) return 'possible';
+    // The link says who or what the story is about, and the result mentions none of it. Only the headline's
+    // names count here: a detail named only in the teaser ("Apollo Gallery") is often missing from good
+    // reports' extracts (seen live with the Louvre card, where it capped France 24, AP and Reuters).
+    if (profile.keyNames.length && s.keyFound === 0) return 'possible';
     // The headline names someone specific: a result that doesn't mention them isn't clearly the same story.
     if (profile.keyNames.some((n) => n.includes(' ')) && s.specificFound === 0) return 'possible';
     if (s.wordShare < 0.2 && s.namesFound === 0) return 'possible';

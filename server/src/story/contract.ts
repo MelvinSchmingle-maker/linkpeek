@@ -78,7 +78,7 @@ export type InvestigationConfidence = 'strong' | 'partial' | 'conflicting' | 'in
 export type SourceKind = 'primary' | 'agency' | 'news' | 'opinion' | 'social' | 'other';
 export type DetailLabel = 'who' | 'what' | 'where' | 'when' | 'why';
 export type ReportStatus = 'report' | 'no-results' | 'no-match' | 'report-failed';
-export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated';
+export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated' | 'vague-link';
 
 export interface Claim {
   text: string;

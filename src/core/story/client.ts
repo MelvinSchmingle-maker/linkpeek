@@ -154,7 +154,7 @@ const MATCHES: MatchStatus[] = ['strong', 'possible', 'none'];
 const CONFIDENCES: InvestigationConfidence[] = ['strong', 'partial', 'conflicting', 'insufficient'];
 const KINDS: SourceKind[] = ['primary', 'agency', 'news', 'opinion', 'social', 'other'];
 const LABELS: DetailLabel[] = ['who', 'what', 'where', 'when', 'why'];
-const NOTES: ReportNote[] = ['single-source', 'developing', 'snippets-only', 'older-story', 'syndicated'];
+const NOTES: ReportNote[] = ['single-source', 'developing', 'snippets-only', 'older-story', 'syndicated', 'vague-link'];
 const MAX_SOURCES = 8;
 
 function str(v: unknown, max: number): string | undefined {

@@ -1,0 +1,108 @@
+{
+  "case": "louvre-url",
+  "recordedAt": "2026-11-27T18:50:23.161Z",
+  "today": "2026-11-27",
+  "note": "Real Exa/Tavily answers to the requests Story Search sent for this case, recorded by `npm run test:story-e2e:record`. Extracts are cut to short passages (this repository is public); no headers or keys are saved.",
+  "exchanges": [
+    {
+      "provider": "exa",
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "body": {
+          "query": "louvre crown jewels stolen apollo gallery",
+          "numResults": 8,
+          "type": "auto",
+          "category": "news",
+          "startPublishedDate": "2025-10-05T00:00:00.000Z",
+          "endPublishedDate": "2025-11-18T23:59:59.999Z",
+          "contents": {
+            "highlights": {
+              "query": "louvre crown jewels stolen apollo gallery",
+              "maxCharacters": 1200
+            }
+          }
+        }
+      },
+      "status": 200,
+      "response": {
+        "results": [
+          {
+            "title": "Informations relatives au vol par effraction survenu ce dimanche 19 octobre au musée du Louvre | Ministère de la Culture",
+            "url": "https://www.culture.gouv.fr/presse/communiques-de-presse/informations-relatives-au-vol-par-effraction-survenu-ce-dimanche-19-octobre-au-musee-du-louvre",
+            "publishedDate": "2025-10-19T00:00:00.000Z",
+            "highlights": [
+              "# Informations relatives au vol par effraction survenu ce dimanche 19 octobre au musée du Louvre Publié le 19 octobre 2025 Ce dimanche 19 octobre, le musée du Louvre a connu un vol par effraction dans la galerie d’Apollon qui abrite la collection royale de gemmes et les diamants de la Couronne. Deux vitrines de haute…"
+            ]
+          },
+          {
+            "title": "Louvre museum robbery: How thieves broke in and what they stole",
+            "url": "https://www.reuters.com/graphics/FRANCE-CRIME/LOUVRE/byprezooove/",
+            "publishedDate": "2025-10-20T11:30:00.000Z",
+            "author": "Adolfo Arranz, Han Huang, Jitesh Chowdhury, Vijdan Mohammad Kawoosa",
+            "highlights": [
+              "A total of nine objects were targeted by the criminals, and eight were actually stolen. The thieves lost the ninth one, the crown of Napoleon III’s wife, Empress Eugenie, during their escape, Beccuau said."
+            ]
+          },
+          {
+            "title": "Thieves use basket lift in daring Louvre robbery, steal priceless jewels | AP News",
+            "url": "https://apnews.com/article/france-louvre-museum-robbery-a3687f330a43e0aaff68c732c4b2585b",
+            "publishedDate": "2025-10-19T09:46:25.000Z",
+            "author": "Thomas Adamson",
+            "highlights": [
+              "One object, the emerald-set imperial crown of Napoleon III’s wife, Empress Eugénie, containing more than 1,300 diamonds, was later found outside the museum, French authorities said. It was reportedly recovered broken. ... Around 9:30 a.m., several intruders forced a window, cut panes with a disc cutter and went…"
+            ]
+          },
+          {
+            "title": "Stolen treasures, a crown dropped as thieves fled - and serious questions for Louvre security",
+            "url": "https://www.bbc.com/news/articles/cj0e24rrjz1o",
+            "publishedDate": "2025-10-19T18:55:16.000Z",
+            "author": "Hugh Schofield",
+            "highlights": [
+              "Inside the richly decorated gallery they made for two display-cases which contain what remains of the French crown jewels. Most of France's royal regalia was lost or sold after the 1789 Revolution, but some items were saved or bought back. Most of what was in the ... According to the authorities, eight items were…"
+            ]
+          },
+          {
+            "title": "A timeline of the jewel heist at the Louvre in Paris | AP News",
+            "url": "https://apnews.com/article/louvre-heist-jewels-paris-timeline-france-thieves-9252e6b65e1339b5cff25281e4498d15",
+            "publishedDate": "2025-10-26T13:22:58.000Z",
+            "highlights": [
+              "PARIS (AP) — Seven people have been arrested so far in the investigation into the theft of crown jewels from the Louvre Museum, but the jewels haven’t been found. Here’s what we know about the timeline of what happened: ... Oct. 19 9 a.m.: The Louvre museum opens to visitors. 9:30 a.m.: Thieves dressed like renovation…"
+            ]
+          },
+          {
+            "title": "French crown jewels: What we know about the stolen Louvre treasures | CNN",
+            "url": "https://www.cnn.com/2025/10/20/style/louvre-heist-which-jewels-stolen-intl-hnk",
+            "publishedDate": "2025-10-20T08:22:35.000Z",
+            "author": "Lex Harvey",
+            "highlights": [
+              "Precious artefacts snatched from Paris’s Louvre Museum on Sunday include an emerald necklace set with more than 1,000 diamonds gifted by Napoleon to his second wife and other treasures of “inestimable” value. The thieves targeted the Louvre’s Apollo Gallery on the upper floor, which houses the French Crown Jewels. In…"
+            ]
+          },
+          {
+            "title": "Louvre museum robbery: Jewels of French royalty stolen in daring heist | AP News",
+            "url": "https://apnews.com/article/louvre-museum-theft-jewels-france-66eb823d9ac9b084fda4f4e9d4c72243",
+            "publishedDate": "2025-10-20T12:28:20.000Z",
+            "highlights": [
+              "— Emerald necklace of Empress Marie-Louise, Napoleon I’s second wife — Emerald earrings worn by Empress Marie-Louise — Crown worn by Empress Eugenie, wife of Napoleon III — Brooch of Empress Eugenie — Crown worn by Queen Marie-Amelie, queen of France 1830-1848, and Queen"
+            ]
+          },
+          {
+            "title": "Thieves steal French crown jewels from Louvre in daytime raid",
+            "url": "https://www.france24.com/en/live-news/20251019-thieves-steal-french-crown-jewels-from-louvre-in-daytime-raid",
+            "publishedDate": "2025-10-19T19:53:18.000Z",
+            "highlights": [
+              "Eugenie's crown was recovered after the thieves dropped it as they made their escape, said the culture ministry statement. According to the museum's website, it is covered in 1,354 diamonds and 56 emeralds."
+            ]
+          }
+        ],
+        "costDollars": {
+          "total": 0.007,
+          "search": {
+            "neural": 0.007
+          }
+        }
+      }
+    }
+  ]
+}

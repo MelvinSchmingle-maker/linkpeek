@@ -18,7 +18,11 @@
     "eval": "node scripts/run-eval.mjs",
     "eval:ai": "node scripts/run-eval-ai.mjs",
     "test:server": "npm --prefix server test",
-    "test:story-live": "npm --prefix server run test:live"
+    "test:story-live": "npm --prefix server run test:live",
+    "test:story-e2e": "node scripts/story-e2e.mjs offline",
+    "test:story-e2e:record": "node scripts/story-e2e.mjs record",
+    "test:story-e2e:live": "node scripts/story-e2e.mjs live",
+    "test:story-e2e:report": "node scripts/story-e2e.mjs report"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

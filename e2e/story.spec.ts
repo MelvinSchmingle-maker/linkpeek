@@ -188,3 +188,120 @@ test('the ordinary preview card is unchanged next to Story Search', async ({ pag
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute('aria-label', 'LinkPeek preview');
 });
+
+// ---------- Every state the card can be in (Part 7 of the evaluation brief) ----------
+
+/** These links sit lower on the page: like a person, look at the link before right-clicking it. */
+async function storyFor(page: Page, context: BrowserContext, which: string, url: string) {
+  await page.locator(`a[data-case="${which}"]`).scrollIntoViewIfNeeded();
+  return story(context, url);
+}
+
+test('a vague link: possible matches only, nobody named as the subject, and the reason first', async ({ page, context }) => {
+  await agreeOnce(context);
+  const pagesBefore = context.pages().length;
+  await storyFor(page, context, 'vague', 'https://celeb.example.com/p/1');
+  const card = storyCard(page);
+  await expect(card.locator('.story-caution')).toHaveText(
+    "This link doesn't say who was involved or when, so LinkPeek can't tell which story it means. The reports below are possible matches only and may be about a different story.",
+    { timeout: 10_000 },
+  );
+  await expect(card.locator('.story-subject')).toHaveCount(0);
+  await expect(card.locator('.story-tag')).toHaveText(['Possible match', 'Partial evidence']);
+  // The explanation isn't repeated at the end; the older-story note is there.
+  await expect(card.locator('.story-notes li')).toHaveText(['Some results were about an earlier story with similar wording. They were left out.']);
+  await expect(card.getByRole('heading', { name: 'Possibly related sources' })).toBeVisible();
+  await expect(card.locator('.story-source-tag', { hasText: 'Possible match' })).toHaveCount(2);
+  // An old story shows its old date: never presented as current.
+  await expect(card.locator('.story-source-meta').first()).toContainText('12 February 2012');
+  expect(page.url()).toBe(PAGE);
+  expect(context.pages()).toHaveLength(pagesBefore);
+});
+
+test('no results: says so, with no report and no sources', async ({ page, context }) => {
+  await agreeOnce(context);
+  await storyFor(page, context, 'no-results', `${TEST_SERVER}/2026/11/25/nothing-turned-up-for-the-lighthouse-keeper`);
+  const card = storyCard(page);
+  await expect(card).toContainText('No reports about this story were found.', { timeout: 10_000 });
+  await expect(card.locator('.story-tag')).toHaveText(['No reliable match']);
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toHaveCount(0);
+  await expect(card.locator('.story-source-link')).toHaveCount(0);
+  await expect(card).toContainText('Searched for: “Nothing turned up for the lighthouse keeper”');
+});
+
+test('the backend failing outright (HTTP 500) is a failure with Try again, never a report', async ({ page, context }) => {
+  await agreeOnce(context);
+  await storyFor(page, context, 'server-down', `${TEST_SERVER}/2026/11/25/server-down-story-about-the-quay`);
+  const card = storyCard(page);
+  await expect(card).toContainText("LinkPeek's server couldn't be reached. Try again later.", { timeout: 10_000 });
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Try again' }).click();
+  await expect(card).toContainText("LinkPeek's server couldn't be reached.", { timeout: 10_000 });
+  expect(await sent(page)).toHaveLength(2);
+});
+
+test('the AI failing: the closest sources as possible matches only, no claims, and Try again', async ({ page, context }) => {
+  await agreeOnce(context);
+  await storyFor(page, context, 'ai-down', `${TEST_SERVER}/2026/11/25/ai-down-story-about-the-dock-cranes`);
+  const card = storyCard(page);
+  await expect(card).toContainText("Couldn't write a report. These sources may be about the same story:", { timeout: 10_000 });
+  await expect(card.locator('.story-tag')).toHaveText(['Possible match']);
+  await expect(card.getByRole('heading', { name: 'Possibly related sources' })).toBeVisible();
+  await expect(card.locator('.story-source-link')).toHaveCount(2);
+  for (const h of ['What happened?', 'What is confirmed?', 'Reported by one source']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible();
+});
+
+test('many sources: each listed with site, date and kind; repeats and the linked article marked; nothing overflows', async ({ page, context }) => {
+  await agreeOnce(context);
+  await storyFor(page, context, 'many', `${TEST_SERVER}/2026/11/25/many-sources-story-about-the-harbour-festival`);
+  const card = storyCard(page);
+  await expect(card.locator('.story-source-link')).toHaveCount(6, { timeout: 10_000 });
+  const items = card.locator('.story-source');
+  await expect(items.nth(0)).toContainText('The linked article');
+  await expect(items.nth(1).locator('.story-source-meta')).toHaveText('Example Wire · 25 November 2026 · News agency');
+  await expect(items.nth(2)).toContainText('Repeats source 2');
+  await expect(items.nth(4).locator('.story-source-meta')).toContainText('Opinion');
+  await expect(items.nth(5).locator('.story-source-meta')).toContainText('Social media post');
+  await expect(items.nth(5)).toContainText('Possible match');
+  await expect(card).toContainText('Some sources repeat the same report. Repeats count once.');
+  // A long source title wraps inside the card rather than pushing it sideways.
+  expect(await card.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+  const box = (await card.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
+test('a very long headline is shown in full before sending, and the card stays inside the window', async ({ page, context }) => {
+  await storyFor(page, context, 'long', `${TEST_SERVER}/2026/11/25/harbour-redevelopment-to-begin`);
+  const card = storyCard(page);
+  await expect(card.locator('.story-preview')).toContainText('after years of delays, funding disputes and two public inquiries');
+  const fits = async () => {
+    expect(await card.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    const box = (await card.boundingBox())!;
+    const view = page.viewportSize()!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(view.width);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(view.height);
+  };
+  await fits();
+  await card.getByRole('button', { name: 'Search' }).click();
+  await expect(card.locator('.story-stages')).toBeVisible();
+  await fits();
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toBeVisible({ timeout: 10_000 });
+  await fits();
+});
+
+test('a link with no description: only its own clues are sent, and the search works', async ({ page, context }) => {
+  await storyFor(page, context, 'no-description', `${TEST_SERVER}/2026/11/25/harbour-lights-switched-on-for-winter`);
+  const card = storyCard(page);
+  // No description line. (The publisher is the page's own site name: this link is on the same site.)
+  await expect(card.locator('.story-preview dt')).toHaveText(['Headline', 'Link address', 'Date', 'Publisher']);
+  await card.getByRole('button', { name: 'Search' }).click();
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toBeVisible({ timeout: 10_000 });
+  const [body] = await sent(page);
+  expect(body).toMatchObject({ headline: { text: 'Harbour lights switched on for winter' }, date: '2026-11-25' });
+  expect(body!.description).toBeUndefined();
+  // Neighbouring stories in the same list aren't mixed in.
+  expect(JSON.stringify(body)).not.toMatch(/lighthouse|quay|dock cranes|festival|redevelopment/);
+});

@@ -209,6 +209,21 @@ describe('extraction from the page', () => {
     expect(extractStoryClues(link)!.headline?.text).toBe('Ferry strike called off after late-night talks');
   });
 
+  it('link text that is just the address is not a headline; the address words are used instead', () => {
+    const href = 'https://paper.example.org/2025/10/19/louvre-crown-jewels-stolen-apollo-gallery';
+    const link = page('https://social.example/post/1', `<main><p><a data-t href="${href}">${href}</a></p></main>`);
+    const c = extractStoryClues(link)!;
+    expect(c.linkText?.confidence).toBe('low');
+    expect(c.headline).toBeUndefined();
+    const pkg = buildPackage(c);
+    expect(pkg.ok && pkg.request.slug).toBe('louvre crown jewels stolen apollo gallery');
+    expect(pkg.ok && pkg.request.date).toBe('2025-10-19');
+    expect(pkg.ok && pkg.request.headline).toBeUndefined();
+    // A bare address with an ID and nothing else gives nothing to search for.
+    const bare = page('https://social.example/post/2', '<main><div><a data-t href="https://www.example-news.com/a/48213377">https://www.example-news.com/a/48213377</a></div></main>');
+    expect(buildPackage(extractStoryClues(bare))).toEqual({ ok: false, reason: 'insufficient' });
+  });
+
   it('a non-web link is not investigated', () => {
     const link = page(FRONT, '<main><a data-t href="mailto:someone@example.com">Email the newsroom about the hotel story</a></main>');
     expect(buildPackage(extractStoryClues(link))).toEqual({ ok: false, reason: 'not-a-web-link' });

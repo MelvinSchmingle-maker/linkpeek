@@ -21,6 +21,7 @@ import { buildQueries, type SearchQuery } from './queries.js';
 import { groupReports, sourceKind } from './sources.js';
 import { storyUserMessage } from './prompt.js';
 import { linkProfile, scoreHits } from './match.js';
+import { evidenceOf, ungrounded } from './report.js';
 import { names } from './text.js';
 
 const { checkRateLimit } = vi.hoisted(() => ({ checkRateLimit: vi.fn() }));
@@ -104,7 +105,7 @@ function ai(patch: Partial<AiReport>): AiReport {
     subject: 'Pop star Jamie Rivers found dead in Paris hotel',
     what_happened: [{ text: 'French police are investigating after singer Jamie Rivers was found dead at a Paris hotel on 24 November 2026.', sources: [1, 2] }],
     details: [
-      { label: 'who', text: 'Jamie Rivers, a 34-year-old American pop singer.', sources: [2] },
+      { label: 'who', text: 'Jamie Rivers, a 34-year-old pop singer.', sources: [2] },
       { label: 'where', text: 'The Grand Meridian hotel in Paris.', sources: [1] },
     ],
     facts: [{ text: 'Paris prosecutors have opened an inquiry.', sources: [1, 2] }],
@@ -286,11 +287,22 @@ describe('scenarios', () => {
       hit({ url: 'https://www.cbsnews.com/news/whitney-houston-died-in-beverly-hills-hotel-room/', title: 'Whitney Houston died in Beverly Hills hotel room', published: '2012-02-12', passages: ['The pop star was found dead in her hotel room.'] }),
       hit({ url: 'https://www.npr.org/2012/02/12/146761831/whitney-houston-dies', title: 'Whitney Houston, pop star, found dead in hotel room', published: '2012-02-12', passages: ['Pop star found dead in hotel room in Beverly Hills.'] }),
     ];
-    const model = new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }], facts: [] }));
+    const model = new FakeModel(
+      ai({
+        matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }],
+        subject: 'Whitney Houston found dead in Beverly Hills hotel room',
+        what_happened: [{ text: 'Whitney Houston was found dead in her hotel room in Beverly Hills.', sources: [1, 2] }],
+        details: [],
+        facts: [],
+      }),
+    );
     const vague = req({ headline: { text: 'Pop star found dead in hotel room', from: 'link-text', confidence: 'high' }, slug: undefined, date: undefined, dateFrom: undefined });
     const { report } = await run(returns(whitney), model, vague);
     expect(report!.match).toBe('possible');
     expect(report!.confidence).not.toBe('strong');
+    // No person put forward as the subject, and the reason given first.
+    expect(report!.subject).toBeUndefined();
+    expect(report!.notes[0]).toBe('vague-link');
   });
 
   it('10e. a name only in the teaser can raise a result\'s score but not sink it', async () => {
@@ -305,6 +317,29 @@ describe('scenarios', () => {
     const [scored] = scoreHits(linkProfile(louvre), [ap]);
     expect(linkProfile(louvre).keyNames).toEqual([]);
     expect(scored!.score).toBeGreaterThanOrEqual(0.35);
+  });
+
+  it('10f. ...nor cap a strong match: the end-to-end suite found real Louvre reports shown as only "possible"', async () => {
+    const louvre = req({
+      url: 'https://paper.example.org/p/88231',
+      headline: { text: 'Louvre jewel heist: thieves steal crown jewels in daylight raid', from: 'card-heading', confidence: 'high' },
+      description: { text: 'Thieves used a lift to reach the Apollo Gallery and escaped within minutes.', from: 'card-teaser', confidence: 'medium' },
+      context: { text: 'Culture 19 October 2025', from: 'surrounding-text', confidence: 'low' },
+      slug: undefined,
+      date: '2025-10-19',
+    });
+    const france24 = hit({ url: 'https://www.france24.com/en/live-news/20251019-louvre', title: 'Thieves steal French crown jewels from Louvre in daytime raid', published: '2025-10-19', passages: ["Thieves raided Paris's Louvre museum in broad daylight Sunday, taking seven minutes to grab crown jewels."] });
+    const reuters = hit({ url: 'https://www.reuters.com/world/europe/louvre-2025-10-19/', title: "Thieves rob priceless jewels from Paris' Louvre in brazen heist", published: '2025-10-19', passages: ["Thieves broke into Paris' Louvre museum on Sunday, stealing objects from the area that houses the crown jewels."] });
+    const model = new FakeModel(ai({ matches: [1, 2].map((source) => ({ source, status: 'strong' as const, reason: 'Same heist.' })), what_happened: [{ text: 'Thieves stole crown jewels from the Louvre in Paris.', sources: [1, 2] }], details: [], facts: [{ text: 'The thieves raided the Louvre on Sunday.', sources: [1, 2] }] }));
+    const { report } = await run(returns([france24, reuters]), model, louvre);
+    expect(report!.sources.map((s) => s.match)).toEqual(['strong', 'strong']);
+    expect(report!.confirmed).toHaveLength(1);
+    // A name in the headline still has to be there: "Pope Francis" isn't in a report about someone else.
+    const pope = req({ headline: { text: 'Death of Pope Francis announced by the Vatican', from: 'link-text', confidence: 'high' }, slug: undefined, date: '2025-04-21' });
+    const other = hit({ url: 'https://www.reuters.com/world/death-announced-2025-04-21/', title: 'Death of former president announced', published: '2025-04-21', passages: ['The death was announced on Monday.'] });
+    const r2 = (await run(returns([other]), new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }], what_happened: [{ text: 'The death was announced on Monday.', sources: [1] }], details: [], facts: [] })), pope)).report!;
+    expect(r2.sources.length).toBeGreaterThan(0);
+    expect(r2.sources.every((s) => s.match === 'possible')).toBe(true);
   });
 
   it('11. conflicting reports: says so, and lists what is unclear', async () => {
@@ -452,6 +487,66 @@ describe('report rules', () => {
   it('the AI can lower confidence but never raise it', async () => {
     const model = new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })), confidence: 'insufficient' }));
     expect((await run(returns([BBC, GUARDIAN, POLICE]), model)).report!.confidence).toBe('insufficient');
+  });
+
+  it('nothing specific may be added: names, numbers and dates must come from the kept sources', () => {
+    const vatican = hit({
+      url: 'https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-dies.html',
+      title: 'Pope Francis has died on Easter Monday aged 88',
+      published: '2025-04-21',
+      passages: ['Pope Francis died on Easter Monday, April 21, 2025, at his residence in the Casa Santa Marta.', 'The crown of Empress Eugenie was found outside.'],
+    });
+    const reuters = hit({ url: 'https://www.reuters.com/world/pope-2025-04-22/', title: 'Pope Francis dies', published: '2025-04-22', passages: ['Francis died on Monday after a stroke, the Vatican said. He was 88.'] });
+    const ev = evidenceOf([vatican, reuters], ['Reuters', 'Associated Press']);
+    // Supported: in the text, worked out from a publication date, accents aside, or a source's own name.
+    expect(ungrounded('Pope Francis died on 21 April 2025 at the Casa Santa Marta, aged 88.', ev)).toEqual([]);
+    expect(ungrounded('Francis died on Monday, 21 April, the Vatican said.', ev)).toEqual([]);
+    expect(ungrounded('The crown of Empress Eugénie was found.', ev)).toEqual([]);
+    expect(ungrounded('Reuters and the Associated Press reported his death on Tuesday 22 April 2025.', ev)).toEqual([]);
+    // Added: a name, a count, a date from another time.
+    expect(ungrounded('The mayor of Zarnwick resigned.', ev)).toEqual(['zarnwick']);
+    expect(ungrounded('The collapse injured 14 people.', ev)).toEqual(['14']);
+    expect(ungrounded('He died on 3 March 2024.', ev)).toEqual(['3 March 2024']);
+    expect(ungrounded('He was born in Buenos Aires.', ev)).toEqual(['buenos', 'aires']);
+    // Short, capitalised sentences are still read for names; the link's own names are checked anywhere.
+    expect(ungrounded('Mayor Pieter Holm of Zarnwick.', ev)).toEqual(['mayor', 'pieter', 'holm', 'zarnwick']);
+    expect(ungrounded('Zarnwick’s mayor resigned.', ev, ['Zarnwick'])).toEqual(['zarnwick']);
+    expect(ungrounded('Zarnwick’s mayor resigned.', ev)).toEqual([]);
+  });
+
+  it('an AI that invents the story gets none of its invention onto the card', async () => {
+    const mayor = hit({ url: 'https://www.cbc.ca/news/canada/mayor-resigns-2026-11-07', title: 'Mayor of Ste-Anne-des-Lacs resigns following accusations', published: '2026-11-07', passages: ['The mayor resigned on Friday after accusations from council.'] });
+    const bridge = hit({ url: 'https://www.hindustantimes.com/cities/bridge-collapses-patiala-2026-11-20', title: 'Bridge collapses on Patiala bypass over canal', published: '2026-11-20', passages: ['A steel bridge over the canal collapsed; two trucks fell and a driver was injured.'] });
+    const invented = new FakeModel(
+      ai({
+        matches: [1, 2].map((source) => ({ source, status: 'strong' as const, reason: 'Same story.' })),
+        subject: 'Mayor of Zarnwick resigns after canal bridge collapse',
+        what_happened: [{ text: 'The mayor of Zarnwick resigned after a canal bridge collapsed on 19 November 2026, injuring 14 people.', sources: [1, 2] }],
+        details: [
+          { label: 'who', text: 'Mayor Pieter Holm of Zarnwick.', sources: [1] },
+          { label: 'when', text: 'On 19 November 2026.', sources: [2] },
+        ],
+        facts: [{ text: 'Fourteen people were hurt when the Zarnwick canal bridge fell.', sources: [2] }],
+        confidence: 'strong',
+      }),
+    );
+    const r = req({
+      url: 'https://news.example.com/2026/11/20/zarnwick-mayor-resigns-canal-bridge-collapse',
+      headline: { text: 'Mayor of Zarnwick resigns after canal bridge collapse injures 14', from: 'link-text', confidence: 'high' },
+      slug: 'zarnwick mayor resigns canal bridge collapse',
+      date: '2026-11-20',
+      dateFrom: 'url-date',
+    });
+    const out = await investigate(r, { provider: returns([mayor, bridge]), model: invented, now: () => NOW });
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    // "Searched for" repeats the link's own headline; everything the AI wrote must be free of its invention.
+    const shown = JSON.stringify({ ...out.report, searchedFor: '' });
+    expect(shown).not.toMatch(/Zarnwick|Holm|\b14\b|Fourteen people/);
+    expect(out.report.subject).toBeUndefined();
+    // Its matching can't be trusted either: no sources are put forward as possibly the story.
+    expect(out.report).toMatchObject({ status: 'no-match', match: 'none', sources: [] });
+    expect(out.metrics.ungroundedDropped).toBeGreaterThanOrEqual(4);
   });
 
   it('marks the linked article itself when the search finds it', async () => {
