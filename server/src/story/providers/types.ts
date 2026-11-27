@@ -24,13 +24,16 @@ export type SearchFailure = 'misconfigured' | 'quota' | 'busy' | 'timeout' | 'up
 
 export type SearchOutcome =
   | { ok: true; hits: SearchHit[]; costUsd: number; provider: string }
-  | { ok: false; code: SearchFailure };
+  /** `tag`: the provider's own error tag, when it sends one (e.g. Exa's "NO_MORE_CREDITS"). For logs and the live-test report. */
+  | { ok: false; code: SearchFailure; tag?: string };
 
 export interface SearchOptions {
   limit: number;
   /** Only results published on or after this day ("YYYY-MM-DD"), when the link's date is known. */
   since?: string;
   language?: string;
+  /** Leave out results from these sites (to find independent reports of a story already found). */
+  excludeDomains?: string[];
   signal?: AbortSignal;
 }
 
@@ -74,6 +77,16 @@ export function webUrl(s: unknown): string | undefined {
   }
 }
 
+/** The provider's error tag, if its error body has one: Exa's `tag`, or a short code. Never the message text. */
+async function errorTag(res: Response): Promise<string | undefined> {
+  try {
+    const body = (await res.json()) as { tag?: unknown };
+    return typeof body?.tag === 'string' && /^[A-Z0-9_]{1,40}$/.test(body.tag) ? body.tag : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** One HTTP call with a timeout, mapped to the short failure codes. Never throws. */
 export async function callJson(
   fetchImpl: typeof fetch,
@@ -81,18 +94,25 @@ export async function callJson(
   init: RequestInit,
   timeoutMs: number,
   outer?: AbortSignal,
-): Promise<{ ok: true; data: unknown } | { ok: false; code: SearchFailure }> {
+): Promise<{ ok: true; data: unknown } | { ok: false; code: SearchFailure; tag?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
   outer?.addEventListener('abort', onAbort);
   try {
     const res = await fetchImpl(url, { ...init, signal: controller.signal });
-    if (res.status === 401 || res.status === 403) return { ok: false, code: 'misconfigured' };
-    // 402: payment required. 432 and 433: Tavily's plan and pay-as-you-go limits.
-    if (res.status === 402 || res.status === 432 || res.status === 433) return { ok: false, code: 'quota' };
-    if (res.status === 429) return { ok: false, code: 'busy' };
-    if (!res.ok) return { ok: false, code: 'upstream' };
+    if (!res.ok) {
+      const tag = await errorTag(res);
+      const fail = (code: SearchFailure) => ({ ok: false as const, code, ...(tag ? { tag } : {}) });
+      if (res.status === 401 || res.status === 403) return fail('misconfigured');
+      // Exa sends 402 with "X402_PAYMENT_REQUIRED" when no key arrived at all: a setup problem, not used-up credit.
+      if (res.status === 402 && tag === 'X402_PAYMENT_REQUIRED') return fail('misconfigured');
+      // 402: Exa's credit or a key/team budget is used up (NO_MORE_CREDITS, API_KEY_BUDGET_EXCEEDED,
+      // TEAM_BUDGET_EXCEEDED). 432 and 433: Tavily's plan or key limit, and its pay-as-you-go limit.
+      if (res.status === 402 || res.status === 432 || res.status === 433) return fail('quota');
+      if (res.status === 429) return fail('busy');
+      return fail('upstream');
+    }
     try {
       return { ok: true, data: await res.json() };
     } catch {

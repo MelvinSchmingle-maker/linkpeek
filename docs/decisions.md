@@ -272,3 +272,12 @@ The owner asked for everything to be free or the cheapest option, and for the de
 - **Hosting:** Vercel Hobby, free, while LinkPeek is non-commercial. Pro ($20 a month) only when it makes money.
 - **Privacy:** D53 as built.
 Reversible: each is one environment variable. Price breakdown in `docs/story-search.md`.
+
+## D62. Strict free mode, and searching once before searching more (27 Nov 2026)
+The owner's review asked for three changes before any merge.
+- **Free mode is the default and stops rather than spends.** `STORY_SPENDING=free` uses only services whose free allowance needs no card (Exa, Tavily), never asks for paid extras, and when both are used up stops with "Story Search has used this month's free searches". Paid use needs `STORY_SPENDING=paid` and a card and limit set in the provider's dashboard; it isn't switched on. The real guarantee is the accounts (no card, no charge); the code can't see billing, and the docs say so. D61's "2,000 searches cost about $17" mixed the two modes and is corrected in `docs/story-search.md`.
+- **One search first, then targeted follow-ups.** D61 sent one or two searches at once. Now one well-built search runs (the headline plus names it lacks), the results are judged, and a follow-up runs only for what's missing: other wording when nothing was relevant, the named person, the link's month when results came from other times, or other outlets (sites already found left out) when there was one source. Stops when two independent sources or an official one are found, or after 3 searches. Accuracy over saving a cent: a single source triggers a second search even though the story was found.
+- **Exa's 402 is read by its tag**: no key sent is a setup problem; used-up credit and key or team budgets are "out of credit".
+- **Live tests before merging**: `server/src/story/live.test.ts`, real services only, in three steps; exhaustion made real by lowering each key's limit in the provider's dashboard. Results go to `docs/eval/story-live-*.md` for the owner to read.
+- **Vercel**: Hobby suits personal testing only; Pro before LinkPeek is offered with the intention of making money, not after the first sale.
+

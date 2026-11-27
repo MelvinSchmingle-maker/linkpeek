@@ -39,8 +39,10 @@ export class BraveProvider implements SearchProvider {
 
   async search(query: SearchQuery, opts: SearchOptions): Promise<SearchOutcome> {
     if (!this.apiKey) return { ok: false, code: 'misconfigured' };
+    // Brave has no exclusion parameter; its search syntax takes -site: for each site to leave out.
+    const minus = (opts.excludeDomains ?? []).slice(0, 5).map((d) => ` -site:${d}`).join('');
     const params = new URLSearchParams({
-      q: query.exact ? `"${query.text}"` : query.text,
+      q: `${query.exact ? `"${query.text}"` : query.text}${minus}`,
       count: String(Math.min(opts.limit, 20)),
       extra_snippets: 'true',
       safesearch: 'moderate',

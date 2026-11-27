@@ -100,6 +100,10 @@ async function standInStory(res, _url, req) {
     send({ error: 'search-failed' });
     return res.end();
   }
+  if (words.includes('free searches used')) {
+    send({ error: 'out-of-credit' });
+    return res.end();
+  }
   if (words.includes('unknown harbour')) {
     send({ report: storyReport({ status: 'no-match', match: 'none', confidence: 'insufficient', setAside: 4, notes: ['older-story'], searchedFor }) });
     return res.end();

@@ -302,3 +302,8 @@ A research run on similar products (browser built-ins, link summarisers, clickba
 ### Free setup (27 Nov 2026)
 
 Tavily added as a free backup behind Exa (both free monthly, no card), one search instead of two for meaning-based services, and a plain "free searches used up" message (D61). `npm run check`: pass, 458 unit tests (5 skipped), backend 110. Story Search browser tests 11/11. Tavily, like Exa, is tested only against its documented request and response shapes; neither has run live.
+
+### Free mode, adaptive search, live test harness (27 Nov 2026)
+
+Strict free mode (D62), one search first with targeted follow-ups, Exa 402 tags read, and a live test harness for real Exa, Tavily and Claude. `npm run check`: pass, 458 unit tests (5 skipped), backend 118 (9 live tests skipped without keys). Story Search browser tests 12/12, including the "free searches used up" message. Live tests: not run yet (no keys). A dry run without keys failed fast with clear messages and cost nothing; both services were reachable from this environment.
+

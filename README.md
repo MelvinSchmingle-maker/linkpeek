@@ -89,6 +89,7 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md`. Also checks the headline check on `eval/headlines.json` and `eval/headlines-holdout.json`, writing `docs/eval/part-07.md` |
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
+| `npm run test:story-live` | Story Search against the real Exa, Tavily and Claude. **Uses free search credit and a little Claude.** Needs keys; writes `docs/eval/story-live-normal.md`. See `docs/story-search.md`, "Live tests" |
 | `node scripts/build.mjs --live && node scripts/live-check.mjs` | Reads a list of real web pages with LinkPeek's own code and writes the results to `docs/compat/part-04-live.md`. Needs the internet; not part of the tests |
 
 The browser tests use the Chromium that comes with Playwright. If it isn't installed on your machine, run `npx playwright install chromium` once. To use a Chromium that's already installed elsewhere instead, set `LINKPEEK_CHROMIUM_PATH` to its executable.

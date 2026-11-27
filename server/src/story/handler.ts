@@ -31,6 +31,10 @@ export interface StoryDeps {
   enabled: boolean;
   /** How many summary-sized requests one Story Search counts as. */
   rateWeight?: number;
+  /** Most searches one Story Search may make. */
+  maxSearches?: number;
+  /** "free" or "paid", for the log line. */
+  spending?: string;
   log?: (line: Record<string, unknown>) => void;
   now?: () => number;
 }
@@ -121,7 +125,7 @@ export async function handleStory(request: Request, deps: StoryDeps): Promise<Re
       let metrics: Metrics | undefined;
       let outcome = 'error';
       try {
-        const result = await investigate(req, { provider: deps.provider, model: deps.model }, send);
+        const result = await investigate(req, { provider: deps.provider, model: deps.model, ...(deps.maxSearches ? { maxSearches: deps.maxSearches } : {}) }, send);
         metrics = result.metrics;
         if (result.ok) {
           outcome = result.report.status;
@@ -141,6 +145,7 @@ export async function handleStory(request: Request, deps: StoryDeps): Promise<Re
           at: 'story',
           status: 200,
           outcome,
+          spending: deps.spending ?? 'free',
           ms: now() - started,
           ...(metrics ?? {}),
           costUsd: metrics ? Math.round((metrics.searchUsd + metrics.aiUsd) * 1e5) / 1e5 : 0,

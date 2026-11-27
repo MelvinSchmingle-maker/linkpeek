@@ -39,10 +39,12 @@ export class ExaProvider implements SearchProvider {
     if (!this.apiKey) return { ok: false, code: 'misconfigured' };
     const body = {
       query: query.text,
-      numResults: opts.limit,
+      // Up to 10 results are included in a search's price; more would cost extra.
+      numResults: Math.min(opts.limit, 10),
       type: 'auto',
       ...(query.news ? { category: 'news' } : {}),
       ...(opts.since ? { startPublishedDate: `${opts.since}T00:00:00.000Z` } : {}),
+      ...(opts.excludeDomains?.length ? { excludeDomains: opts.excludeDomains.slice(0, 20) } : {}),
       contents: { highlights: { query: query.text, maxCharacters: 1200 } },
     };
     const res = await callJson(

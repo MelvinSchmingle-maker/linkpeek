@@ -43,6 +43,7 @@ export class TavilyProvider implements SearchProvider {
       include_raw_content: false,
       include_usage: true,
       ...(opts.since ? { start_date: opts.since } : {}),
+      ...(opts.excludeDomains?.length ? { exclude_domains: opts.excludeDomains.slice(0, 20) } : {}),
     };
     const res = await callJson(
       this.fetchImpl,

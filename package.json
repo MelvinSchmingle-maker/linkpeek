@@ -17,7 +17,8 @@
     "screenshots": "npm run build:e2e && SCREENSHOTS=1 playwright test screenshots",
     "eval": "node scripts/run-eval.mjs",
     "eval:ai": "node scripts/run-eval-ai.mjs",
-    "test:server": "npm --prefix server test"
+    "test:server": "npm --prefix server test",
+    "test:story-live": "npm --prefix server run test:live"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

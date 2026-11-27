@@ -14,9 +14,9 @@ import { handleStory, type StoryDeps } from './handler.js';
 import { investigate } from './investigate.js';
 import { BraveProvider, BRAVE_NEWS_URL } from './providers/brave.js';
 import { EXA_URL, ExaProvider } from './providers/exa.js';
-import { ProviderChain, searchProviderFor } from './providers/index.js';
+import { ProviderChain, searchProviderFor, spendingMode } from './providers/index.js';
 import { TAVILY_URL, TavilyProvider } from './providers/tavily.js';
-import type { SearchHit, SearchOutcome, SearchProvider } from './providers/types.js';
+import type { SearchHit, SearchOptions, SearchOutcome, SearchProvider } from './providers/types.js';
 import { buildQueries, type SearchQuery } from './queries.js';
 import { groupReports, sourceKind } from './sources.js';
 import { storyUserMessage } from './prompt.js';
@@ -76,9 +76,11 @@ const UNRELATED = hit({ url: 'https://garden.example.com/tomatoes', title: 'Ten 
 class FakeProvider implements SearchProvider {
   readonly name = 'fake';
   calls: SearchQuery[] = [];
+  options: SearchOptions[] = [];
   constructor(private readonly answer: (q: SearchQuery, n: number) => SearchOutcome) {}
-  async search(q: SearchQuery): Promise<SearchOutcome> {
+  async search(q: SearchQuery, opts: SearchOptions): Promise<SearchOutcome> {
     this.calls.push(q);
+    this.options.push(opts);
     return this.answer(q, this.calls.length);
   }
 }
@@ -158,27 +160,46 @@ describe('request rules', () => {
 });
 
 describe('queries', () => {
-  it('starts with the exact headline, its key words and names with the event', () => {
-    const plan = buildQueries(req({ description: { text: 'French police have opened an inquiry into the death of Jamie Rivers.', from: 'card-teaser', confidence: 'medium' } }));
-    expect(plan.initial.map((q) => q.purpose)).toEqual(['exact-headline', 'headline-keywords', 'names-and-event']);
-    expect(plan.initial[0]).toMatchObject({ text: 'Pop star Jamie Rivers found dead in Paris hotel', exact: true, news: true });
-    expect(plan.initial[1]!.text).toBe('pop star jamie rivers found dead paris hotel');
-    expect(plan.initial[2]!.text.toLowerCase()).toContain('jamie rivers');
-    expect(plan.main).toBe('Pop star Jamie Rivers found dead in Paris hotel');
+  it('one best search first: the headline in plain words plus names it lacks, for meaning-based search', () => {
+    const plan = buildQueries(
+      req({
+        headline: { text: 'Police investigate death of music superstar at city hotel', from: 'card-heading', confidence: 'high' },
+        description: { text: 'Officers were called to the Grand Meridian hotel after staff found Jamie Rivers.', from: 'card-teaser', confidence: 'medium' },
+      }),
+      { exactPhrases: false },
+    );
+    expect(plan.first).toMatchObject({ purpose: 'best', news: true });
+    expect(plan.first!.exact).toBeUndefined();
+    expect(plan.first!.text).toBe('Police investigate death of music superstar at city hotel Grand Meridian Jamie Rivers');
+    expect(plan.main).toBe(plan.first!.text);
   });
 
-  it('without a headline, searches the address words, but never a shortened address', () => {
-    const plan = buildQueries(req({ headline: undefined }));
-    expect(plan.initial.map((q) => q.purpose)).toContain('address-words');
+  it('with a provider that honours exact wording, the first search is the exact headline', () => {
+    const plan = buildQueries(req());
+    expect(plan.first).toMatchObject({ text: 'Pop star Jamie Rivers found dead in Paris hotel', exact: true, purpose: 'best' });
+    expect(plan.followUps.map((q) => q.purpose)).toContain('headline-keywords');
+  });
+
+  it('follow-ups cover each thing that can be missing, each once', () => {
+    const plan = buildQueries(req({ altHeadlines: [{ text: 'French prosecutors examine singer death', from: 'card-heading', confidence: 'high' }] }), { exactPhrases: false });
+    const purposes = plan.followUps.map((q) => q.purpose);
+    expect(purposes).toEqual(expect.arrayContaining(['names-and-event', 'names-event-date', 'alternative-headline', 'address-words', 'other-outlets', 'broader']));
+    expect(new Set(purposes).size).toBe(purposes.length);
+    expect(plan.followUps.find((q) => q.purpose === 'names-event-date')!.text).toMatch(/jamie rivers.*November 2026/i);
+    expect(plan.followUps.find((q) => q.purpose === 'broader')!.news).toBe(false);
+  });
+
+  it('without a headline, starts from the address words, but never a shortened address', () => {
+    expect(buildQueries(req({ headline: undefined }), { exactPhrases: false }).first!.text).toBe('jamie rivers found dead paris hotel');
     const short = buildQueries(req({ headline: undefined, slug: undefined, shortened: true, url: 'https://bit.ly/3xYz9Ab', context: { text: 'Huge news tonight pop star found dead in hotel room, police say', from: 'surrounding-text', confidence: 'low' } }));
-    expect(short.initial.map((q) => q.purpose)).toEqual(['nearby-text']);
+    expect(short.first!.text).toBe('huge tonight pop star found dead hotel room police');
+    expect(short.followUps.map((q) => q.purpose)).not.toContain('address-words');
   });
 
   it('never runs two near-identical searches', () => {
-    const plan = buildQueries(req({ slug: 'pop star jamie rivers found dead paris hotel', altHeadlines: [{ text: 'Pop star Jamie Rivers found dead in a Paris hotel', from: 'card-heading', confidence: 'high' }] }));
-    const keywordSearches = [...plan.initial, ...plan.expansion].filter((q) => !q.exact).map((q) => q.text);
-    expect(new Set(keywordSearches).size).toBe(keywordSearches.length);
-    expect(keywordSearches.filter((t) => t.includes('jamie rivers found dead paris hotel'))).toHaveLength(1);
+    const plan = buildQueries(req({ slug: 'pop star jamie rivers found dead paris hotel', altHeadlines: [{ text: 'Pop star Jamie Rivers found dead in a Paris hotel', from: 'card-heading', confidence: 'high' }] }), { exactPhrases: false });
+    const words = [plan.first!, ...plan.followUps].filter((q) => q.purpose !== 'other-outlets' && q.purpose !== 'broader').map((q) => q.text.toLowerCase().replace(/[^a-z ]/g, ''));
+    expect(words.filter((t) => t.includes('jamie rivers found dead'))).toHaveLength(1);
   });
 
   it('reads names, but not from a Title Case headline', () => {
@@ -281,18 +302,44 @@ describe('scenarios', () => {
     expect(model.messages).toHaveLength(0);
   });
 
-  it('12b. weak results trigger one broader search, never more', async () => {
+  it('12b. nothing relevant: differently worded follow-ups, never more than the limit', async () => {
     const provider = returns([UNRELATED]);
-    await run(provider, new FakeModel(ai({})), req({ altHeadlines: [{ text: 'Paris prosecutors investigate singer death', from: 'card-heading', confidence: 'medium' }] }));
-    expect(provider.calls.length).toBeGreaterThan(2);
-    expect(provider.calls.length).toBeLessThanOrEqual(5);
-    expect(provider.calls.some((q) => !q.news)).toBe(true);
+    const { out } = await run(provider, new FakeModel(ai({})), req({ altHeadlines: [{ text: 'Paris prosecutors investigate singer death', from: 'card-heading', confidence: 'medium' }] }));
+    expect(provider.calls.map((q) => q.purpose)).toEqual(['best', 'alternative-headline', 'headline-keywords']);
+    expect(out.metrics.searchPath).toEqual(['best', 'nothing-relevant>alternative-headline', 'nothing-relevant>headline-keywords']);
+    const two = returns([UNRELATED]);
+    await investigate(req(), { provider: two, model: new FakeModel(ai({})), maxSearches: 2, now: () => NOW });
+    expect(two.calls).toHaveLength(2);
   });
 
-  it('12c. good results need no second search', async () => {
+  it('12c. the first search found the story in two independent places: no second search', async () => {
     const provider = returns([BBC, GUARDIAN]);
     await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }] })));
-    expect(provider.calls.every((q) => q.news)).toBe(true);
+    expect(provider.calls).toHaveLength(1);
+  });
+
+  it('12d. only one source: the follow-up looks for the same story on other sites', async () => {
+    const provider = new FakeProvider((_q, n) => ({ ok: true, hits: n === 1 ? [BBC] : [GUARDIAN], costUsd: 0.01, provider: 'fake' }));
+    await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }] })));
+    expect(provider.calls.map((q) => q.purpose)).toEqual(['best', 'other-outlets']);
+    expect(provider.options[1]!.excludeDomains).toEqual(['bbc.co.uk']);
+    expect(provider.options[1]!.since).toBe('2026-11-10');
+  });
+
+  it('12e. results that never mention the named person: the follow-up searches for the person', async () => {
+    const vague = hit({ url: 'https://celeb.example.com/2026/11/24/hotel-drama', title: 'Pop star found dead in Paris hotel', published: '2026-11-24', passages: ['A singer was found dead in a hotel in Paris.'] });
+    const provider = new FakeProvider((_q, n) => ({ ok: true, hits: n === 1 ? [vague] : [BBC, GUARDIAN], costUsd: 0.01, provider: 'fake' }));
+    await run(provider, new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })) })));
+    expect(provider.calls.map((q) => q.purpose)).toEqual(['best', 'names-and-event']);
+    expect(provider.calls[1]!.text).toMatch(/jamie rivers/i);
+  });
+
+  it('12f. results only from another time: the follow-up adds the link\'s month', async () => {
+    const earlier = { ...BBC, url: 'https://www.bbc.co.uk/news/world-europe-60000001', published: '2023-02-01' };
+    const provider = new FakeProvider((_q, n) => ({ ok: true, hits: n === 1 ? [earlier] : [BBC, GUARDIAN], costUsd: 0.01, provider: 'fake' }));
+    await run(provider, new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })) })));
+    expect(provider.calls.map((q) => q.purpose)).toEqual(['best', 'names-event-date']);
+    expect(provider.calls[1]!.text).toContain('November 2026');
   });
 
   it('13. the search provider failing is an error, not an empty report', async () => {
@@ -303,10 +350,13 @@ describe('scenarios', () => {
     expect((await run(fails('misconfigured'), new FakeModel(ai({})))).out).toMatchObject({ ok: false, code: 'not-configured' });
   });
 
-  it('13b. one query failing while another works still gives a report', async () => {
-    const provider = new FakeProvider((_q, n) => (n === 1 ? { ok: false, code: 'upstream' } : { ok: true, hits: [BBC, GUARDIAN], costUsd: 0.01, provider: 'fake' }));
-    const { report } = await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }, { source: 2, status: 'strong', reason: '' }] })));
+  it('13b. a follow-up failing (allowance used up) stops searching but keeps what the first search found', async () => {
+    const provider = new FakeProvider((_q, n) => (n === 1 ? { ok: true, hits: [BBC], costUsd: 0.01, provider: 'fake' } : { ok: false, code: 'quota', tag: 'exa:NO_MORE_CREDITS' }));
+    const { report, out } = await run(provider, new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: '' }], facts: [] })));
+    expect(provider.calls).toHaveLength(2);
     expect(report!.status).toBe('report');
+    expect(report!.notes).toContain('single-source');
+    expect(out.metrics.searchErrors).toEqual(['exa:NO_MORE_CREDITS']);
   });
 
   it('13c. the AI failing shows the closest results as possible matches only, with no claims', async () => {
@@ -563,7 +613,7 @@ describe('POST /api/story', () => {
     await (await handleStory(post(req()), d)).text();
     const second = await handleStory(post(req()), d);
     expect(await second.json()).toMatchObject({ report: { status: 'report' } });
-    expect((d.provider as FakeProvider).calls.length).toBe(3);
+    expect((d.provider as FakeProvider).calls.length).toBe(1);
   });
 
   it('counts a Story Search as three summary-sized requests, in its own bucket', async () => {
@@ -600,13 +650,13 @@ describe('POST /api/story', () => {
     const all = JSON.stringify(lines);
     expect(all).not.toContain('Jamie');
     expect(all).not.toContain('paper.example.org');
-    expect(lines[0]).toMatchObject({ at: 'story', outcome: 'report', provider: 'fake', queries: 3, candidates: 2 });
+    expect(lines[0]).toMatchObject({ at: 'story', outcome: 'report', provider: 'fake', spending: 'free', queries: 1, searchPath: ['best'], candidates: 2 });
     expect(typeof lines[0]!.costUsd).toBe('number');
   });
 });
 
 describe('free providers: Exa first, Tavily as backup', () => {
-  const q: SearchQuery = { text: 'Jamie Rivers Paris hotel', purpose: 'headline', news: true };
+  const q: SearchQuery = { text: 'Jamie Rivers Paris hotel', purpose: 'best', news: true };
   const status = (n: number) => (async () => new Response('{}', { status: n })) as unknown as typeof fetch;
 
   it('Tavily: sends the documented request and reads the documented response', async () => {
@@ -665,20 +715,45 @@ describe('free providers: Exa first, Tavily as backup', () => {
     expect((await run(new ProviderChain([new ExaProvider(undefined), new TavilyProvider(undefined)]), new FakeModel(ai({})))).out).toMatchObject({ ok: false, code: 'not-configured' });
   });
 
-  it('the default setup is Exa then Tavily', () => {
+  it('the default setup is Exa then Tavily, in free mode', () => {
+    expect(spendingMode({})).toBe('free');
     expect(searchProviderFor({}).name).toBe('exa+tavily');
-    expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'brave' }).name).toBe('brave');
     expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'tavily, exa' }).name).toBe('tavily+exa');
   });
 
-  it('with a meaning-based provider, the headline is searched once, not twice', async () => {
-    const meaning = new FakeProvider(() => ({ ok: true, hits: [BBC, GUARDIAN, POLICE], costUsd: 0.012, provider: 'exa' }));
+  it('free mode never uses a service that needs a card, even if listed; only an explicit paid setting allows it', async () => {
+    expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'exa,brave' }).name).toBe('exa');
+    const none = searchProviderFor({ STORY_SEARCH_PROVIDER: 'brave' });
+    expect(await none.search(q, { limit: 1 })).toEqual({ ok: false, code: 'misconfigured' });
+    expect(searchProviderFor({ STORY_SEARCH_PROVIDER: 'brave', STORY_SPENDING: 'paid' }).name).toBe('brave');
+    expect(spendingMode({ STORY_SPENDING: 'yes please' })).toBe('free');
+  });
+
+  it('Exa: no key sent is a setup problem; used-up credit or a key budget is "quota", with its tag', async () => {
+    const tagged = (status: number, tag: string) => (async () => Response.json({ requestId: 'r', error: 'x', tag }, { status })) as unknown as typeof fetch;
+    expect(await new ExaProvider('k', tagged(402, 'X402_PAYMENT_REQUIRED')).search(q, { limit: 1 })).toEqual({ ok: false, code: 'misconfigured', tag: 'X402_PAYMENT_REQUIRED' });
+    expect(await new ExaProvider('k', tagged(402, 'NO_MORE_CREDITS')).search(q, { limit: 1 })).toEqual({ ok: false, code: 'quota', tag: 'NO_MORE_CREDITS' });
+    expect(await new ExaProvider('k', tagged(402, 'API_KEY_BUDGET_EXCEEDED')).search(q, { limit: 1 })).toEqual({ ok: false, code: 'quota', tag: 'API_KEY_BUDGET_EXCEEDED' });
+    expect(await new ExaProvider('k', tagged(429, 'RATE_LIMIT_EXCEEDED')).search(q, { limit: 1 })).toEqual({ ok: false, code: 'busy', tag: 'RATE_LIMIT_EXCEEDED' });
+  });
+
+  it('Exa never asks for more than the 10 results its price includes', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ results: [] }));
+    await new ExaProvider('k', fetchImpl as unknown as typeof fetch).search(q, { limit: 25, excludeDomains: ['bbc.co.uk'] });
+    const body = JSON.parse((fetchImpl.mock.calls[0]! as unknown as [string, RequestInit])[1].body as string);
+    expect(body.numResults).toBe(10);
+    expect(body.excludeDomains).toEqual(['bbc.co.uk']);
+  });
+
+  it('with a meaning-based provider, one plain-words search when it finds enough', async () => {
+    const meaning = new FakeProvider(() => ({ ok: true, hits: [BBC, GUARDIAN, POLICE], costUsd: 0.015, provider: 'exa' }));
     Object.assign(meaning, { exactPhrases: false });
-    await run(meaning, new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })) })));
-    expect(meaning.calls.map((c) => c.purpose)).toEqual(['headline', 'names-and-event']);
-    expect(meaning.calls.some((c) => c.exact)).toBe(false);
-    // A provider that honours exact wording still gets both.
-    expect(buildQueries(req(), { exactPhrases: true }).initial.map((c) => c.purpose)).toEqual(['exact-headline', 'headline-keywords', 'names-and-event']);
+    const { out } = await run(meaning, new FakeModel(ai({ matches: [1, 2, 3].map((source) => ({ source, status: 'strong' as const, reason: '' })) })));
+    expect(meaning.calls).toHaveLength(1);
+    expect(meaning.calls[0]).toMatchObject({ purpose: 'best', text: 'Pop star Jamie Rivers found dead in Paris hotel' });
+    expect(meaning.calls[0]!.exact).toBeUndefined();
+    expect(meaning.options[0]!.limit).toBe(8);
+    expect(out.metrics.searchUsd).toBe(0.015);
   });
 
   it('a report built on Brave results is not kept by the server', async () => {
@@ -686,6 +761,6 @@ describe('free providers: Exa first, Tavily as backup', () => {
     const d = deps({ provider: brave });
     await (await handleStory(post(req()), d)).text();
     await (await handleStory(post(req()), d)).text();
-    expect(brave.calls.length).toBe(6);
+    expect(brave.calls.length).toBe(2);
   });
 });

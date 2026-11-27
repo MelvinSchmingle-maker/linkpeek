@@ -1,11 +1,18 @@
 /**
  * One Story Search, from request to report:
  *
- *  1. Queries from the link's clues (queries.ts). Two or three to start.
- *  2. Search, all starting queries at once. Results are merged and the same
- *     page under different addresses counted once.
- *  3. If fewer than two results look like the story, one or two broader
- *     queries run. Never more.
+ *  1. One well-built search first (queries.ts): the headline plus the names
+ *     that pin the story down.
+ *  2. Judge what it found (assess). Enough means at least two independent
+ *     reports of the same story (syndicated copies count once), or one from
+ *     an official source, that mention the person the link names and date
+ *     from the same time.
+ *  3. Only when it isn't enough, a targeted follow-up aimed at what was
+ *     missing: different wording when nothing was relevant, the named person
+ *     when results didn't mention them, the date when results came from
+ *     different times, and other sites (the ones already found left out) when
+ *     there was only one source. At most STORY_MAX_SEARCHES searches in all
+ *     (3 by default). Searching stops early if the free allowance runs out.
  *  4. Results with almost nothing in common with the link are set aside
  *     (match.ts). The best five go on.
  *  5. Syndicated copies and agency reports are grouped (sources.ts).
@@ -13,47 +20,57 @@
  *     (analyse.ts), and the rules then check it (report.ts).
  *
  * Stages reported to the extension as they really happen: "searching"
- * before the first query, "analysing" while Claude reads the results, and
+ * before the first search, "analysing" while Claude reads the results, and
  * "writing" while the rules check its reply.
- *
- * Search spend is bounded: at most 5 queries of 5 results each (8 when only
- * one runs first), and the AI sees at most 5 results, each cut to about
- * 1,600 characters. With Exa or Tavily, usually 1 or 2 queries in all.
  */
 import { aiCostUsd, type StoryModel } from './analyse.js';
 import type { SourceKind, StoryErrorCode, StoryReport, StoryRequest } from './contract.js';
-import { GOOD_SCORE, linkProfile, MIN_CANDIDATE_SCORE, scoreHits, type Scored } from './match.js';
+import { GOOD_SCORE, linkProfile, MIN_CANDIDATE_SCORE, scoreHits, type LinkProfile, type Scored } from './match.js';
 import { storyUserMessage } from './prompt.js';
-import type { SearchFailure, SearchHit, SearchProvider } from './providers/types.js';
-import { buildQueries, type SearchQuery } from './queries.js';
+import type { SearchFailure, SearchHit, SearchOptions, SearchProvider } from './providers/types.js';
+import { buildQueries, type QueryPlan, type QueryPurpose, type SearchQuery } from './queries.js';
 import { finalise, noMatch, noResults, reportFailed } from './report.js';
-import { canonicalKey, groupReports, publisherName, sourceKind } from './sources.js';
+import { canonicalKey, groupReports, hostOf, publisherName, sourceKind } from './sources.js';
+import { daysBetween } from './text.js';
 
-/** Results asked for per query. Exa includes up to 10 in its price but charges per page of highlights. */
-export const RESULTS_PER_QUERY = 5;
-/** When only one query runs first, it asks for a few more, so one syndicated story can't fill every slot. */
-export const RESULTS_SINGLE_QUERY = 8;
+/** Results asked for by the first search: enough to see the story from several sites. */
+export const FIRST_RESULTS = 8;
+/** Results asked for by a follow-up. */
+export const FOLLOW_UP_RESULTS = 5;
+/** Searches per Story Search, unless STORY_MAX_SEARCHES says otherwise. */
+export const DEFAULT_MAX_SEARCHES = 3;
 export const MAX_RESULTS = 12;
 export const MAX_CANDIDATES = 5;
-/** How many results must look like the story before no broader search is needed. */
-const ENOUGH_GOOD = 2;
 /** The search looks this far back from the link's date. */
 const LOOKBACK_DAYS = 14;
+/** Good results this far apart are probably about different events. */
+const SPREAD_DAYS = 90;
 
 export type Stage = { stage: 'searching' } | { stage: 'analysing'; found: number } | { stage: 'writing' };
 
 export interface InvestigateDeps {
   provider: SearchProvider;
   model: StoryModel;
+  /** Most searches one Story Search may make (1 to 5). */
+  maxSearches?: number;
   now?: () => Date;
 }
 
-/** What the log line records. Counts and money only, never what was searched for. */
+/** Why the results so far aren't enough. */
+export type Shortfall = 'nothing-relevant' | 'name-missing' | 'dates-disagree' | 'single-source';
+
+export type Assessment = { enough: true } | { enough: false; shortfall: Shortfall };
+
+/** What the log line records. Counts, money and reasons only, never what was searched for. */
 export interface Metrics {
   provider: string;
   /** Which providers actually answered (with a chain, the backup may have). */
   providersUsed: string[];
   queries: number;
+  /** Each search's purpose, and for follow-ups the shortfall that caused it ("single-source>other-outlets"). */
+  searchPath: string[];
+  /** Provider error tags seen, e.g. "exa:NO_MORE_CREDITS". */
+  searchErrors: string[];
   results: number;
   candidates: number;
   searchUsd: number;
@@ -66,46 +83,104 @@ export interface Metrics {
 
 export type Investigation = { ok: true; report: StoryReport; metrics: Metrics } | { ok: false; code: StoryErrorCode; metrics: Metrics };
 
+/**
+ * Are the results so far enough to stop searching? Only results that look
+ * like the story count ("good"): close enough in words and names, from the
+ * link's time, and naming the person the link names.
+ */
+export function assess(scored: Scored[], profile: LinkProfile): Assessment {
+  const specific = profile.names.some((n) => n.includes(' '));
+  const relevant = scored.filter((s) => s.score >= GOOD_SCORE);
+  const good = relevant.filter((s) => !s.dateMismatch && (!specific || s.specificFound > 0));
+  if (!good.length) {
+    if (!relevant.length) return { enough: false, shortfall: 'nothing-relevant' };
+    if (relevant.every((s) => s.dateMismatch)) return { enough: false, shortfall: 'dates-disagree' };
+    return { enough: false, shortfall: 'name-missing' };
+  }
+  const dates = good.map((s) => s.hit.published).filter((d): d is string => Boolean(d)).sort();
+  if (dates.length >= 2 && (daysBetween(dates[0]!, dates[dates.length - 1]!) ?? 0) > SPREAD_DAYS) return { enough: false, shortfall: 'dates-disagree' };
+  const hits = good.map((s) => s.hit);
+  const groups = new Set(groupReports(hits).group).size;
+  const official = hits.some((h) => sourceKind(h.url, h.title) === 'primary');
+  return groups >= 2 || official ? { enough: true } : { enough: false, shortfall: 'single-source' };
+}
+
+/** Which follow-up suits each shortfall, best first. */
+const FOLLOW_UP_ORDER: Record<Shortfall, QueryPurpose[]> = {
+  'nothing-relevant': ['alternative-headline', 'description', 'headline-keywords', 'address-words', 'selection', 'names-and-event', 'nearby-text', 'broader'],
+  'name-missing': ['names-and-event', 'names-event-date', 'alternative-headline', 'broader'],
+  'dates-disagree': ['names-event-date', 'names-and-event', 'alternative-headline'],
+  'single-source': ['other-outlets', 'names-and-event', 'alternative-headline', 'broader'],
+};
+
+export function nextQuery(plan: QueryPlan, shortfall: Shortfall, used: Set<QueryPurpose>): SearchQuery | undefined {
+  for (const purpose of FOLLOW_UP_ORDER[shortfall]) {
+    if (used.has(purpose)) continue;
+    const q = plan.followUps.find((f) => f.purpose === purpose);
+    if (q) return q;
+  }
+  return undefined;
+}
+
 export async function investigate(req: StoryRequest, deps: InvestigateDeps, onStage: (s: Stage) => void = () => undefined): Promise<Investigation> {
   const now = deps.now?.() ?? new Date();
   const plan = buildQueries(req, { exactPhrases: deps.provider.exactPhrases ?? true });
-  const metrics: Metrics = { provider: deps.provider.name, providersUsed: [], queries: 0, results: 0, candidates: 0, searchUsd: 0, aiUsd: 0 };
+  const metrics: Metrics = {
+    provider: deps.provider.name,
+    providersUsed: [],
+    queries: 0,
+    searchPath: [],
+    searchErrors: [],
+    results: 0,
+    candidates: 0,
+    searchUsd: 0,
+    aiUsd: 0,
+  };
   const searchedFor = plan.main;
   const profile = linkProfile(req);
   const since = req.date ? lookback(req.date) : undefined;
+  const maxSearches = Math.max(1, Math.min(5, Math.floor(deps.maxSearches ?? DEFAULT_MAX_SEARCHES)));
 
   onStage({ stage: 'searching' });
   const merged = new Map<string, SearchHit>();
-  const failures: SearchFailure[] = [];
-  const run = async (queries: SearchQuery[], withSince: boolean) => {
-    const limit = queries.length === 1 ? RESULTS_SINGLE_QUERY : RESULTS_PER_QUERY;
-    const outcomes = await Promise.all(
-      queries.map((q) => deps.provider.search(q, { limit, ...(withSince && since ? { since } : {}), ...(req.language ? { language: req.language } : {}) })),
-    );
-    metrics.queries += queries.length;
-    for (const o of outcomes) {
-      if (!o.ok) {
-        failures.push(o.code);
-        continue;
-      }
-      metrics.searchUsd += o.costUsd;
-      if (!metrics.providersUsed.includes(o.provider)) metrics.providersUsed.push(o.provider);
-      for (const h of o.hits) {
-        const key = canonicalKey(h.url);
-        const prev = merged.get(key);
-        // The same page twice: keep the copy with more text.
-        if (!prev || h.passages.length + (h.description ? 1 : 0) > prev.passages.length + (prev.description ? 1 : 0)) merged.set(key, h);
-      }
+  /** One search. Returns its failure, if it failed. */
+  const runOne = async (q: SearchQuery, opts: Omit<SearchOptions, 'language'>, label: string): Promise<SearchFailure | undefined> => {
+    metrics.queries++;
+    metrics.searchPath.push(label);
+    const o = await deps.provider.search(q, { ...opts, ...(req.language ? { language: req.language } : {}) });
+    if (!o.ok) {
+      if (o.tag) metrics.searchErrors.push(o.tag);
+      return o.code;
     }
+    metrics.searchUsd += o.costUsd;
+    if (!metrics.providersUsed.includes(o.provider)) metrics.providersUsed.push(o.provider);
+    for (const h of o.hits) {
+      const key = canonicalKey(h.url);
+      const prev = merged.get(key);
+      // The same page twice: keep the copy with more text.
+      if (!prev || h.passages.length + (h.description ? 1 : 0) > prev.passages.length + (prev.description ? 1 : 0)) merged.set(key, h);
+    }
+    return undefined;
   };
 
-  if (!plan.initial.length) return { ok: true, report: noResults(searchedFor, now), metrics };
-  await run(plan.initial, true);
-  if (failures.length === plan.initial.length) return { ok: false, code: failureCode(failures), metrics };
+  if (!plan.first) return { ok: true, report: noResults(searchedFor, now), metrics };
+  const firstFailure = await runOne(plan.first, { limit: FIRST_RESULTS, ...(since ? { since } : {}) }, plan.first.purpose);
+  if (firstFailure) return { ok: false, code: failureCode([firstFailure]), metrics };
 
   let scored = scoreHits(profile, [...merged.values()]);
-  if (scored.filter((s) => s.score >= GOOD_SCORE).length < ENOUGH_GOOD && plan.expansion.length) {
-    await run(plan.expansion, false);
+  const used = new Set<QueryPurpose>([plan.first.purpose]);
+  while (metrics.queries < maxSearches) {
+    const verdict = assess(scored, profile);
+    if (verdict.enough) break;
+    const q = nextQuery(plan, verdict.shortfall, used);
+    if (!q) break;
+    used.add(q.purpose);
+    const found = verdict.shortfall === 'single-source' ? [...new Set(scored.filter((s) => s.score >= GOOD_SCORE).map((s) => hostOf(s.hit.url)))] : [];
+    // Looking for the same story elsewhere keeps the date window; looking more widely drops it.
+    const keepDate = q.news && verdict.shortfall !== 'nothing-relevant';
+    const failure = await runOne(q, { limit: FOLLOW_UP_RESULTS, ...(keepDate && since ? { since } : {}), ...(found.length ? { excludeDomains: found } : {}) }, `${verdict.shortfall}>${q.purpose}`);
+    // A follow-up that fails (allowance used up, service down) ends the searching; what was found still counts.
+    if (failure) break;
     scored = scoreHits(profile, [...merged.values()]);
   }
   scored = scored.slice(0, MAX_RESULTS);

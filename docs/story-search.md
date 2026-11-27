@@ -9,7 +9,9 @@ Built 26 Nov 2026 on branch `claude/eloquent-cerf-xnjbmt`. The existing preview 
 | Part | Status |
 |---|---|
 | Extracting clues from the link and the page | Built and tested (21 unit tests on page shapes and addresses, browser tests on a test page) |
-| Search provider interface: Exa (default), Tavily (free backup), Brave (optional) | Built and tested against the request and response shapes in each provider's documentation. **Never run against the live APIs**: no key was configured. |
+| Search provider interface: Exa (default), Tavily (free backup), Brave (paid mode only) | Built and tested against the request and response shapes in each provider's documentation. Both services were reached from this environment (they answered "no key"). **Never run with a key**: none configured yet. A live test harness is ready (`npm run test:story-live`). |
+| One search first, targeted follow-ups only when needed | Built and tested with stand-in search results |
+| Free mode: Exa then Tavily, stop with a clear message when both are used up | Built and tested with stand-ins and in the browser |
 | Matching, syndication grouping, report rules | Built and tested with stand-in search results and a stand-in AI |
 | Claude analysis (structured JSON output) | Built and tested with a stand-in client. **Never run against Claude**: no key was configured in this environment. |
 | Card, stages, consent, errors, settings | Built and tested in Chromium against a stand-in backend |
@@ -44,9 +46,9 @@ Right-click > "LinkPeek – Story Search"
    src/content/story-run.ts → src/background/story.ts → src/core/story/client.ts
   ▼
 3. Backend: server/src/story/
-   queries.ts     2–3 queries first (exact headline, key words, names + event)
-   providers/     Exa, then Tavily if Exa can't answer (Brave optional)
-   investigate.ts merge, drop duplicates, one broader round only if results are weak
+   queries.ts     one best search first; targeted follow-ups ready if needed
+   providers/     Exa, then Tavily if Exa can't answer (free mode: nothing else)
+   investigate.ts search once, judge the results, follow up only for what's missing
    match.ts       set aside results with nothing in common; date and name checks
    sources.ts     source kinds; group syndicated copies and agency reports
    analyse.ts     Claude decides which results are the story, writes JSON
@@ -78,7 +80,18 @@ Each clue carries where it came from and how confident the extractor is. The car
 
 ### 2. Searching
 
-`queries.ts` writes several differently worded queries: the exact headline (quoted where the provider supports it), its key words, and names with the event ("Jamie Rivers Paris hotel death"); without a good headline, the description, the address's words, the selection or nearby text. Near-duplicates (80% the same words) are dropped. Two or three run at once; if fewer than two results look like the story, at most two broader queries run (no news-only filter, so official sources can turn up). When the link's date is known, the first round only asks for results from 14 days before it.
+**One search first.** `queries.ts` builds the single best query from every clue: the headline (or, without one, the description, the selection, the address's words or the nearby text), plus any names from the card or nearby text that the headline doesn't mention ("Police investigate death of music superstar at city hotel Grand Meridian Jamie Rivers"). Exa and Tavily search by meaning, so this is sent in plain words. With Brave, which honours exact wording, the first search is the exact headline. When the link's date is known, it only asks for results from 14 days before it. It asks for 8 results.
+
+**Then it judges what came back** (`assess` in `investigate.ts`). Only results that look like the story count: close in words and names, from the link's time, and mentioning the person or organisation the link names. It's enough when those come from at least two independent sources (syndicated copies and one agency's story count once), or from one official source. Otherwise one of four things is missing, and a follow-up is aimed at it:
+
+| What's missing | Follow-up search |
+|---|---|
+| Nothing relevant came back | The story in other words: another headline found on the page, the description, the headline's key words, the address's words, then a broader search without the news-only filter |
+| Results don't mention the person the link names | The names with what happened ("Jamie Rivers Paris hotel death") |
+| Results come from other times (a different, older event) | The names, what happened and the link's month ("... November 2026") |
+| Only one independent source | The same search again, leaving out the sites already found, to reach other outlets |
+
+It stops as soon as there's enough, after 3 searches in all (`STORY_MAX_SEARCHES`, 1 to 5), or when a follow-up fails (for example the free allowance runs out), keeping what it already found. Each follow-up asks for 5 results. The log line records which path it took ("best → single-source>other-outlets"), never the words.
 
 Each provider adapter turns a query into results with title, address, date, author, snippet and short passages. Results are merged, with the same page under different addresses (`www.`, `amp.`, `/amp`, tracking parameters) counted once.
 
@@ -102,77 +115,102 @@ Stages shown as they really happen: Extracting link information (on the device),
 
 Messages for every failure: not enough information, not a web link, not set up, search service down, search timed out, free searches used up for the month, rate limited, server unreachable, unreadable answer. "Try again" only where it can help.
 
-## Setup: the free way (decided 27 Nov 2026)
+## Free mode (the default) and paid mode
 
-Everything below is free and needs no credit card, so none of it can charge anyone. The owner asked for free or the cheapest option, so these choices are made, not pending:
+**Free mode** is the default and the only mode in use. Story Search uses only Exa and Tavily, each on its free monthly allowance, and neither needs a card. Each search goes to Exa first; if Exa's credit is used up (or it's down), Tavily answers. When both allowances are used up, Story Search stops: the card says "Story Search has used this month's free searches. It works again when they renew at the start of next month," and offers no retry. Nothing switches to paid use.
 
-| Choice | Decision | Why |
+What makes this a guarantee is the accounts, not the code: with no card on file, Exa and Tavily cannot charge (Exa answers `402 NO_MORE_CREDITS`, Tavily `432`). LinkPeek's code can't see a provider's billing. The code's part: in free mode it never uses a service whose free plan needs a card (Brave is dropped even if listed), never asks for paid extras (Exa: never more than the 10 results its price includes, no summaries; Tavily: basic searches only, 1 credit each), and stops cleanly when a provider says its credit is used up.
+
+**Paid mode** only exists as an explicit choice, and isn't switched on: `STORY_SPENDING=paid` in Vercel, plus a card added in a provider's dashboard and a monthly limit set there (Exa: a budget on the key or team; Tavily: the pay-as-you-go limit). LinkPeek doesn't keep a running total of spend across its servers, so the provider's own limit is what caps it. Paid mode also allows Brave.
+
+## Cost
+
+Estimates from list prices read 26–27 Nov 2026, not measured. The live test records real per-search costs (Exa reports each request's cost; Tavily reports credits).
+
+**Per Story Search**
+
+| Item | When the first search is enough | With two follow-ups (the most) |
 |---|---|---|
-| Search service | **Exa first, Tavily as automatic backup** | Both free every month with no card. Exa gives the best page extracts; when its free credit runs out, Tavily takes over on its own. Brave dropped from the default: since 2026 even its free credit needs a card |
-| AI model | **Claude Haiku 5.5** | Cheapest Claude model, about $0.002 a search, already the model for summaries. Sonnet is one setting away if the live test shows wrong matches |
-| Hosting | **Vercel Hobby (free)** | Allows 300-second functions (Story Search needs 60). Hobby is for non-commercial use: move to Pro ($20 a month) only when LinkPeek starts making money |
-| Privacy | **Keep the design as built** | Only on request, consent screen first time, no page address, cookies or typed text (D53) |
+| Exa (first search: $0.007 + 8 pages of extracts at $0.001; each follow-up: $0.007 + 5 pages) | $0.015 | $0.039 |
+| Tavily, if Exa's credit is used up (1 credit a search) | 1 credit | 3 credits |
+| Claude Haiku 5.5 (about 7,000 tokens in, 2,000 out) | about $0.002 | about $0.002 |
 
-The owner's steps:
+**Free mode (now)**
 
-1. Make a free Exa account at https://dashboard.exa.ai (no card). Copy the API key.
-2. Make a free Tavily account at https://app.tavily.com (no card). Copy the API key (it starts with `tvly-`).
-3. In Vercel: project `linkpeek-api` > Settings > Environment Variables. Add `EXA_API_KEY` and `TAVILY_API_KEY`, for Production. Never paste keys into a chat.
-4. In the Anthropic Console, check a monthly spend limit is set (for example $5). Story Search's AI costs about $2 per 1,000 searches.
-5. Merge this branch into `main`, which deploys the backend. Then try Story Search on 20 to 30 real links.
-
-## Configuration and keys
-
-| Where | Variable | What |
+| Item | Monthly cost | What it covers |
 |---|---|---|
-| Vercel (backend) | `EXA_API_KEY` | Exa key (free, no card). From https://dashboard.exa.ai |
-| Vercel (backend) | `TAVILY_API_KEY` | Tavily key (free, no card), the backup. From https://app.tavily.com |
-| Vercel (backend) | `STORY_SEARCH_PROVIDER` | Optional. Default `exa,tavily`: Exa, then Tavily when Exa fails or its credit is used up. Any list of `exa`, `tavily`, `brave` |
-| Vercel (backend) | `BRAVE_SEARCH_API_KEY` | Only if `brave` is added to the list. Needs a card at sign-up |
-| Vercel (backend) | `ANTHROPIC_API_KEY` | Already set for summaries; Story Search uses the same key |
-| Vercel (backend) | `STORY_MODEL` | Optional, default `claude-haiku-5-5` |
-| Vercel (backend) | `STORY_EFFORT` | Optional: `low`, `medium` (default) or `high` |
-| Vercel (backend) | `STORY_SEARCH_ENABLED` | Optional: `false` switches Story Search off without a redeploy |
-| Vercel (backend) | `STORY_RATE_WEIGHT` | Optional, default 3: one Story Search counts as this many requests against the existing `summarise` rate-limit rule, in its own buckets |
-| Extension build | `LINKPEEK_STORY_API_URL` | Optional. Default `https://linkpeek-api.vercel.app/api/story`; empty builds without Story Search |
+| Exa | $0 | $10 free credit: roughly 250 to 650 Story Searches |
+| Tavily | $0 | 1,000 free credits: roughly 330 to 1,000 Story Searches |
+| Vercel Hobby | $0 | Personal, non-commercial testing (see below) |
+| Claude Haiku 5.5 | about $0.002 a Story Search: **at most about $1.30 to $3.30 a month**, because the free searches run out first | Paid from your existing Anthropic account, capped by its monthly limit |
+| **Total** | **$0 for searching; about $1 to $3.30 for Claude** | About 600 to 1,600 Story Searches a month, then it stops until the 1st |
 
-No key is needed in the extension. With one key, that service is used alone. With neither, the backend answers "not configured" and the card says "Story Search isn't set up in this version of LinkPeek". When every service's free credit is used up, the card says "Story Search has used this month's free searches", and it works again when they renew. It never pretends to search.
+Claude is the one part that isn't free: Anthropic has no free API allowance. It's the same account and key the summaries already use.
 
-## Cost (from list prices read 26 and 27 Nov 2026; estimates, not measured)
+**Paid mode (not enabled; only if you decide to later)**
 
-How many searches one Story Search makes: Exa and Tavily search by meaning, so the headline and its key words are one search, not two. A link that names someone gets two searches (the headline, then the names with the event); otherwise one, with a few more results. One or two more run only when the first find little.
-
-| Item | Price | Per Story Search |
+| Item | Price | Per extra Story Search |
 |---|---|---|
-| Exa search (`auto`, up to 10 results) | $7 per 1,000 searches | 1–2 searches, rarely up to 4 |
-| Exa page extracts (highlights) | $1 per 1,000 pages | 5 pages a search (8 when only one search) |
-| **Exa total** | **Free: $10 credit a month, no card** | **about $0.015–0.024; free covers roughly 400–650 Story Searches a month** |
-| **Tavily (backup)** | **Free: 1,000 credits a month, no card**; then $0.008 a credit | **1–2 credits; free covers roughly 500–700 Story Searches a month** |
-| Brave (optional, not used by default) | $5 per 1,000 searches, $5 free a month, card required | about $0.005–0.01 |
-| Claude Haiku 5.5 | $0.10 / $0.50 per million tokens in / out | **about $0.002** |
-| Vercel Hobby | Free (non-commercial only) | $0 |
+| Tavily pay-as-you-go | $0.008 a credit | $0.008 to $0.024 |
+| Exa paid credit | as above | $0.015 to $0.039 |
+| Brave (needs a card) | $5 per 1,000 searches | $0.005 to $0.015 |
+| Claude | as above | about $0.002 |
 
-Monthly, at list prices:
+For example, 1,000 Story Searches a month beyond the free ones would cost roughly $10 to $26 for searching with Tavily, plus about $2 for Claude.
 
-| Story Searches a month | Search | Claude | Vercel | Total |
-|---|---|---|---|---|
-| Up to about 900 | $0 (free credit) | about $1.80 | $0 | **about $2** |
-| 2,000, paying for the extra | about $13 (1,100 extra on Tavily: about 1.5 credits each at $0.008) | about $4 | $0 | **about $17** |
-| Once LinkPeek is commercial | as above | as above | $20 (Pro) | add $20 |
+**Later, separately from Story Search:** Vercel Pro once LinkPeek is commercial ($20 per developer a month), and Chrome Web Store's one-time $5 developer fee when you publish the extension.
 
-Without a card on file, Exa and Tavily stop at their free credit instead of charging. Paying for more is the owner's choice later, not something that can happen by accident.
+## Vercel hosting: what Hobby allows
 
-Spending controls in the code: at most 5 searches per Story Search; the AI sees at most 5 results of about 1,600 characters each; one Story Search counts as 3 requests in its own rate-limit buckets per install and per IP (with the current rule of 30 per 10 minutes, that's 10 Story Searches per install and per address every 10 minutes); finished reports are reused for 10 minutes (breaking or empty) to 6 hours (settled) by the backend, and for 30 minutes on the device; a report the AI couldn't write is never reused, and neither is one built on Brave results (Brave's terms reserve storing results for custom plans). Every request logs its search count, result count, which service answered, model, tokens and estimated cost, never the link or the search words. The hard ceilings are the free credits and the Anthropic Console's monthly limit.
+- **Hobby is for personal, non-commercial use only; all commercial use needs Pro or Enterprise.** Vercel's guidelines define commercial use as a deployment "used for the purpose of financial gain of anyone involved in any part of the production of the project" (as quoted from Vercel's guidelines on its community forum; the page itself didn't display its list of examples when read on 27 Nov 2026, so check https://vercel.com/docs/limits/fair-use-guidelines in a browser).
+- **Fine on Hobby now:** you and a few testers using LinkPeek, with no payments, no ads, no affiliate links, no paid plan announced, and nobody paid to build it.
+- **Needs Pro before, not after, the first sale:** once LinkPeek is offered with the intention of making money (a paid plan, even if not live yet; ads; affiliate links), or anyone is paid to work on it. A Vercel answer on its forum puts it as "you charge or intend to charge users".
+- **No surprise hosting bills on Hobby:** it includes 1 million function calls, 4 CPU-hours, 360 GB-hours of memory and functions of up to 300 seconds a month; going over pauses the feature until the 30 days are up, and is never billed. Story Search mostly waits on the search services, so it uses little CPU time.
+- **Pro:** $20 per developer a month (the developer-seat price on Vercel's Hobby page; confirm on vercel.com/pricing before upgrading). Nothing has been upgraded.
 
-## Privacy
+## What you need to configure
 
-Only when the user picks the menu item, and the first time only after they've seen exactly what will be sent and pressed "Search". Sent to LinkPeek's server: the link's address without its query string or fragment, the headline and other wordings found, the card's teaser, up to 600 characters of nearby text, the address's words, a date, publisher, author, section and keywords if the page gave them, the user's selection if they made one, the page language, and a random install ID. The server passes search queries made from these to the search service (Exa, or Tavily when Exa can't answer), and the clues plus search results to Anthropic. Not sent: the current page's address, cookies, form contents, or anything typed. Full details in `docs/privacy.md`.
+**For the live tests (in this cloud session):**
 
-## Still to check after the first live run
+| What | Where | Notes |
+|---|---|---|
+| Exa key | Secure key form Claude opens (network secret for `api.exa.ai`, header `x-api-key`) | Free account at https://dashboard.exa.ai, no card |
+| Tavily key | Secure key form (network secret for `api.tavily.com`, `Authorization: Bearer`) | Free account at https://app.tavily.com, no card |
+| Anthropic key | `LINKPEEK_ANTHROPIC_API_KEY` in this cloud environment's environment variables | The same key the summaries use; how the earlier AI evaluation ran |
 
-1. **Quality**: run Story Search on 20 to 30 real links of different kinds (news, sport, celebrity, local, a "Read more" link, a shortened link). Note where it picked the wrong story or missed the right one.
-2. **Model**: if it picks wrong stories, set `STORY_MODEL=claude-sonnet-5-5` (about $0.04 a search for the AI instead of $0.002) and compare.
-3. **Exa against Tavily**: to compare them, set `STORY_SEARCH_PROVIDER=tavily` for a while. Neither has been run live yet.
+**For production (only after you authorise the merge):** in Vercel, project `linkpeek-api` > Settings > Environment Variables, for Production:
+
+| Variable | Value |
+|---|---|
+| `EXA_API_KEY` | Your Exa key |
+| `TAVILY_API_KEY` | Your Tavily key |
+| `ANTHROPIC_API_KEY` | Already set |
+
+Nothing else is needed: the defaults are free mode, Exa then Tavily, at most 3 searches, Claude Haiku 5.5. Optional settings: `STORY_SPENDING` (`free` default, `paid` only by decision), `STORY_SEARCH_PROVIDER` (default `exa,tavily`), `STORY_MAX_SEARCHES` (1 to 5, default 3), `STORY_MODEL`, `STORY_EFFORT`, `STORY_SEARCH_ENABLED` (`false` switches Story Search off), `STORY_RATE_WEIGHT`, and `BRAVE_SEARCH_API_KEY` (paid mode only). In the extension build, `LINKPEEK_STORY_API_URL` (default `https://linkpeek-api.vercel.app/api/story`).
+
+**In the Anthropic Console:** check a monthly spend limit is set (for example $5).
+
+## Live tests (before merging)
+
+`npm run test:story-live` (in `server/src/story/live.test.ts`) runs against the real services, with no imitations, and writes the results to `docs/eval/story-live-<step>.md` for you to read. Three steps:
+
+1. **normal**: a real Exa search; a real Tavily search on its own; then five Story Searches end to end with real Exa, Tavily and Claude: Pope Francis's death (21 April 2025); the Louvre jewel theft (19 October 2025) from a "Read more" card; the same story from the address alone; a vague "Pop star found dead in hotel room" (for you to judge); and a made-up story that must not produce a report. Checks: real results with page text, a strong sourced report for the real stories, every factual line sourced, and no report for the made-up one.
+2. **exa-exhausted**: lower the Exa key's budget in Exa's dashboard below what it has spent, so the real Exa answers "used up". Checks that Exa reports it, and that Tavily takes over and still produces the report.
+3. **both-exhausted**: also lower the Tavily key's limit. Checks that both report it, and that Story Search answers "out-of-credit" (the browser test checks the message the card shows for that answer).
+
+Then raise both limits again. Estimated use: step 1 about $0.10–0.25 of Exa's free credit, about 10 Tavily credits and about $0.02 of Claude; steps 2 and 3 almost nothing.
+
+How the keys reach the tests in this cloud session: Exa and Tavily through the secure key form (stored as network secrets, added by the network proxy, never shown to Claude). Claude through a `LINKPEEK_ANTHROPIC_API_KEY` environment variable, the way the summaries evaluation ran, because the proxy route for Anthropic would also affect Claude Code's own connection.
+
+Not yet known: whether Exa's and Tavily's free plans let you set a per-key limit. If not, the two exhaustion steps can't be made real without using up a month's allowance, and the fallback is covered only by the unit tests (which use each provider's documented "used up" reply).
+
+## Still open
+
+1. **The live tests haven't run**: no keys yet. Nothing here has searched the real web or asked the real Claude.
+2. **Per-key limits on the free plans**: needed for the real exhaustion steps; see above.
+3. **Not merged**: `/api/story` exists only on this branch. The production build of the extension points at `linkpeek-api.vercel.app/api/story`, which only exists after the merge. Waiting for your go-ahead.
+4. **Vercel's list of commercial examples** couldn't be read from its page; the rule itself is clear (above).
+5. **Claude isn't free**: about $0.002 a Story Search, capped by your Anthropic monthly limit.
 
 ## Known limits
 

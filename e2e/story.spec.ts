@@ -135,6 +135,15 @@ test('a search failure is shown as a failure, and Try again really tries again',
   expect(await sent(page)).toHaveLength(2);
 });
 
+test('when the free searches are used up, it says so plainly and offers no pointless retry', async ({ page, context }) => {
+  await agreeOnce(context);
+  await story(context, `${TEST_SERVER}/2026/11/25/free-searches-used-up-story-about-the-harbour`);
+  const card = storyCard(page);
+  await expect(card).toContainText("Story Search has used this month's free searches. It works again when they renew at the start of next month.", { timeout: 10_000 });
+  await expect(card.getByRole('button', { name: 'Try again' })).toHaveCount(0);
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toHaveCount(0);
+});
+
 test('a report on possible matches says so before anything else', async ({ page, context }) => {
   await agreeOnce(context);
   await story(context, `${TEST_SERVER}/2026/11/24/possible-bridge-closure-for-repairs`);
