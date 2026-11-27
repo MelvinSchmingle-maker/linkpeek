@@ -15,6 +15,7 @@
  * the live mode (real Claude) says anything about the AI's reports.
  */
 import type { AiReport } from '../../../server/src/story/analyse';
+import type { Quote } from '../../../server/src/story/evidence';
 import type { Expectation } from './validate';
 
 export interface PromptSource {
@@ -27,6 +28,8 @@ export interface PromptSource {
   title: string;
   /** Title, description and passages, as the AI was given them. */
   text: string;
+  /** The same, one part each (a quote never runs from one part into the next). */
+  parts: string[];
 }
 
 /** The sources in a Story Search prompt, as storyUserMessage wrote them. */
@@ -44,6 +47,7 @@ export function promptSources(userMessage: string): PromptSource[] {
       ...(attrs.same_report_as ? { sameAs: Number(attrs.same_report_as) } : {}),
       title: body.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? '',
       text: body.replace(/<\/?[a-z_]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      parts: [...body.matchAll(/<(title|description|passage)>([\s\S]*?)<\/\1>/g)].map((p) => p[2]!.replace(/…$/, '').trim()),
     });
   }
   return out;
@@ -54,10 +58,58 @@ export function ids(sources: PromptSource[], ...patterns: RegExp[]): number[] {
   return sources.filter((s) => patterns.every((p) => p.test(s.text))).map((s) => s.id);
 }
 
+/** A claim in a written reply: the sources it rests on, or the exact passages (see toAiReport). */
+export interface StandInClaim {
+  text: string;
+  sources?: number[];
+  evidence?: Quote[];
+}
+
+export interface StandInReply extends Omit<AiReport, 'what_happened' | 'details' | 'facts' | 'unclear' | 'headline'> {
+  what_happened: StandInClaim[];
+  details: (StandInClaim & { label: AiReport['details'][number]['label'] })[];
+  facts: StandInClaim[];
+  unclear: StandInClaim[];
+  headline?: { verdict: AiReport['headline']['verdict']; reason: string; sources?: number[]; evidence?: Quote[] };
+}
+
 export interface StandIn {
   /** What this reply is, for the report. */
   note: string;
-  reply(sources: PromptSource[]): AiReport;
+  reply(sources: PromptSource[]): StandInReply;
+}
+
+const wordsOf = (t: string) => new Set((t.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []));
+
+/**
+ * A written reply in the shape Claude must use: every claim with passages
+ * copied from its sources. Where the reply only lists sources, each gets its
+ * sentence most like the claim, copied from the prompt, so it is always a real
+ * passage of that source. Explicit `evidence` is passed on as written (that's
+ * how the deliberately wrong stand-ins quote the wrong source).
+ */
+export function toAiReport(r: StandInReply, sources: PromptSource[]): AiReport {
+  const quote = (claim: string, id: number): Quote | undefined => {
+    const src = sources.find((s) => s.id === id);
+    if (!src) return { source: id, quote: 'a passage that is in no source at all' };
+    const want = wordsOf(claim);
+    const sentences = src.parts.flatMap((p) => p.split(/(?<=[.!?])\s+/)).map((x) => x.trim()).filter((x) => x.split(/\s+/).length >= 4);
+    const best = sentences.map((x) => ({ x, n: [...wordsOf(x)].filter((w) => want.has(w)).length })).sort((a, b) => b.n - a.n)[0];
+    return best ? { source: id, quote: best.x.split(/\s+/).slice(0, 30).join(' ') } : undefined;
+  };
+  const fill = <T extends StandInClaim>(c: T) => {
+    const { sources: cited, ...rest } = c;
+    return { ...rest, evidence: c.evidence ?? (cited ?? []).map((id) => quote(c.text, id)).filter((q): q is Quote => Boolean(q)) };
+  };
+  const h = r.headline;
+  return {
+    ...r,
+    what_happened: r.what_happened.map(fill),
+    details: r.details.map(fill),
+    facts: r.facts.map(fill),
+    unclear: r.unclear.map(fill),
+    headline: h ? { verdict: h.verdict, reason: h.reason, evidence: h.evidence ?? (h.sources ?? []).map((id) => quote(h.reason, id)).filter((q): q is Quote => Boolean(q)) } : { verdict: 'unverified', reason: '', evidence: [] },
+  } as AiReport;
 }
 
 export interface PageFixture {

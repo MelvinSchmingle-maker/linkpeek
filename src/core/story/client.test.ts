@@ -130,4 +130,21 @@ describe('parseReport', () => {
       expect(parseReport(bad)).toBeUndefined();
     }
   });
+
+  it('keeps evidence quotes, the headline check and source marks; drops the ones that do not fit', () => {
+    const n = REPORT.sources[0]!.n;
+    const r = parseReport({
+      ...REPORT,
+      whatHappened: [{ ...REPORT.whatHappened[0], evidence: [{ source: n, quote: 'A passage from the source.' }, { source: 99, quote: 'From a source not in the list.' }, { source: n, quote: 42 }], weak: true }],
+      headline: { headline: 'The headline', verdict: 'misleading', reason: 'The reports say otherwise.', evidence: [{ source: n, quote: 'What the reports say.' }], extra: '<b>x</b>' },
+      sources: [{ ...REPORT.sources[0], updated: '2026-11-25', corrected: true }, ...REPORT.sources.slice(1)],
+    })!;
+    expect(r.whatHappened[0]).toMatchObject({ evidence: [{ source: n, quote: 'A passage from the source.' }], weak: true });
+    expect(r.headline).toEqual({ headline: 'The headline', verdict: 'misleading', reason: 'The reports say otherwise.', evidence: [{ source: n, quote: 'What the reports say.' }] });
+    expect(r.sources[0]).toMatchObject({ updated: '2026-11-25', corrected: true });
+    // A verdict that isn't one of the four, or no headline text: no headline check at all.
+    expect(parseReport({ ...REPORT, headline: { headline: 'x', verdict: 'fake news', reason: '', evidence: [] } })!.headline).toBeUndefined();
+    expect(parseReport({ ...REPORT, headline: { verdict: 'accurate', reason: '', evidence: [] } })!.headline).toBeUndefined();
+    expect(parseReport({ ...REPORT, sources: [{ ...REPORT.sources[0], updated: 'yesterday' }] })!.sources[0]).not.toHaveProperty('updated');
+  });
 });

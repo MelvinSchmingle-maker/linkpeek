@@ -4,18 +4,23 @@
  *  1. One well-built search first (queries.ts): the headline plus the names
  *     that pin the story down. When the link's date is known, only results
  *     from 14 days before it to 30 days after it (never past today).
- *  2. Judge what it found (assess). Enough means at least two independent
- *     reports of the same story (syndicated copies count once), or one from
- *     an official source, that mention the person the link names and date
- *     from the same time.
+ *  2. Judge what it found (assess). Enough means independent corroboration
+ *     of the same story by the same rule the report uses to call something
+ *     established (sources.ts, wellSupported): two independent reports from
+ *     news agencies or recognised news organisations (syndicated copies count
+ *     once), or an official source and one such report, that mention the
+ *     person the link names and date from the same time. Social media,
+ *     opinion and unrecognised sites never make it enough.
  *  3. Only when it isn't enough, a targeted follow-up aimed at what was
  *     missing: different wording when nothing was relevant, the named person
  *     when results didn't mention them, the date when results came from
  *     different times, and other sites (the ones already found left out) when
  *     there was only one source. At most STORY_MAX_SEARCHES searches in all
  *     (3 by default). Searching stops early if the free allowance runs out.
- *  4. Results with almost nothing in common with the link are set aside
- *     (match.ts). The best five go on.
+ *  4. Every result is cleaned first (hygiene.ts): text addressed to an AI is
+ *     removed, withdrawn articles are left out, corrections are marked and
+ *     "Updated" stamps are taken out. Results with almost nothing in common
+ *     with the link are set aside (match.ts). The best five go on.
  *  5. Syndicated copies and agency reports are grouped (sources.ts).
  *  6. Claude decides which are the same story and writes the report
  *     (analyse.ts), and the rules then check it (report.ts).
@@ -30,8 +35,9 @@ import { GOOD_SCORE, linkProfile, MIN_CANDIDATE_SCORE, scoreHits, type LinkProfi
 import { storyUserMessage } from './prompt.js';
 import type { SearchFailure, SearchHit, SearchOptions, SearchProvider } from './providers/types.js';
 import { buildQueries, type QueryPlan, type QueryPurpose, type SearchQuery } from './queries.js';
-import { finalise, noMatch, noResults, reportFailed } from './report.js';
-import { canonicalKey, groupReports, hostOf, isRedirectWrapper, publisherName, sourceKind } from './sources.js';
+import { cleanHits } from './hygiene.js';
+import { finalise, noMatch, noResults, reportFailed, type Stats } from './report.js';
+import { canonicalKey, groupReports, hostOf, isRedirectWrapper, publisherName, sourceKind, wellSupported } from './sources.js';
 import { daysBetween } from './text.js';
 
 /** Results asked for by the first search: enough to see the story from several sites. */
@@ -84,8 +90,16 @@ export interface Metrics {
   outputTokens?: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
-  /** Sentences (and subjects) dropped for stating a name, number or date no kept source contains. */
+  /** Sentences (and subjects) dropped for stating a name, number, date or event their sources don't establish. */
   ungroundedDropped?: number;
+  /** Sentences dropped because none of their quoted passages was found in the sources they cite. */
+  unverifiedDropped?: number;
+  /** Sentences kept but marked weak (their passages don't carry them). */
+  weakClaims?: number;
+  contradictedClaims?: number;
+  /** Results left out as withdrawn by their publisher, and sentences removed for addressing an AI. */
+  withdrawn?: number;
+  injectionRemoved?: number;
 }
 
 export type Investigation = { ok: true; report: StoryReport; metrics: Metrics } | { ok: false; code: StoryErrorCode; metrics: Metrics };
@@ -106,10 +120,10 @@ export function assess(scored: Scored[], profile: LinkProfile): Assessment {
   }
   const dates = good.map((s) => s.hit.published).filter((d): d is string => Boolean(d)).sort();
   if (dates.length >= 2 && (daysBetween(dates[0]!, dates[dates.length - 1]!) ?? 0) > SPREAD_DAYS) return { enough: false, shortfall: 'dates-disagree' };
+  // The same rule as "strong evidence" in the report: social posts, opinion and unrecognised sites never make it enough.
   const hits = good.map((s) => s.hit);
-  const groups = new Set(groupReports(hits).group).size;
-  const official = hits.some((h) => sourceKind(h.url, h.title) === 'primary');
-  return groups >= 2 || official ? { enough: true } : { enough: false, shortfall: 'single-source' };
+  const kinds = hits.map((h) => sourceKind(h.url, h.title));
+  return wellSupported(hits.map((_, i) => i), groupReports(hits), kinds) ? { enough: true } : { enough: false, shortfall: 'single-source' };
 }
 
 /** Which follow-up suits each shortfall, best first. */
@@ -151,6 +165,8 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
 
   onStage({ stage: 'searching' });
   const merged = new Map<string, SearchHit>();
+  let withdrawn = 0;
+  let injection = 0;
   /** One search. Returns its failure, if it failed. */
   const runOne = async (q: SearchQuery, opts: Omit<SearchOptions, 'language'>, label: string): Promise<SearchFailure | undefined> => {
     metrics.queries++;
@@ -162,7 +178,10 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
     }
     metrics.searchUsd += o.costUsd;
     if (!metrics.providersUsed.includes(o.provider)) metrics.providersUsed.push(o.provider);
-    for (const h of o.hits) {
+    const cleaned = cleanHits(o.hits);
+    withdrawn += cleaned.withdrawn;
+    injection += cleaned.injection;
+    for (const h of cleaned.hits) {
       if (isRedirectWrapper(h.url)) continue;
       const key = canonicalKey(h.url);
       const prev = merged.get(key);
@@ -177,7 +196,8 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   const firstFailure = await runOne(plan.first, { limit: FIRST_RESULTS, ...window }, plan.first.purpose);
   if (firstFailure) return { ok: false, code: failureCode([firstFailure]), metrics };
 
-  let scored = scoreHits(profile, [...merged.values()]);
+  const day = now.toISOString().slice(0, 10);
+  let scored = scoreHits(profile, [...merged.values()], day);
   const used = new Set<QueryPurpose>([plan.first.purpose]);
   while (metrics.queries < maxSearches) {
     const verdict = assess(scored, profile);
@@ -191,8 +211,10 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
     const failure = await runOne(q, { limit: FOLLOW_UP_RESULTS, ...(keepDate ? window : {}), ...(found.length ? { excludeDomains: found } : {}) }, `${verdict.shortfall}>${q.purpose}`);
     // A follow-up that fails (allowance used up, service down) ends the searching; what was found still counts.
     if (failure) break;
-    scored = scoreHits(profile, [...merged.values()]);
+    scored = scoreHits(profile, [...merged.values()], day);
   }
+  if (withdrawn) metrics.withdrawn = withdrawn;
+  if (injection) metrics.injectionRemoved = injection;
   scored = scored.slice(0, MAX_RESULTS);
   metrics.results = scored.length;
   if (!scored.length) return { ok: true, report: noResults(searchedFor, now), metrics };
@@ -224,9 +246,12 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   metrics.outputTokens = ai.usage.outputTokens;
   metrics.cacheReadTokens = ai.usage.cacheReadTokens;
   metrics.cacheWriteTokens = ai.usage.cacheWriteTokens;
-  const stats = { ungrounded: 0 };
-  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, snippetsOnly, searchedFor, now, stats });
+  const stats: Stats = { ungrounded: 0, unverified: 0, weak: 0, contradicted: 0 };
+  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, snippetsOnly, withdrawn, searchedFor, now, stats });
   metrics.ungroundedDropped = stats.ungrounded;
+  metrics.unverifiedDropped = stats.unverified;
+  metrics.weakClaims = stats.weak;
+  metrics.contradictedClaims = stats.contradicted;
   return { ok: true, report, metrics };
 }
 

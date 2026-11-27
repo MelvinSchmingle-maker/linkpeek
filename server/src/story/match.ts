@@ -81,7 +81,17 @@ function hitText(h: SearchHit): string {
   return [h.title, h.description ?? '', ...h.passages].join(' ');
 }
 
-export function scoreHits(profile: LinkProfile, hits: SearchHit[]): Scored[] {
+/** For a link with no date: matching reporting from this recently means the link is most likely about that. */
+const RECENT_DAYS = 30;
+
+/**
+ * `today` ("YYYY-MM-DD"): for a link with no date, if any close result is
+ * from the last month, the newest close results set the reference date, so
+ * this week's story about someone isn't set aside for an older one that
+ * happens to match the wording better (D73). Without recent coverage, the
+ * best results' dates set it, as before.
+ */
+export function scoreHits(profile: LinkProfile, hits: SearchHit[], today?: string): Scored[] {
   const scored = hits.map((hit) => {
     const text = hitText(hit);
     const lower = text.toLowerCase();
@@ -98,8 +108,8 @@ export function scoreHits(profile: LinkProfile, hits: SearchHit[]): Scored[] {
     else if (others.length) score = Math.max(wordShare, 0.6 * wordShare + 0.4 * (others.filter(has).length / others.length));
     return { hit, score, wordShare, namesFound, keyFound: keyFound.length, specificFound, dateMismatch: false };
   });
-  // When the link has no date, the best results' dates stand in for it.
-  const reference = profile.date ?? clusterDate(scored);
+  // When the link has no date, recent close coverage stands in for it, or else the best results' dates.
+  const reference = profile.date ?? recentDate(scored, today) ?? clusterDate(scored);
   if (reference) {
     for (const s of scored) {
       const d = s.hit.published ? daysBetween(reference, s.hit.published) : undefined;
@@ -107,6 +117,20 @@ export function scoreHits(profile: LinkProfile, hits: SearchHit[]): Scored[] {
     }
   }
   return scored.sort((a, b) => b.score - a.score);
+}
+
+/** The newest close result's date, if it is from the last RECENT_DAYS. */
+function recentDate(scored: Scored[], today: string | undefined): string | undefined {
+  if (!today) return undefined;
+  const recent = scored
+    .filter((s) => s.score >= GOOD_SCORE && s.hit.published)
+    .map((s) => s.hit.published!)
+    .filter((d) => {
+      const age = daysBetween(d, today);
+      return age !== undefined && age >= -1 && age <= RECENT_DAYS;
+    })
+    .sort();
+  return recent.pop();
 }
 
 /** The middle date of the three best-scoring dated results, if at least two have dates. */

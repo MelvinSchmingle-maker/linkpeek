@@ -78,11 +78,41 @@ export type InvestigationConfidence = 'strong' | 'partial' | 'conflicting' | 'in
 export type SourceKind = 'primary' | 'agency' | 'news' | 'opinion' | 'social' | 'other';
 export type DetailLabel = 'who' | 'what' | 'where' | 'when' | 'why';
 export type ReportStatus = 'report' | 'no-results' | 'no-match' | 'report-failed';
-export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated' | 'vague-link';
+export type ReportNote =
+  | 'single-source'
+  | 'developing'
+  | 'snippets-only'
+  | 'older-story'
+  | 'syndicated'
+  | 'vague-link'
+  /** None of the sources is a news agency, a recognised news organisation or an official body. */
+  | 'no-established-sources'
+  /** A result was left out because its publisher withdrew or retracted it. */
+  | 'withdrawn';
+
+/** A passage copied word for word from a source, shown as the reason for a claim. */
+export interface Evidence {
+  source: number;
+  quote: string;
+}
 
 export interface Claim {
   text: string;
   sources: number[];
+  /** The passages that support it, each from the source it cites (evidence.ts). */
+  evidence?: Evidence[];
+  /** Its own passages share few of its words or don't show its specifics: never counted as confirmed. */
+  weak?: boolean;
+}
+
+export type HeadlineVerdict = 'accurate' | 'partly-accurate' | 'misleading' | 'unverified';
+
+/** Does the link's headline say what the reporting establishes (headline.ts)? */
+export interface HeadlineCheck {
+  headline: string;
+  verdict: HeadlineVerdict;
+  reason: string;
+  evidence: Evidence[];
 }
 
 export interface ReportSource {
@@ -97,6 +127,10 @@ export interface ReportSource {
   via?: string;
   /** This is the linked article itself, found by the search. */
   original?: boolean;
+  /** "YYYY-MM-DD": when the article says it was last updated. Never taken as the date of the event. */
+  updated?: string;
+  /** The article carries a correction notice; what it now says was used. */
+  corrected?: boolean;
 }
 
 export interface StoryReport {
@@ -112,6 +146,8 @@ export interface StoryReport {
   sources: ReportSource[];
   setAside: number;
   notes: ReportNote[];
+  /** Headline accuracy, when the link had a headline and a report was written. */
+  headline?: HeadlineCheck;
   searchedFor: string;
   checkedAt: string;
 }

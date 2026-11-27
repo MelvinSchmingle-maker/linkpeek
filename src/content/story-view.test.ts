@@ -35,7 +35,7 @@ const sectionIds = (r: StoryReport) => toStoryView({ kind: 'report', report: r }
 describe('story view', () => {
   it('a full report has every section, in order, each line with its sources', () => {
     const v = toStoryView({ kind: 'report', report: report() });
-    expect(v.sections.map((s) => s.heading)).toEqual(['What happened?', 'Key details', 'What is confirmed?', 'Reported by one source', 'What remains unclear?']);
+    expect(v.sections.map((s) => s.heading)).toEqual(['What happened?', 'Key details', 'What is confirmed?', 'Reported, not confirmed', 'What remains unclear?']);
     expect(v.tags.map((t) => t.text)).toEqual(['Strong match', 'Strong evidence']);
     expect(v.sections[0]!.items[0]!.refs).toEqual([1, 2]);
     expect(v.sources[0]!.meta).toBe('BBC News · 24 November 2026 · News');
@@ -130,6 +130,60 @@ describe('story view', () => {
       { label: 'Link address', text: 'https://paper.example.org/a' },
     ]);
     expect(v.confirm!.notSent).toMatch(/Not sent: this page's address, your cookies/);
+  });
+});
+
+describe('evidence, headline accuracy and source marks', () => {
+  const withEvidence = report({
+    whatHappened: [{ text: 'Police in Paris are investigating the death of Jamie Rivers.', sources: [1, 2], evidence: [{ source: 1, quote: 'French police say the body of the singer Jamie Rivers was found' }, { source: 2, quote: 'Rivers, 34, was discovered in a suite' }] }],
+    reported: [{ text: 'He was 34.', sources: [2], evidence: [{ source: 2, quote: 'Rivers dies aged 34 in Paris' }], weak: true }],
+    headline: { headline: 'Pop star Jamie Rivers found dead in Paris hotel', verdict: 'accurate', reason: 'The reports establish that he was found dead at a Paris hotel.', evidence: [{ source: 1, quote: 'Jamie Rivers was found at the Grand Meridian hotel in Paris' }] },
+    sources: [...report().sources.slice(0, 2).map((s, i) => (i === 0 ? { ...s, corrected: true, updated: '2026-11-25' } : s)), report().sources[2]!],
+  });
+
+  it('each claim can show the passages behind it, named by source; a weak one says so', () => {
+    const v = toStoryView({ kind: 'report', report: withEvidence });
+    expect(v.sections[0]!.items[0]!.evidence).toEqual([
+      { ref: '[1] BBC News', quote: 'French police say the body of the singer Jamie Rivers was found' },
+      { ref: '[2] The Guardian', quote: 'Rivers, 34, was discovered in a suite' },
+    ]);
+    const card = renderStoryCard(v, 'https://news.example.com/a', { onClose: () => undefined, onConfirm: () => undefined, onCancel: () => undefined, onRetry: () => undefined });
+    const details = card.querySelectorAll('details.story-evidence');
+    // Closed until asked for: the report stays short.
+    expect([...details].every((d) => !(d as HTMLDetailsElement).open)).toBe(true);
+    expect(details[0]!.querySelector('summary')!.textContent).toBe('Show evidence');
+    expect(details[0]!.querySelector('q')!.textContent).toBe('French police say the body of the singer Jamie Rivers was found');
+    expect(card.querySelector('.reported .story-evidence-weak')!.textContent).toBe("The quoted passages don't show all of this. Check the source.");
+  });
+
+  it('the headline verdict comes after the report, with its reason and evidence', () => {
+    const v = toStoryView({ kind: 'report', report: withEvidence });
+    expect(v.headline).toMatchObject({ heading: 'Is the headline accurate?', verdict: 'Accurate', tone: 'strong', headline: 'Pop star Jamie Rivers found dead in Paris hotel' });
+    const card = renderStoryCard(v, 'https://news.example.com/a', { onClose: () => undefined, onConfirm: () => undefined, onCancel: () => undefined, onRetry: () => undefined });
+    const sections = [...card.querySelectorAll('section h3')].map((h) => h.textContent);
+    expect(sections.indexOf('Is the headline accurate?')).toBe(sections.indexOf('What remains unclear?') + 1);
+    expect(card.querySelector('.story-verdict')!.textContent).toBe('Accurate');
+    expect(card.querySelector('.story-headline-checked')!.textContent).toBe('Headline: “Pop star Jamie Rivers found dead in Paris hotel”');
+    for (const verdict of ['partly-accurate', 'misleading', 'unverified'] as const) {
+      const hv = toStoryView({ kind: 'report', report: report({ headline: { ...withEvidence.headline!, verdict } }) });
+      expect(hv.headline!.verdict).toBe({ 'partly-accurate': 'Partly accurate', misleading: 'Misleading', unverified: 'Unverified' }[verdict]);
+    }
+    // No headline check, no section.
+    expect(toStoryView({ kind: 'report', report: report() }).headline).toBeUndefined();
+  });
+
+  it('a corrected or updated source says so; the update is never shown as the story’s date', () => {
+    const v = toStoryView({ kind: 'report', report: withEvidence });
+    expect(v.sources[0]!.meta).toBe('BBC News · 24 November 2026 · updated 25 November 2026 · News');
+    expect(v.sources[0]!.tags).toContain('Corrected by its publisher');
+  });
+
+  it('the new notes have plain wording', () => {
+    const v = toStoryView({ kind: 'report', report: report({ notes: ['no-established-sources', 'withdrawn'] }) });
+    expect(v.notes).toEqual([
+      "None of these sources is a news agency, a news organisation LinkPeek recognises or an official body, so nothing here counts as confirmed.",
+      'A result was left out because its publisher withdrew it.',
+    ]);
   });
 });
 

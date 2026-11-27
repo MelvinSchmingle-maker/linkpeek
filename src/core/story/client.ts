@@ -13,6 +13,9 @@
 import type {
   Claim,
   DetailLabel,
+  Evidence,
+  HeadlineCheck,
+  HeadlineVerdict,
   InvestigationConfidence,
   MatchStatus,
   ReportNote,
@@ -154,8 +157,11 @@ const MATCHES: MatchStatus[] = ['strong', 'possible', 'none'];
 const CONFIDENCES: InvestigationConfidence[] = ['strong', 'partial', 'conflicting', 'insufficient'];
 const KINDS: SourceKind[] = ['primary', 'agency', 'news', 'opinion', 'social', 'other'];
 const LABELS: DetailLabel[] = ['who', 'what', 'where', 'when', 'why'];
-const NOTES: ReportNote[] = ['single-source', 'developing', 'snippets-only', 'older-story', 'syndicated', 'vague-link'];
+const NOTES: ReportNote[] = ['single-source', 'developing', 'snippets-only', 'older-story', 'syndicated', 'vague-link', 'no-established-sources', 'withdrawn'];
+const VERDICTS: HeadlineVerdict[] = ['accurate', 'partly-accurate', 'misleading', 'unverified'];
 const MAX_SOURCES = 8;
+/** One passage per cited source, so never fewer than the sources a claim can cite. */
+const MAX_QUOTES = MAX_SOURCES;
 
 function str(v: unknown, max: number): string | undefined {
   if (typeof v !== 'string') return undefined;
@@ -196,6 +202,7 @@ export function parseReport(v: unknown): StoryReport | undefined {
     const m = oneOf(s.match, ['strong', 'possible'] as const);
     if (!Number.isInteger(n) || !url || !title || !kind || !m) return undefined;
     const published = typeof s.published === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.published) ? s.published : undefined;
+    const updated = typeof s.updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.updated) ? s.updated : undefined;
     sources.push({
       n: n as number,
       title,
@@ -207,9 +214,20 @@ export function parseReport(v: unknown): StoryReport | undefined {
       ...(Number.isInteger(s.copyOf) ? { copyOf: s.copyOf as number } : {}),
       ...(str(s.via, 60) ? { via: str(s.via, 60) } : {}),
       ...(s.original === true ? { original: true } : {}),
+      ...(updated ? { updated } : {}),
+      ...(s.corrected === true ? { corrected: true } : {}),
     });
   }
   const numbers = new Set(sources.map((s) => s.n));
+  // Quotes: plain text, capped, each pointing at a source in the list.
+  const evidence = (x: unknown): Evidence[] =>
+    Array.isArray(x)
+      ? (x as Record<string, unknown>[])
+          .filter((q) => q && Number.isInteger(q.source) && numbers.has(q.source as number))
+          .map((q) => ({ source: q.source as number, quote: str(q.quote, 320) }))
+          .filter((q): q is Evidence => Boolean(q.quote))
+          .slice(0, MAX_QUOTES)
+      : [];
   const claims = (x: unknown, max: number, needSources: boolean): Claim[] | undefined => {
     if (!Array.isArray(x)) return undefined;
     const out: Claim[] = [];
@@ -218,7 +236,8 @@ export function parseReport(v: unknown): StoryReport | undefined {
       const refs = Array.isArray(c?.sources) ? (c.sources as unknown[]).filter((r): r is number => Number.isInteger(r) && numbers.has(r as number)) : [];
       // A factual claim whose sources aren't in the list is dropped here too.
       if (!text || (needSources && !refs.length)) continue;
-      out.push({ text, sources: refs });
+      const quotes = evidence(c.evidence);
+      out.push({ text, sources: refs, ...(quotes.length ? { evidence: quotes } : {}), ...(c.weak === true ? { weak: true } : {}) });
     }
     return out;
   };
@@ -234,6 +253,10 @@ export function parseReport(v: unknown): StoryReport | undefined {
     if (label && c) details.push({ ...c, label });
   }
   const notes = Array.isArray(o.notes) ? (o.notes as unknown[]).filter((x): x is ReportNote => NOTES.includes(x as ReportNote)) : [];
+  const h = o.headline as Record<string, unknown> | undefined;
+  const verdict = h && typeof h === 'object' ? oneOf(h.verdict, VERDICTS) : undefined;
+  const headline: HeadlineCheck | undefined =
+    h && verdict && str(h.headline, 300) ? { headline: str(h.headline, 300)!, verdict, reason: str(h.reason, 320) ?? '', evidence: evidence(h.evidence) } : undefined;
   return {
     status,
     ...(str(o.subject, 160) ? { subject: str(o.subject, 160) } : {}),
@@ -247,6 +270,7 @@ export function parseReport(v: unknown): StoryReport | undefined {
     sources,
     setAside: Number.isInteger(o.setAside) && (o.setAside as number) >= 0 ? (o.setAside as number) : 0,
     notes: [...new Set(notes)],
+    ...(headline ? { headline } : {}),
     searchedFor: str(o.searchedFor, 220) ?? '',
     checkedAt: typeof o.checkedAt === 'string' && !Number.isNaN(Date.parse(o.checkedAt)) ? o.checkedAt : new Date().toISOString(),
   };

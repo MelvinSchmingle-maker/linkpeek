@@ -85,7 +85,14 @@ export function names(text: string, { allowTitleCase = false }: { allowTitleCase
   return [...out].slice(0, 12);
 }
 
+/** Months and weekdays are capitalised but aren't names ("19 October", "on Monday"). */
+const CALENDAR = new Set([
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+]);
+
 function isCapitalised(w: string): boolean {
+  if (CALENDAR.has(w.toLowerCase())) return false;
   return /^\p{Lu}[\p{Ll}'’-]+(\p{Lu}[\p{Ll}]+)?$/u.test(w) || /^\p{Lu}{2,5}$/u.test(w);
 }
 

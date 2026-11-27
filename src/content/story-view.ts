@@ -29,6 +29,20 @@ export interface ViewItem {
   label?: string;
   text: string;
   refs: number[];
+  /** The passages behind it, shown on request: "[2] BBC News" and the quote. */
+  evidence?: { ref: string; quote: string }[];
+  /** Its passages don't fully carry it. */
+  weak?: boolean;
+}
+
+/** Headline accuracy, as shown. */
+export interface ViewHeadline {
+  heading: string;
+  headline: string;
+  verdict: string;
+  tone: Tone;
+  reason: string;
+  evidence: { ref: string; quote: string }[];
 }
 
 export interface ViewSection {
@@ -61,6 +75,7 @@ export interface StoryView {
   confirm?: { intro: string; lines: { label: string; text: string; from?: string }[]; notSent: string; go: string; cancel: string };
   sections: ViewSection[];
   notes: string[];
+  headline?: ViewHeadline;
   sourcesHeading?: string;
   sources: ViewSource[];
   searchedFor?: string;
@@ -158,9 +173,10 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
     n: s.n,
     title: s.title,
     url: s.url,
-    meta: [s.publisher, formatDay(s.published), S.kind[s.kind]].filter(Boolean).join(' · '),
+    meta: [s.publisher, formatDay(s.published), s.updated && s.updated !== s.published ? S.updated(formatDay(s.updated) ?? s.updated) : undefined, S.kind[s.kind]].filter(Boolean).join(' · '),
     tags: [
       ...(s.original ? [S.original] : []),
+      ...(s.corrected ? [S.corrected] : []),
       ...(s.match === 'possible' && r.status === 'report' ? [S.possibleTag] : []),
       ...(s.copyOf !== undefined ? [S.repeats(s.copyOf)] : s.via && s.kind !== 'agency' ? [S.credits(s.via)] : []),
     ],
@@ -180,14 +196,21 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
   if (r.notes.includes('vague-link')) view.caution = S.note['vague-link'];
   else if (r.match === 'possible') view.caution = S.possibleOnly;
 
-  const items = (list: { text: string; sources: number[] }[]) => list.map((c) => ({ text: c.text, refs: c.sources }));
+  const publisherOf = (n: number) => r.sources.find((s) => s.n === n)?.publisher ?? '';
+  const quotes = (list: { source: number; quote: string }[] | undefined) => (list ?? []).map((q) => ({ ref: `[${q.source}] ${publisherOf(q.source)}`.trim(), quote: q.quote }));
+  const items = (list: { text: string; sources: number[]; evidence?: { source: number; quote: string }[]; weak?: boolean }[]) =>
+    list.map((c) => ({ text: c.text, refs: c.sources, ...(c.evidence?.length ? { evidence: quotes(c.evidence) } : {}), ...(c.weak ? { weak: true } : {}) }));
   if (r.whatHappened.length) view.sections.push({ id: 'what-happened', heading: S.whatHappened, kind: 'paragraph', items: items(r.whatHappened) });
   if (r.details.length) {
-    view.sections.push({ id: 'details', heading: S.keyDetails, kind: 'details', items: r.details.map((d) => ({ label: S.detail[d.label], text: d.text, refs: d.sources })) });
+    view.sections.push({ id: 'details', heading: S.keyDetails, kind: 'details', items: r.details.map((d) => ({ label: S.detail[d.label], ...items([d])[0]! })) });
   }
   if (r.confirmed.length) view.sections.push({ id: 'confirmed', heading: S.confirmed, note: S.confirmedNote, kind: 'list', items: items(r.confirmed) });
   if (r.reported.length) view.sections.push({ id: 'reported', heading: S.reported, note: S.reportedNote, kind: 'list', items: items(r.reported) });
   if (r.unclear.length) view.sections.push({ id: 'unclear', heading: S.unclear, kind: 'list', items: items(r.unclear) });
+  if (r.headline) {
+    const tone: Record<typeof r.headline.verdict, Tone> = { accurate: 'strong', 'partly-accurate': 'possible', misleading: 'conflicting', unverified: 'neutral' };
+    view.headline = { heading: S.headlineHeading, headline: r.headline.headline, verdict: S.verdict[r.headline.verdict], tone: tone[r.headline.verdict], reason: r.headline.reason, evidence: quotes(r.headline.evidence) };
+  }
   view.sourcesHeading = r.match === 'possible' ? S.possibleSources : S.sources;
   const day = formatDay(r.checkedAt);
   // "Written by AI" only when something was written; a vague link's card is a list of sources.

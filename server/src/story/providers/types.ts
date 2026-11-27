@@ -17,6 +17,10 @@ export interface SearchHit {
   description?: string;
   /** Relevant passages from the page, as the provider extracted them. Short, never the whole article. */
   passages: string[];
+  /** "YYYY-MM-DD": when the article says it was last updated, if its text says so (hygiene.ts). */
+  updated?: string;
+  /** The article carries a correction notice (hygiene.ts). */
+  corrected?: boolean;
 }
 
 /** "quota": the account's credit or plan limit is used up (on a free plan, until it renews). */

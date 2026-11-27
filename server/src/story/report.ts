@@ -5,39 +5,56 @@
  * - A source is a match only if the AI says so AND the rule-based checks
  *   allow it (match.ts). Sources that aren't matches are removed, with every
  *   claim that relied only on them.
- * - Every sentence in "What happened", "Key details" and the facts must cite
- *   at least one remaining source, or it's dropped. "What remains unclear"
- *   may cite none.
- * - "Confirmed" is decided here, not by the AI: a fact is confirmed only when
- *   strong matches from at least two independent groups (syndicated copies
- *   count once) state it, or a primary source (police, a court, a
- *   government) does. Otherwise it's listed as reported by one source.
+ * - **Every claim carries its own evidence** (evidence.ts): for each source it
+ *   cites, a passage copied from that source, which must really be there.
+ *   Its names, numbers, dates and main event must be in the sources it
+ *   cites, not in some other result. A citation without a real passage is
+ *   removed; a claim left with none is dropped. A claim whose own passages
+ *   don't carry it is marked weak and never counted as confirmed.
+ * - **Dates**: an event date must be written in a cited source, or follow
+ *   exactly from a weekday or "yesterday" in it and its publication date. A
+ *   publication or update date is never taken as the event's (D71).
+ * - **"Confirmed" is decided here, not by the AI**: stated by strong matches
+ *   from two independent groups of news agencies or recognised news
+ *   organisations (syndicated copies count once), or, for what an official
+ *   body itself announced, by that official source. Opinion, social media
+ *   and unrecognised sites never confirm anything (D70). Everything else is
+ *   "reported, not confirmed".
+ * - **"What remains unclear?"** may say what's missing without a source, but
+ *   anything specific there (a name, a number, a date, an allegation) needs
+ *   the same evidence as a fact, so it can't bring in a suspect or a rumour
+ *   the sources never mention. A disagreement must quote both sides (D72).
  * - The AI's confidence can be lowered, never raised: "strong evidence"
- *   needs strong matches from two independent groups, a confirmed fact, and
- *   more than snippets to go on.
+ *   needs strong matches with independent corroboration (sources.ts,
+ *   wellSupported), a confirmed fact, and more than snippets to go on;
+ *   "conflicting" needs a quoted disagreement.
+ * - **Headline accuracy** is checked against the evidence (headline.ts).
  * - Sentences with "yesterday", "today" and the like are dropped: on a card
  *   read later they'd be wrong. Links and markup are removed from AI text.
  * - A link with no name and no date gets no written report at all, only the
  *   closest results as possible matches, each with its date (D68).
- * - Nothing specific may be added: a sentence (or the subject) that states a
- *   number, a name or a date that none of the kept sources contains is
- *   dropped (grounded()). A date worked out from a source's publication date,
- *   as the prompt asks, counts as supported. This is what stops an AI that
- *   invents a story ("the mayor of Zarnwick resigned...") from getting its
- *   invention onto the card, even as a "possible" match. Wording is not
- *   checked: paraphrase is normal, and would make the rule drop good claims.
+ * - If everything the AI wrote is dropped for stating what no source says,
+ *   its matching isn't trusted either: no reliable match (D65).
  */
-import type { AiReport } from './analyse.js';
-import type { Claim, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
+import type { AiClaim, AiReport } from './analyse.js';
+import type { Claim, Evidence, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
+import { ALLEGATION, checkClaim, datesWritten, unsupportedSpecifics, type ClaimCheck, type ClaimContext } from './evidence.js';
+import { assessHeadline } from './headline.js';
 import { capMatch, type LinkProfile, type Scored } from './match.js';
-import type { SearchHit } from './providers/types.js';
-import { canonicalKey, type Grouping } from './sources.js';
-import { clip, daysBetween, names } from './text.js';
+import { ATTRIBUTED, canonicalKey, corroborates, corroboratingGroups, wellSupported, type Grouping } from './sources.js';
+import { clip, daysBetween, words } from './text.js';
 
 const RELATIVE_DATE = /\b(yesterday|today|tonight|tomorrow|last night|this (morning|afternoon|evening))\b/i;
 const MAX_SENTENCE = 320;
 /** A story whose newest source is this recent may still be developing. */
 const FRESH_DAYS = 2;
+/** "No source reviewed reports...", "isn't established": saying what's missing. */
+const ABSENCE = /\b(no|none of the|not one of the)\b[^.]{0,60}\b(sources?|reports?|results?)\b|\bsources?( reviewed)? (do not|don't|did not|didn't|does not|doesn't)\b|\b(is not|isn't|was not|wasn't|are not|aren't|not|has not been|have not been|hasn't been|haven't been)( yet)? (established|confirmed|known|reported|clear|given|stated|said)\b/i;
+/** Saying that sources disagree... */
+const DISAGREE = /\b(while|whereas|but|however|differ|differs|disagree|disagrees|contradict|contradicts|conflicting|another source|other sources?|one source)\b|\bsays?\b[^;]*;[^;]*\bsays?\b/i;
+/** ...about what particular sources say. */
+const SOME_SOURCES = /\b(one|another|other|some|two|both) (sources?|reports?|outlets?)\b/i;
+const NO_DATE = "The sources reviewed don't establish when this happened.";
 
 export interface FinaliseInput {
   req: StoryRequest;
@@ -53,76 +70,20 @@ export interface FinaliseInput {
   olderSetAside: boolean;
   /** No result came with more than its headline and snippet. */
   snippetsOnly: boolean;
+  /** Results left out because their publisher withdrew them (hygiene.ts). */
+  withdrawn?: number;
   searchedFor: string;
   now: Date;
-  /** Filled in: how many sentences (and subjects) were dropped for stating what no kept source says. */
-  stats?: { ungrounded: number };
+  /** Filled in: sentences dropped for stating what their sources don't say, for having no real evidence, and kept but weak. */
+  stats?: Stats;
 }
 
-const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-const NOT_NAMES = new Set([...MONTHS, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
-const MONTH = MONTHS.join('|');
-const DATE = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH})(?:,?\\s+(\\d{4}))?\\b|\\b(${MONTH})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`, 'gi');
-/** A date this many days either side of a kept source's publication date may have been worked out from it. */
-const WORKED_OUT_DAYS = 7;
-
-/** Lower case without accents, so "Eugénie" matches "Eugenie". */
-function fold(s: string): string {
-  return s.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase();
-}
-
-function digitRuns(s: string): string[] {
-  return (s.match(/\d+/g) ?? []).flatMap((d) => [d, String(Number(d))]);
-}
-
-/** What the kept sources say, as the words and numbers a claim's specifics are checked against. */
-export interface Evidence {
-  words: Set<string>;
-  digits: Set<string>;
-  /** Publication dates, as days since 1970. */
-  days: number[];
-}
-
-export function evidenceOf(hits: SearchHit[], extra: string[] = []): Evidence {
-  const text = fold([...hits.flatMap((h) => [h.title, h.description ?? '', h.author ?? '', ...h.passages]), ...extra].join(' \n '));
-  const digits = new Set(digitRuns(text));
-  const days: number[] = [];
-  for (const h of hits) {
-    if (!h.published) continue;
-    for (const part of h.published.split('-')) for (const d of digitRuns(part)) digits.add(d);
-    const t = Date.parse(h.published.length === 7 ? `${h.published}-15` : h.published);
-    if (!Number.isNaN(t)) days.push(Math.round(t / 86_400_000));
-  }
-  return { words: new Set(text.split(/[^\p{L}\p{N}]+/u).filter(Boolean)), digits, days };
-}
-
-/**
- * The numbers, names and dates in a sentence that the kept sources don't
- * contain: what the AI added. Empty when everything specific is supported.
- * `linkNames`: the names the link itself gives. They're checked wherever they
- * appear, even first in a sentence, because echoing the link's own names is
- * exactly how an invented report would look ("Zarnwick's mayor resigned").
- */
-export function ungrounded(sentence: string, ev: Evidence, linkNames: string[] = []): string[] {
-  const out: string[] = [];
-  // Dates first: in the sources' text, or within a week of a publication date (worked out from it).
-  const rest = sentence.replace(DATE, (whole, d1, m1, y1, m2, d2, y2) => {
-    const day = Number(d1 ?? d2);
-    const month = MONTHS.indexOf(String(m1 ?? m2).toLowerCase());
-    const year = y1 ?? y2;
-    const inText = ev.words.has(MONTHS[month]!) && ev.digits.has(String(day)) && (!year || ev.digits.has(year));
-    const near = ev.days.some((p) => {
-      const years = year ? [Number(year)] : [new Date(p * 86_400_000).getUTCFullYear()];
-      return years.some((y) => Math.abs(Math.round(Date.UTC(y, month, day) / 86_400_000) - p) <= WORKED_OUT_DAYS);
-    });
-    if (!inText && !near) out.push(whole);
-    return ' ';
-  });
-  for (const d of rest.match(/\d+/g) ?? []) if (!ev.digits.has(d) && !ev.digits.has(String(Number(d)))) out.push(d);
-  const said = new Set(fold(rest).split(/[^\p{L}\p{N}]+/u));
-  const words = [...names(rest, { allowTitleCase: true }), ...linkNames].flatMap((n) => fold(n).split(/[^\p{L}\p{N}]+/u));
-  for (const w of new Set(words)) if (w && said.has(w) && !NOT_NAMES.has(w) && !/^\d+$/.test(w) && !ev.words.has(w)) out.push(w);
-  return out;
+export interface Stats {
+  ungrounded: number;
+  unverified: number;
+  weak: number;
+  /** Claims a cited source's own passage contradicts (dropped, or kept as weak). */
+  contradicted: number;
 }
 
 function cleanText(s: string): string | undefined {
@@ -131,9 +92,25 @@ function cleanText(s: string): string | undefined {
   return t;
 }
 
+/**
+ * "Source 2 says..." means the prompt's source 2, which may be numbered
+ * differently on the card: name it by its site instead. (These numbers are
+ * citations, not facts, so they aren't checked as numbers either.)
+ */
+function nameSources(text: string, publishers: string[]): string {
+  const pub = (n: string) => publishers[Number(n) - 1];
+  return text
+    .replace(/\b([Ss])ources (\d+) and (\d+)\b/g, (whole, _s, a: string, b: string) => (pub(a) && pub(b) ? `${pub(a)} and ${pub(b)}` : whole))
+    .replace(/\b([Ss])ource (\d+)\b/g, (whole, _s, n: string) => pub(n) ?? whole);
+}
+
+/** A checked claim, with its citations renumbered for the report. */
+type Checked = Claim & { cited: number[] };
+
 export function finalise(input: FinaliseInput): StoryReport {
   const { req, profile, candidates, grouping, kinds, publishers, ai, now } = input;
   const today = now.toISOString().slice(0, 10);
+  const hits = candidates.map((c) => c.hit);
 
   // 1. Which sources are matches, after the rules.
   const status: MatchStatus[] = candidates.map((c, i) => {
@@ -142,26 +119,19 @@ export function finalise(input: FinaliseInput): StoryReport {
   });
   const kept = candidates.map((_, i) => i).filter((i) => status[i] !== 'none');
   const number = new Map(kept.map((i, k) => [i + 1, k + 1]));
-  // Everything the kept sources say (their sites and credited agencies too, so "the Associated Press said" is supported).
-  const evidence = evidenceOf(
-    kept.map((i) => candidates[i]!.hit),
-    kept.flatMap((i) => [publishers[i] ?? '', grouping.via[i] ?? '']),
-  );
-  const stats = input.stats ?? { ungrounded: 0 };
-  const supported = (text: string): boolean => {
-    if (!ungrounded(text, evidence, profile.names).length) return true;
-    stats.ungrounded++;
-    return false;
-  };
   const strongIdx = new Set(kept.filter((i) => status[i] === 'strong'));
   const rejectedOlder = candidates.some((c, i) => status[i] === 'none' && c.dateMismatch) || input.olderSetAside;
   const setAside = input.setAsideEarly + (candidates.length - kept.length);
+  const stats = input.stats ?? { ungrounded: 0, unverified: 0, weak: 0, contradicted: 0 };
+  const extras = candidates.map((_, i) => [publishers[i] ?? '', grouping.via[i] ?? ''].filter(Boolean));
+  const ctx: ClaimContext = { hits, kept: new Set(kept), extras, linkNames: profile.names };
 
   const base = {
     setAside,
     searchedFor: input.searchedFor,
     checkedAt: now.toISOString(),
   };
+  const withdrawnNote: ReportNote[] = input.withdrawn ? ['withdrawn'] : [];
   if (!kept.length) {
     return {
       ...base,
@@ -174,71 +144,120 @@ export function finalise(input: FinaliseInput): StoryReport {
       reported: [],
       unclear: [],
       sources: [],
-      notes: rejectedOlder ? ['older-story'] : [],
+      notes: [...(rejectedOlder ? (['older-story'] as const) : []), ...withdrawnNote],
     };
   }
 
-  // 2. Claims, with sources renumbered and unmatched ones removed.
-  const cite = (ids: number[]) => [...new Set(ids.map((id) => number.get(id)).filter((n): n is number => n !== undefined))].sort((a, b) => a - b);
-  const factual = (list: { text: string; sources: number[] }[], max: number): Claim[] => {
-    const out: Claim[] = [];
+  // 2. Claims, each checked against its own evidence, with citations renumbered.
+  const toClaim = (text: string, r: ClaimCheck): Checked => {
+    // One passage per cited source, the first that checked out: enough to show where the claim comes from.
+    const evidence: Evidence[] = r.cited.map((i) => ({ source: number.get(i + 1)!, quote: clip(r.quotes.find((q) => q.i === i)!.quote, 300) })).sort((a, b) => a.source - b.source);
+    return { text, sources: r.cited.map((i) => number.get(i + 1)!).sort((a, b) => a - b), evidence, ...(r.weak ? { weak: true } : {}), cited: r.cited };
+  };
+  const clean = (raw: string) => cleanText(nameSources(raw, publishers));
+  const verify = (c: AiClaim): Checked | undefined => {
+    const text = clean(c.text);
+    if (!text) return undefined;
+    const r = checkClaim(text, c.evidence ?? [], ctx);
+    if (r.contradicted.length) stats.contradicted++;
+    if (!r.ok) {
+      if (r.reason === 'no-evidence') stats.unverified++;
+      else if (r.reason !== 'contradicted') stats.ungrounded++;
+      return undefined;
+    }
+    if (r.weak) stats.weak++;
+    return toClaim(text, r);
+  };
+  const factual = (list: AiClaim[], max: number): Checked[] => {
+    const out: Checked[] = [];
     for (const c of list) {
-      const text = cleanText(c.text);
-      const sources = cite(c.sources);
-      if (text && sources.length && supported(text)) out.push({ text, sources });
+      const v = verify(c);
+      if (v) out.push(v);
       if (out.length >= max) break;
     }
     return out;
   };
   const whatHappened = factual(ai.what_happened, 3);
   const seenLabels = new Set<string>();
-  const details = ai.details
-    .map((d) => ({ label: d.label, text: cleanText(d.text), sources: cite(d.sources) }))
-    .filter((d): d is Claim & { label: typeof d.label } => Boolean(d.text) && d.sources.length > 0 && !seenLabels.has(d.label) && supported(d.text!) && Boolean(seenLabels.add(d.label)))
-    .slice(0, 5);
+  const details: (Checked & { label: AiReport['details'][number]['label'] })[] = [];
+  for (const d of ai.details) {
+    if (seenLabels.has(d.label) || details.length >= 5) continue;
+    const v = verify(d);
+    if (!v) continue;
+    seenLabels.add(d.label);
+    details.push({ label: d.label, ...v });
+  }
   const facts = factual(ai.facts, 6);
-  const unclear = ai.unclear
-    .map((c) => ({ text: cleanText(c.text), sources: cite(c.sources) }))
-    .filter((c): c is Claim => Boolean(c.text))
-    .slice(0, 4);
 
-  // 3. Confirmed or only reported: decided by independent groups.
-  const indexOf = (n: number) => kept[n - 1]!;
-  const confirmed: Claim[] = [];
-  const reported: Claim[] = [];
-  for (const f of facts) {
-    const strong = f.sources.map(indexOf).filter((i) => strongIdx.has(i));
-    const groups = new Set(strong.map((i) => grouping.group[i]));
-    if (groups.size >= 2 || strong.some((i) => kinds[i] === 'primary')) confirmed.push(f);
-    else reported.push(f);
+  // 3. "What remains unclear?": what's missing may be said plainly; anything specific needs evidence like a fact.
+  const unclear: Checked[] = [];
+  let quotedDisagreement = false;
+  for (const c of ai.unclear) {
+    if (unclear.length >= 4) break;
+    const text = clean(c.text);
+    if (!text) continue;
+    const absence = ABSENCE.test(text);
+    // Saying the link's own claim isn't in the sources ("no source reports a resignation in Zarnwick") may use the link's names.
+    const specifics = unsupportedSpecifics(text, [], [], absence ? [] : profile.names).filter((w) => !(absence && profile.names.some((n) => n.toLowerCase().split(/\s+/).includes(w))));
+    const alleges = words(text).some((w) => ALLEGATION.has(w));
+    // A disagreement names who says what: two of the sites, or "one source ... another".
+    const named = kept.filter((i) => (publishers[i] ?? '').length > 2 && text.toLowerCase().includes(publishers[i]!.toLowerCase())).length;
+    const disagreement = DISAGREE.test(text) && (named >= 2 || SOME_SOURCES.test(text));
+    if (!specifics.length && !alleges && !disagreement) {
+      unclear.push({ text, sources: [], cited: [] });
+      continue;
+    }
+    // Both sides of a disagreement are quoted here, so a passage saying the opposite is expected.
+    const r = checkClaim(text, c.evidence ?? [], { ...ctx, linkNames: absence ? [] : profile.names }, { opposites: false });
+    // An unclear point questions an event rather than stating it, so a missing event word isn't held against it.
+    const ok = r.ok || (r.reason === 'unsupported-event' && r.cited.length > 0);
+    if (!ok || (disagreement && new Set(r.cited.map((i) => grouping.group[i])).size < 2)) {
+      if (r.reason === 'no-evidence' || !r.cited.length) stats.unverified++;
+      else stats.ungrounded++;
+      continue;
+    }
+    if (disagreement) quotedDisagreement = true;
+    unclear.push(toClaim(text, { ...r, ok: true }));
   }
 
-  // 4. Overall match and confidence. Lowered by the rules, never raised.
+  // 4. Confirmed or only reported: decided by independent corroboration among strong matches.
+  const confirmed: Checked[] = [];
+  const reported: Checked[] = [];
+  for (const f of facts) {
+    const strong = f.cited.filter((i) => strongIdx.has(i));
+    const corroborated = corroboratingGroups(strong, grouping, kinds) >= 2;
+    // An official body can establish what it itself announced, not every detail of an event.
+    const announced = strong.some((i) => kinds[i] === 'primary') && ATTRIBUTED.test(f.text);
+    (!f.weak && (corroborated || announced) ? confirmed : reported).push(f);
+  }
+
+  // 5. Overall match and confidence. Lowered by the rules, never raised.
   const match: MatchStatus = strongIdx.size ? 'strong' : 'possible';
-  const strongGroups = new Set([...strongIdx].map((i) => grouping.group[i]));
   const keptGroups = new Set(kept.map((i) => grouping.group[i]));
-  const primaryStrong = [...strongIdx].some((i) => kinds[i] === 'primary');
   let confidence: InvestigationConfidence = ai.confidence;
-  if ((ai.conflicting || confidence === 'conflicting') && kept.length >= 2) confidence = 'conflicting';
+  if ((ai.conflicting || confidence === 'conflicting') && quotedDisagreement) confidence = 'conflicting';
   else if (confidence === 'conflicting') confidence = 'partial';
   if (confidence === 'strong') {
-    const enough = match === 'strong' && (strongGroups.size >= 2 || primaryStrong) && confirmed.length > 0 && !input.snippetsOnly;
+    // A source contradicting part of the report rules out strong evidence.
+    const enough = match === 'strong' && wellSupported([...strongIdx], grouping, kinds) && confirmed.length > 0 && !input.snippetsOnly && !stats.contradicted;
     if (!enough) confidence = 'partial';
   }
 
-  // 5. Notes.
+  // 6. Notes.
   const notes: ReportNote[] = [];
   // A link with no name and no date can't be pinned to one story (match.ts caps it at "possible"):
   // say so first, and don't put a name forward as its subject.
   const vague = !profile.names.length && !profile.date;
   if (vague) notes.push('vague-link');
   if (keptGroups.size === 1) notes.push('single-source');
+  if (!kept.some((i) => corroborates(kinds[i]!) || kinds[i] === 'primary')) notes.push('no-established-sources');
   if (kept.some((i) => grouping.copyOf[i] !== undefined)) notes.push('syndicated');
   const newest = kept.map((i) => candidates[i]!.hit.published).filter((d): d is string => Boolean(d)).sort().pop();
   const fresh = newest !== undefined && (daysBetween(newest, today) ?? Infinity) <= FRESH_DAYS;
   if (ai.developing || fresh) notes.push('developing');
   if (input.snippetsOnly) notes.push('snippets-only');
   if (rejectedOlder) notes.push('older-story');
+  notes.push(...withdrawnNote);
 
   const sources: ReportSource[] = kept.map((i, k) => {
     const h = candidates[i]!.hit;
@@ -250,10 +269,12 @@ export function finalise(input: FinaliseInput): StoryReport {
       publisher: publishers[i] ?? '',
       url: h.url,
       ...(h.published ? { published: h.published } : {}),
+      ...(h.updated ? { updated: h.updated } : {}),
       kind: kinds[i]!,
       match: status[i] as 'strong' | 'possible',
       ...(copyOf !== undefined ? { copyOf } : {}),
       ...(grouping.via[i] ? { via: grouping.via[i] } : {}),
+      ...(h.corrected ? { corrected: true } : {}),
       ...(canonicalKey(h.url) === canonicalKey(req.url) ? { original: true } : {}),
     };
   });
@@ -279,30 +300,54 @@ export function finalise(input: FinaliseInput): StoryReport {
   }
 
   // The AI's subject must not add a name or number either; with none, the link's own headline stands in.
-  const aiSubject = cleanText(ai.subject);
-  const subject = aiSubject ? (supported(aiSubject) ? aiSubject : undefined) : req.headline?.text;
+  const keptHits = kept.map((i) => hits[i]!);
+  const keptExtras = kept.flatMap((i) => extras[i] ?? []);
+  const aiSubject = clean(ai.subject);
+  let subject: string | undefined = req.headline?.text;
+  if (aiSubject) {
+    if (unsupportedSpecifics(aiSubject, keptHits, keptExtras, profile.names).length) {
+      stats.ungrounded++;
+      subject = undefined;
+    } else subject = aiSubject;
+  }
   const written = whatHappened.length > 0 || facts.length > 0;
   if (!written) {
     // The AI's report stated things no source says: its matching can't be trusted either. Nothing is shown.
     if (stats.ungrounded > 0) {
-      return { ...base, setAside: input.setAsideEarly + candidates.length, status: 'no-match', match: 'none', confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources: [], notes: rejectedOlder ? ['older-story'] : [] };
+      return { ...base, setAside: input.setAsideEarly + candidates.length, status: 'no-match', match: 'none', confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources: [], notes: [...(rejectedOlder ? (['older-story'] as const) : []), ...withdrawnNote] };
     }
     // Nothing usable was written: the closest sources are listed as possible matches, with no claims at all.
     return { ...base, status: 'report-failed', match, confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources, notes };
   }
+
+  // When nothing written gives the event's date, say so rather than leave it to be guessed from publication dates.
+  const dated = [...whatHappened, ...details, ...facts].some((c) => datesWritten(c.text).length > 0 || /\b(on|last) (monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(c.text));
+  if (!dated && !unclear.some((c) => /\b(when|date|day)\b/i.test(c.text)) && unclear.length < 4) unclear.push({ text: NO_DATE, sources: [], cited: [] });
+
+  // 7. Headline accuracy, against strong matches from sources that can corroborate or are official.
+  const eligible = [...strongIdx].filter((i) => corroborates(kinds[i]!) || kinds[i] === 'primary');
+  const headlineText = req.headline && req.headline.confidence !== 'low' ? req.headline.text : undefined;
+  const headline = assessHeadline({ headline: headlineText, ai: ai.headline, vague, hits, eligible, number, extras, clean });
+
+  const strip = <T extends Checked>(c: T): Omit<T, 'cited'> => {
+    const rest: Omit<T, 'cited'> & { cited?: number[] } = { ...c };
+    delete rest.cited;
+    return rest;
+  };
   return {
     ...base,
     status: 'report',
     ...(subject ? { subject: clip(subject, 140) } : {}),
     match,
     confidence,
-    whatHappened,
-    details,
-    confirmed,
-    reported,
-    unclear,
+    whatHappened: whatHappened.map(strip),
+    details: details.map(strip),
+    confirmed: confirmed.map(strip),
+    reported: reported.map(strip),
+    unclear: unclear.map(strip),
     sources,
     notes,
+    ...(headline ? { headline } : {}),
   };
 }
 

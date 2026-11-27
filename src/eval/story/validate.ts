@@ -1,11 +1,14 @@
 /**
  * Report-quality checks for Story Search reports.
  *
- * Ten checks per report, each pass, fail, "review" (a person should look) or
- * n/a. They test the structure strictly and the facts as far as a program
- * can: whether a claim's words and numbers actually appear in the sources it
+ * Eleven checks per report, each pass, fail, "review" (a person should look)
+ * or n/a. They test the structure strictly and the facts as far as a program
+ * can: whether each cited source has a passage of its own that really is in
+ * that source, whether a claim's words and numbers appear in the sources it
  * cites, whether a date could only have come from an article's publication
- * date, whether "confirmed" really rests on independent sources. A program
+ * date, whether "confirmed" rests on independent news or agency reports (or
+ * an official source), and whether the headline verdict is the expected one.
+ * A passage being in a source doesn't show it supports the claim. A program
  * can't tell whether a claim is true, so every factual claim is also listed
  * for a person to check against its sources, and factual accuracy is never
  * marked as passed on the strength of well-formed output alone.
@@ -48,6 +51,11 @@ export interface Expectation {
   minSources?: number;
   /** At least one source from these sites. */
   hostsAnyOf?: string[];
+  /** The headline verdict expected (headline accuracy, D74), or that there is none. */
+  headline?: ('accurate' | 'partly-accurate' | 'misleading' | 'unverified')[] | 'absent';
+  /** Facts that must be under "What is confirmed?" (pattern), and ones that must not be. */
+  confirmedMust?: RegExp[];
+  confirmedNever?: boolean;
   /** Which search services must have answered. */
   providersUsed?: string[];
 }
@@ -82,6 +90,26 @@ function hostOf(url: string): string {
 
 function hitText(h: SearchHit | undefined): string {
   return h ? [h.title, h.description ?? '', ...h.passages].join(' ') : '';
+}
+
+/** For checking quotes independently of the backend: case, accents, spacing and quote styles don't matter. */
+function plainText(s: string): string {
+  return s.normalize('NFKD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[‘’`´]/g, "'").replace(/[“”«»]/g, '"').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+}
+
+function quoteIn(quote: string, hit: SearchHit | undefined): boolean {
+  if (!hit) return false;
+  const parts = [hit.title, hit.description ?? '', ...hit.passages].map(plainText);
+  const pieces = quote.split(/\s*(?:\.{3}|…)\s*/).map((p) => plainText(p).replace(/^[\s"'.,;:!?()-]+|[\s"'.,;:!?()-]+$/g, '')).filter(Boolean);
+  return parts.some((t) => {
+    let from = 0;
+    for (const p of pieces) {
+      const at = t.indexOf(p, from);
+      if (at < 0) return false;
+      from = at + p.length;
+    }
+    return pieces.length > 0;
+  });
 }
 
 function check(id: string, label: string, status: CheckStatus, detail: string): Check {
@@ -170,6 +198,7 @@ export function validateReport(input: {
       ['citations', 'Proper source references'],
       ['confidence', 'Appropriate confidence'],
       ['writing', 'Clear, readable writing'],
+      ['headline', 'Headline accuracy'],
     ] as const) {
       checks.push(check(id, label, 'n/a', 'no report'));
     }
@@ -265,9 +294,21 @@ export function validateReport(input: {
 
   // 8. Source references: structure checked strictly, support estimated.
   const citeProblems: string[] = [];
+  const allClaims = [...r.whatHappened, ...r.details, ...r.confirmed, ...r.reported, ...r.unclear];
   for (const c of factual) {
     if (!c.sources.length) citeProblems.push(`"${c.text.slice(0, 50)}…" cites nothing`);
     for (const n of c.sources) if (!r.sources.some((s) => s.n === n)) citeProblems.push(`"${c.text.slice(0, 50)}…" cites [${n}], which isn't listed`);
+  }
+  // Every citation proves itself: each cited source has a passage of its own, and it really is in that source.
+  let quotes = 0;
+  for (const c of allClaims) {
+    const ev = (c as { evidence?: { source: number; quote: string }[] }).evidence ?? [];
+    for (const n of c.sources) if (!ev.some((q) => q.source === n)) citeProblems.push(`"${c.text.slice(0, 50)}…" cites [${n}] without a passage from it`);
+    for (const q of ev) {
+      quotes++;
+      const src = r.sources.find((s) => s.n === q.source);
+      if (!src || !quoteIn(q.quote, byUrl.get(src.url))) citeProblems.push(`passage "${q.quote.slice(0, 50)}…" is not in source [${q.source}]`);
+    }
   }
   for (const s of r.sources) {
     if (!byUrl.has(s.url)) citeProblems.push(`source ${s.n} (${s.url}) wasn't among the retrieved results`);
@@ -278,8 +319,10 @@ export function validateReport(input: {
   }
   for (const c of r.confirmed) {
     const cited = c.sources.map((n) => r.sources.find((s) => s.n === n)).filter((s): s is ReportSource => Boolean(s) && s!.match === 'strong');
-    const groups = new Set(cited.map((s) => groupOf(s, r.sources)));
-    if (groups.size < 2 && !cited.some((s) => s.kind === 'primary')) citeProblems.push(`"${c.text.slice(0, 50)}…" is under "confirmed" with only one independent source`);
+    // Only news and agency reports corroborate (social posts, opinion and unknown sites never do), each group once.
+    const groups = new Set(cited.filter((s) => s.kind === 'news' || s.kind === 'agency').map((s) => groupOf(s, r.sources)));
+    if (groups.size < 2 && !cited.some((s) => s.kind === 'primary')) citeProblems.push(`"${c.text.slice(0, 50)}…" is under "confirmed" without two independent news or agency reports or an official source`);
+    if ((c as { weak?: boolean }).weak) citeProblems.push(`"${c.text.slice(0, 50)}…" is under "confirmed" but its passages are weak`);
   }
   if (e.minSources !== undefined && r.sources.length < e.minSources) citeProblems.push(`${r.sources.length} sources, expected at least ${e.minSources}`);
   if (e.hostsAnyOf?.length && !r.sources.some((s) => e.hostsAnyOf!.some((h) => hostOf(s.url).endsWith(h)))) citeProblems.push(`no source from ${e.hostsAnyOf.join(', ')}`);
@@ -325,7 +368,7 @@ export function validateReport(input: {
       'citations',
       'Proper source references',
       citeProblems.length || providerProblems.length ? 'fail' : lowSupport ? 'review' : 'pass',
-      [...citeProblems, ...providerProblems, lowSupport ? `${lowSupport} claim(s) with weak word support: see the review list` : '', !citeProblems.length && !providerProblems.length ? `${factual.length} factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources` : '']
+      [...citeProblems, ...providerProblems, lowSupport ? `${lowSupport} claim(s) with weak word support: see the review list` : '', !citeProblems.length && !providerProblems.length ? `${factual.length} factual claim(s), every one cites a listed source with a passage of its own (${quotes} passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources` : '']
         .filter(Boolean)
         .join('; '),
     ),
@@ -359,6 +402,34 @@ export function validateReport(input: {
   if (r.subject && r.subject.split(/\s+/).length > 16) writing.push(`subject is ${r.subject.split(/\s+/).length} words`);
   if (r.whatHappened.length > 3) writing.push(`${r.whatHappened.length} sentences under "What happened?"`);
   checks.push(check('writing', 'Clear, readable writing', writing.length ? 'fail' : 'pass', writing.length ? writing.join('; ') : `${sentences.length} sentence(s): no markup, links or relative dates, none over 45 words`));
+
+  // 11. Headline accuracy.
+  const h = r.headline;
+  if (e.headline === undefined) checks.push(check('headline', 'Headline accuracy', 'n/a', h ? `${h.verdict}: ${h.reason}` : 'no headline check'));
+  else if (e.headline === 'absent') checks.push(check('headline', 'Headline accuracy', h ? 'fail' : 'pass', h ? `expected none, got ${h.verdict}` : 'none, as expected'));
+  else {
+    const okVerdict = Boolean(h && e.headline.includes(h.verdict));
+    const badQuote = h?.evidence.find((q) => !quoteIn(q.quote, byUrl.get(r.sources.find((s) => s.n === q.source)?.url ?? '')));
+    checks.push(
+      check(
+        'headline',
+        'Headline accuracy',
+        okVerdict && !badQuote ? 'pass' : 'fail',
+        [h ? `${h.verdict} (expected ${e.headline.join(' or ')})${h.reason ? `: ${h.reason}` : ''}` : `none (expected ${e.headline.join(' or ')})`, badQuote ? `passage "${badQuote.quote.slice(0, 40)}…" not in its source` : ''].filter(Boolean).join('; '),
+      ),
+    );
+  }
+  // Confirmed facts expected, or none at all: part of "Appropriate confidence".
+  const conf = checks.find((x) => x.id === 'confidence')!;
+  for (const p of e.confirmedMust ?? []) {
+    if (p.test(confirmedText)) continue;
+    conf.status = 'fail';
+    conf.detail += `; ${p} not under "What is confirmed?"`;
+  }
+  if (e.confirmedNever && r.confirmed.length) {
+    conf.status = 'fail';
+    conf.detail += `; ${r.confirmed.length} fact(s) under "What is confirmed?", expected none`;
+  }
 
   // Facts written by Claude always need a person; stand-in replies don't (they were written for the test).
   if (input.aiWritten && factual.length) {

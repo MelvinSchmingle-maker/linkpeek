@@ -104,12 +104,32 @@ export type InvestigationConfidence = 'strong' | 'partial' | 'conflicting' | 'in
 export type SourceKind = 'primary' | 'agency' | 'news' | 'opinion' | 'social' | 'other';
 export type DetailLabel = 'who' | 'what' | 'where' | 'when' | 'why';
 export type ReportStatus = 'report' | 'no-results' | 'no-match' | 'report-failed';
-export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated' | 'vague-link';
+export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated' | 'vague-link' | 'no-established-sources' | 'withdrawn';
+
+/** A passage copied word for word from a source: why LinkPeek says what it says. */
+export interface Evidence {
+  source: number;
+  quote: string;
+}
 
 export interface Claim {
   text: string;
   /** Source numbers (1-based, as in `sources`). Never empty for factual claims. */
   sources: number[];
+  /** The passages, from those sources, that support it (checked by the backend). */
+  evidence?: Evidence[];
+  /** Its own passages don't fully carry it: never counted as confirmed. */
+  weak?: boolean;
+}
+
+export type HeadlineVerdict = 'accurate' | 'partly-accurate' | 'misleading' | 'unverified';
+
+/** Does the link's headline say what the reporting establishes? */
+export interface HeadlineCheck {
+  headline: string;
+  verdict: HeadlineVerdict;
+  reason: string;
+  evidence: Evidence[];
 }
 
 export interface ReportSource {
@@ -126,6 +146,10 @@ export interface ReportSource {
   via?: string;
   /** This is the linked article itself, found by the search. */
   original?: boolean;
+  /** When the article says it was last updated ("YYYY-MM-DD"). */
+  updated?: string;
+  /** Its publisher corrected it; what it now says was used. */
+  corrected?: boolean;
 }
 
 export interface StoryReport {
@@ -135,15 +159,17 @@ export interface StoryReport {
   confidence: InvestigationConfidence;
   whatHappened: Claim[];
   details: (Claim & { label: DetailLabel })[];
-  /** Backed by at least two independent sources, or by a primary source. */
+  /** Stated by two independent news reports, or (for what it announced) an official source. */
   confirmed: Claim[];
-  /** Backed by one independent source only. */
+  /** Reported, not confirmed that way. */
   reported: Claim[];
   unclear: Claim[];
   sources: ReportSource[];
   /** How many search results were set aside as not about this story. */
   setAside: number;
   notes: ReportNote[];
+  /** Headline accuracy, when the link had a headline. */
+  headline?: HeadlineCheck;
   /** The main search query, shown so the user can judge it. */
   searchedFor: string;
   /** When the investigation ran (ISO date-time). */

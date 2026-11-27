@@ -19,24 +19,33 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { MessagesClient } from '../anthropic.js';
 import { supportsFallback } from '../anthropic.js';
 import type { Usage } from '../contract.js';
-import type { DetailLabel, InvestigationConfidence, MatchStatus } from './contract.js';
+import type { DetailLabel, HeadlineVerdict, InvestigationConfidence, MatchStatus } from './contract.js';
+import type { Quote } from './evidence.js';
 import { STORY_SCHEMA, STORY_SYSTEM_PROMPT } from './prompt.js';
 
 export const DEFAULT_STORY_MODEL = 'claude-haiku-5-5';
-const MAX_TOKENS = 6000;
+/** Room for thinking plus the JSON with its quoted evidence (D69: quotes made replies longer). */
+const MAX_TOKENS = 8000;
 const TIMEOUT_MS = 20_000;
+
+/** A sentence and the passages, copied from the sources, that support it. */
+export interface AiClaim {
+  text: string;
+  evidence: Quote[];
+}
 
 /** The model's reply, as the schema defines it. */
 export interface AiReport {
   matches: { source: number; status: MatchStatus; reason: string }[];
   subject: string;
-  what_happened: { text: string; sources: number[] }[];
-  details: { label: DetailLabel; text: string; sources: number[] }[];
-  facts: { text: string; sources: number[] }[];
-  unclear: { text: string; sources: number[] }[];
+  what_happened: AiClaim[];
+  details: (AiClaim & { label: DetailLabel })[];
+  facts: AiClaim[];
+  unclear: AiClaim[];
   conflicting: boolean;
   developing: boolean;
   confidence: InvestigationConfidence;
+  headline: { verdict: HeadlineVerdict; reason: string; evidence: Quote[] };
 }
 
 export type AnalysisResult =
@@ -111,6 +120,11 @@ export class AnthropicStoryModel implements StoryModel {
 const STATUSES = new Set(['strong', 'possible', 'none']);
 const LABELS = new Set(['who', 'what', 'where', 'when', 'why']);
 const CONFIDENCES = new Set(['strong', 'partial', 'conflicting', 'insufficient']);
+const VERDICTS = new Set(['accurate', 'partly-accurate', 'misleading', 'unverified']);
+
+function quotes(x: unknown): boolean {
+  return Array.isArray(x) && x.every((q) => q && typeof q === 'object' && Number.isInteger((q as { source?: unknown }).source) && typeof (q as { quote?: unknown }).quote === 'string');
+}
 
 /** Parses and checks the model's JSON. Returns undefined when it isn't the expected shape. */
 export function parseAiReport(text: string): AiReport | undefined {
@@ -122,12 +136,13 @@ export function parseAiReport(text: string): AiReport | undefined {
   }
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
-  const claims = (x: unknown) =>
-    Array.isArray(x) && x.every((c) => c && typeof c === 'object' && typeof (c as { text?: unknown }).text === 'string' && Array.isArray((c as { sources?: unknown }).sources) && (c as { sources: unknown[] }).sources.every(Number.isInteger));
+  const claims = (x: unknown) => Array.isArray(x) && x.every((c) => c && typeof c === 'object' && typeof (c as { text?: unknown }).text === 'string' && quotes((c as { evidence?: unknown }).evidence));
   if (!Array.isArray(o.matches) || !o.matches.every((m) => m && Number.isInteger(m.source) && STATUSES.has(m.status) && typeof m.reason === 'string')) return undefined;
   if (typeof o.subject !== 'string' || !claims(o.what_happened) || !claims(o.facts) || !claims(o.unclear)) return undefined;
   if (!claims(o.details) || !(o.details as { label?: unknown }[]).every((d) => LABELS.has(d.label as string))) return undefined;
   if (typeof o.conflicting !== 'boolean' || typeof o.developing !== 'boolean' || !CONFIDENCES.has(o.confidence as string)) return undefined;
+  const h = o.headline as { verdict?: unknown; reason?: unknown; evidence?: unknown } | undefined;
+  if (!h || typeof h !== 'object' || !VERDICTS.has(h.verdict as string) || typeof h.reason !== 'string' || !quotes(h.evidence)) return undefined;
   return o as unknown as AiReport;
 }
 

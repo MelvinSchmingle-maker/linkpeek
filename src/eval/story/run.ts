@@ -37,7 +37,7 @@ import { runStorySearch, type StoryEvent as ClientEvent } from '../../core/story
 import { extractStoryClues } from '../../core/story/extract';
 import { buildPackage } from '../../core/story/package';
 import type { StoryReport, StoryRequestBody, StoryRequestClues } from '../../core/story/types';
-import { CASES, promptSources, realStandIn, type E2ECase, type ExaResult, type Sim, type StandIn } from './cases';
+import { CASES, promptSources, realStandIn, toAiReport, type E2ECase, type ExaResult, type Sim, type StandIn } from './cases';
 import {
   Budget,
   BudgetedModel,
@@ -108,8 +108,16 @@ export interface CaseMetrics {
   outputTokens?: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
-  /** Sentences the report rules dropped for stating a name, number or date no kept source contains. */
+  /** Sentences the report rules dropped for stating what their cited sources don't (D65, D69). */
   ungroundedDropped?: number;
+  /** Sentences dropped because none of their quoted passages was in the source they cite (D69). */
+  unverifiedDropped?: number;
+  /** Sentences kept but marked weak. */
+  weakClaims?: number;
+  contradictedClaims?: number;
+  /** Results left out as withdrawn, and sentences removed for addressing an AI (D73). */
+  withdrawn?: number;
+  injectionRemoved?: number;
   /** Exa's own reported cost (costDollars.total) of the searches, in dollars. */
   exaReportedUsd: number;
   /** Credits Tavily reported using (usage.credits). */
@@ -463,7 +471,8 @@ function setUpModel(c: E2ECase, opts: RunOptions): ModelSetup {
       return { model: 'stand-in', stopReason: 'refusal', text: '', usage: { input_tokens: 0, output_tokens: 0 } };
     }
     used = 'stand-in';
-    return { model: 'stand-in', stopReason: 'end_turn', text: JSON.stringify(standIn.reply(promptSources(userMessageOf(params)))), usage: { input_tokens: 0, output_tokens: 0 } };
+    const src = promptSources(userMessageOf(params));
+    return { model: 'stand-in', stopReason: 'end_turn', text: JSON.stringify(toAiReport(standIn.reply(src), src)), usage: { input_tokens: 0, output_tokens: 0 } };
   });
   return {
     model: new AnthropicStoryModel(client, DEFAULT_STORY_MODEL, 'medium'),
@@ -644,6 +653,11 @@ export async function runCase(c: E2ECase, opts: RunOptions): Promise<CaseResult>
     ...(typeof line?.aiFailure === 'string' ? { aiFailure: line.aiFailure } : {}),
     ...(claude && num('inputTokens') !== undefined ? { inputTokens: num('inputTokens'), outputTokens: num('outputTokens'), cacheReadTokens: num('cacheReadTokens'), cacheWriteTokens: num('cacheWriteTokens') } : {}),
     ...(num('ungroundedDropped') !== undefined ? { ungroundedDropped: num('ungroundedDropped') } : {}),
+    ...(num('unverifiedDropped') !== undefined ? { unverifiedDropped: num('unverifiedDropped') } : {}),
+    ...(num('weakClaims') !== undefined ? { weakClaims: num('weakClaims') } : {}),
+    ...(num('contradictedClaims') !== undefined ? { contradictedClaims: num('contradictedClaims') } : {}),
+    ...(num('withdrawn') !== undefined ? { withdrawn: num('withdrawn') } : {}),
+    ...(num('injectionRemoved') !== undefined ? { injectionRemoved: num('injectionRemoved') } : {}),
     exaReportedUsd: Math.round(exaReportedUsd * 1e6) / 1e6,
     tavilyCredits,
     ...(claude && num('aiUsd') !== undefined ? { aiUsd: num('aiUsd') } : {}),

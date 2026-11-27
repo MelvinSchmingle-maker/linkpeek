@@ -45,12 +45,43 @@ function refs(nums: number[]): HTMLElement {
   return wrap;
 }
 
+/** The passages behind a claim, closed until asked for: "Show evidence". */
+function evidenceNode(evidence: { ref: string; quote: string }[], weak = false): HTMLElement {
+  const details = el('details', 'story-evidence');
+  details.append(el('summary', 'story-evidence-toggle', MSG.story.showEvidence));
+  const list = el('ul', 'story-evidence-list');
+  for (const q of evidence) {
+    const li = el('li', 'story-quote');
+    li.append(el('span', 'story-quote-ref', `${q.ref}: `), el('q', 'story-quote-text', q.quote));
+    list.append(li);
+  }
+  details.append(list);
+  if (weak) details.append(el('p', 'story-evidence-weak', MSG.story.evidenceWeak));
+  return details;
+}
+
 function itemNode(tag: 'p' | 'li', item: ViewItem): HTMLElement {
   const node = el(tag, 'claim');
   if (item.label) node.append(el('strong', 'detail-label', `${item.label}: `));
   node.append(document.createTextNode(item.text));
   if (item.refs.length) node.append(' ', refs(item.refs));
+  if (item.evidence?.length) node.append(evidenceNode(item.evidence, item.weak));
   return node;
+}
+
+function headlineNode(h: NonNullable<StoryView['headline']>): HTMLElement {
+  const section = el('section', 'story-section story-headline-check');
+  const heading = el('h3', 'story-heading', h.heading);
+  heading.id = 'lp-story-headline';
+  section.setAttribute('aria-labelledby', heading.id);
+  const line = el('p', 'story-headline-line');
+  const verdict = el('span', `tag story-verdict ${h.tone}`, h.verdict);
+  verdict.setAttribute('data-tone', h.tone);
+  line.append(verdict, ' ', el('span', 'story-headline-checked', `${MSG.story.headlineChecked} “${h.headline}”`));
+  section.append(heading, line);
+  if (h.reason) section.append(el('p', 'story-headline-reason', h.reason));
+  if (h.evidence.length) section.append(evidenceNode(h.evidence));
+  return section;
 }
 
 function sectionNode(s: ViewSection): HTMLElement {
@@ -145,6 +176,7 @@ export function renderStoryCard(view: StoryView, href: string, handlers: StoryCa
     body.append(caution);
   }
   for (const s of view.sections) body.append(sectionNode(s));
+  if (view.headline) body.append(headlineNode(view.headline));
   if (view.notes.length) {
     const notes = el('ul', 'story-notes');
     for (const n of view.notes) notes.append(el('li', '', n));
