@@ -309,12 +309,12 @@ describe('scenarios', () => {
   });
 
   it('10. an older story with similar wording is never presented as this one', async () => {
-    // Even when the AI wrongly calls it a strong match, the date rule caps it.
+    // Even when the AI wrongly calls it a strong match, its date rules it out: nothing it says is evidence for
+    // this story, so nothing is written about it and the card says an older story was left out.
     const wrong = new FakeModel(ai({ matches: [{ source: 1, status: 'strong', reason: 'Same words.' }], what_happened: [{ text: 'A pop star was found dead in a Paris hotel.', sources: [1] }], details: [], facts: [] }));
     const { report } = await run(returns([OLD]), wrong);
-    expect(report!.match).not.toBe('strong');
-    expect(report!.sources[0]!.match).toBe('possible');
-    expect(report!.confidence).not.toBe('strong');
+    expect(report).toMatchObject({ status: 'no-match', match: 'none', confidence: 'insufficient', sources: [], whatHappened: [] });
+    expect(report!.notes).toContain('older-story');
 
     // When the AI rejects it, nothing is shown as a match, and the card can say why.
     const right = new FakeModel(ai({ matches: [{ source: 1, status: 'none', reason: 'A 2019 story about another singer.' }], what_happened: [{ text: 'A pop star was found dead.', sources: [1] }] }));
@@ -1134,6 +1134,9 @@ describe('what may confirm: news agencies and news organisations, not social med
       expect(out.ok).toBe(true);
       if (!out.ok) return;
       expect(out.report.confirmed).toEqual([]);
+      // Nothing is stated as what happened either: it is only reported (once, though the AI wrote it twice).
+      expect(out.report.whatHappened).toEqual([]);
+      expect(out.report.details).toEqual([]);
       expect(out.report.reported.map((c) => c.text)).toEqual([claim]);
       expect(out.report.confidence).not.toBe('strong');
       expect(out.report.notes).toContain('no-established-sources');
@@ -1216,6 +1219,31 @@ describe('"What remains unclear?" cannot bring in rumours (D72)', () => {
     expect(out.metrics.unverifiedDropped! + out.metrics.ungroundedDropped!).toBeGreaterThanOrEqual(2);
   });
 
+  it('an allegation needs a passage that makes it, not one that only names the person', async () => {
+    const accused = hit({ url: 'https://www.theguardian.com/uk/2026/nov/24/holt', title: 'Harbour master Nia Holt suspended', published: '2026-11-24', passages: ['Nia Holt is accused of approving repairs without tenders, two councillors said.'] });
+    const plainReport = hit({ url: 'https://www.bbc.co.uk/news/uk-70000020', title: 'Harbour master Nia Holt suspended', published: '2026-11-24', passages: ['The harbour master, Nia Holt, has been suspended while a review is carried out.'] });
+    const r = req({ url: 'https://news.example.com/2026/11/24/harbour-master-nia-holt-suspended', headline: { text: 'Harbour master Nia Holt suspended', from: 'link-text', confidence: 'high' }, slug: 'harbour master nia holt suspended', date: '2026-11-24' });
+    const reply = new FakeModel((msg) => {
+      const bbc = idOf(msg, 'BBC News');
+      const guardian = idOf(msg, 'The Guardian');
+      return ai({
+        matches: [1, 2].map((source) => ({ source, status: 'strong' as const, reason: '' })),
+        what_happened: [{ text: 'Nia Holt, the harbour master, has been suspended.', evidence: [{ source: bbc, quote: 'The harbour master, Nia Holt, has been suspended' }] }],
+        facts: [
+          // The passage names her but alleges nothing: dropped.
+          { text: 'Nia Holt is suspected of taking bribes from shipping firms.', evidence: [{ source: bbc, quote: 'The harbour master, Nia Holt, has been suspended' }] },
+          // The passage makes the allegation: kept (as reported, one source).
+          { text: 'Nia Holt is accused of approving repairs without tenders.', evidence: [{ source: guardian, quote: 'Nia Holt is accused of approving repairs without tenders' }] },
+        ],
+        unclear: [{ text: 'Whether Nia Holt is suspected of taking bribes.', evidence: [{ source: bbc, quote: 'The harbour master, Nia Holt, has been suspended' }] }],
+      });
+    });
+    const { report } = await run(returns([plainReport, accused]), reply, r);
+    const all = [...report!.confirmed, ...report!.reported, ...report!.unclear].map((c) => c.text);
+    expect(all).toContain('Nia Holt is accused of approving repairs without tenders.');
+    expect(all.join(' ')).not.toMatch(/bribes/);
+  });
+
   it('saying the link’s own claim is not in the sources may use the link’s names; speculating about them may not', async () => {
     const r = req({ headline: { text: 'Jamie Rivers manager Victor Kale questioned over Paris hotel death', from: 'link-text', confidence: 'high' }, slug: undefined });
     const { report } = await run(
@@ -1273,6 +1301,16 @@ describe('what the search services return is cleaned first (D73)', () => {
     if (!out.ok) throw new Error('expected a result');
     expect(out.report.notes).toContain('withdrawn');
     expect(out.report.sources[0]).toMatchObject({ corrected: true });
+  });
+});
+
+describe('a headline’s capitalised first word is not part of the name (D73)', () => {
+  it('"Singer Mara Vey dies" matches a report of "Mara Vey"', () => {
+    const profile = linkProfile(req({ headline: { text: 'Singer Mara Vey dies after hotel incident', from: 'link-text', confidence: 'high' }, slug: undefined }));
+    const [scored] = scoreHits(profile, [hit({ url: 'https://www.bbc.co.uk/news/9', title: 'Mara Vey in hospital after hotel incident', published: '2026-11-24', passages: ['Mara Vey is being treated in hospital.'] })]);
+    expect(profile.keyNames).toContain('Singer Mara Vey');
+    expect(scored!.keyFound).toBe(1);
+    expect(scored!.specificFound).toBe(1);
   });
 });
 

@@ -174,6 +174,12 @@ function aboutTerms(text: string): Set<string> {
     // The event itself, in any of the languages above: "injured" and "blessé" are about the same thing.
     const e = eventOf(w);
     if (e) out.add(`event:${e}`);
+    // So are weekdays and months in any of them: "Tuesday evening" and "mardi soir".
+    const p = plain(w);
+    const day = [WEEKDAYS, ...FOREIGN_WEEKDAYS].map((week) => week.indexOf(p)).find((i) => i >= 0);
+    if (day !== undefined) out.add(`weekday:${day}`);
+    const month = MONTH_INDEX[p] ?? FOREIGN_MONTHS[p];
+    if (month !== undefined && p.length > 3) out.add(`month:${month}`);
   }
   for (const t of [...out]) if (SAME_THING[t]) out.add(SAME_THING[t]!);
   return out;

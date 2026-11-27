@@ -40,6 +40,8 @@ export interface Expectation {
   facts?: RegExp[];
   /** Must not appear in any factual sentence: the wrong story, invented causes, wrong years. */
   forbidden?: RegExp[];
+  /** Must not appear under "What remains unclear?": a rumoured suspect, an allegation no source makes. */
+  unclearForbidden?: RegExp[];
   /** Each pair must not both appear in the factual sections (two versions stated as fact). */
   contradictions?: [RegExp, RegExp][];
   /** Disputed values: each must appear under "What remains unclear?" and none in "What is confirmed?". */
@@ -51,11 +53,15 @@ export interface Expectation {
   minSources?: number;
   /** At least one source from these sites. */
   hostsAnyOf?: string[];
+  /** Results at these addresses (a part of the address is enough) may be listed only as possible matches, and never cited. */
+  notStrong?: string[];
   /** The headline verdict expected (headline accuracy, D74), or that there is none. */
   headline?: ('accurate' | 'partly-accurate' | 'misleading' | 'unverified')[] | 'absent';
   /** Facts that must be under "What is confirmed?" (pattern), and ones that must not be. */
   confirmedMust?: RegExp[];
   confirmedNever?: boolean;
+  /** May be reported, never under "What is confirmed?" (rests on one independent source). */
+  notConfirmed?: RegExp[];
   /** Which search services must have answered. */
   providersUsed?: string[];
 }
@@ -257,7 +263,10 @@ export function validateReport(input: {
   listCheck('facts', 'Relevant facts', e.facts, factualText);
 
   // 6. Unsupported assumptions: forbidden statements, and numbers no retrieved source contains.
-  const forbiddenHits = (e.forbidden ?? []).filter((p) => p.test(factualText));
+  const forbiddenHits = [
+    ...(e.forbidden ?? []).filter((p) => p.test(factualText)),
+    ...(e.unclearForbidden ?? []).filter((p) => p.test(r.unclear.map((c) => c.text).join(' '))).map((p) => new RegExp(`${p.source} (under "What remains unclear?")`, p.flags)),
+  ];
   const inventedNumbers: string[] = [];
   for (const c of factual) for (const n of numbersIn(c.text)) if (!retrievedDigits.has(n) && !retrievedDigits.has(String(Number(n)))) inventedNumbers.push(`${n} (in "${c.text.slice(0, 50)}…")`);
   checks.push(
@@ -326,6 +335,11 @@ export function validateReport(input: {
   }
   if (e.minSources !== undefined && r.sources.length < e.minSources) citeProblems.push(`${r.sources.length} sources, expected at least ${e.minSources}`);
   if (e.hostsAnyOf?.length && !r.sources.some((s) => e.hostsAnyOf!.some((h) => hostOf(s.url).endsWith(h)))) citeProblems.push(`no source from ${e.hostsAnyOf.join(', ')}`);
+  for (const s of r.sources) {
+    if (!(e.notStrong ?? []).some((u) => s.url.includes(u))) continue;
+    if (s.match === 'strong') citeProblems.push(`source ${s.n} (${s.url}) is a strong match; expected possible at most`);
+    if (allClaims.some((c) => c.sources.includes(s.n))) citeProblems.push(`source ${s.n} (${s.url}) is cited; it shouldn't support anything`);
+  }
 
   let lowSupport = 0;
   for (const c of factual) {
@@ -429,6 +443,11 @@ export function validateReport(input: {
   if (e.confirmedNever && r.confirmed.length) {
     conf.status = 'fail';
     conf.detail += `; ${r.confirmed.length} fact(s) under "What is confirmed?", expected none`;
+  }
+  for (const p of e.notConfirmed ?? []) {
+    if (!p.test(confirmedText)) continue;
+    conf.status = 'fail';
+    conf.detail += `; ${p} under "What is confirmed?", expected only reported`;
   }
 
   // Facts written by Claude always need a person; stand-in replies don't (they were written for the test).

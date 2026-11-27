@@ -34,7 +34,7 @@
  * wording; this judges what the headline claims against the evidence.
  */
 import type { HeadlineCheck, HeadlineVerdict } from './contract.js';
-import { ALLEGATION, eventsIn, onlyAlleged, polarity, quoteFound, sourceText, unsupportedEvents, unsupportedSpecifics, type Quote } from './evidence.js';
+import { eventsIn, isAllegation, onlyAlleged, polarity, quoteFound, sourceText, unsupportedEvents, unsupportedSpecifics, type Quote } from './evidence.js';
 import type { SearchHit } from './providers/types.js';
 import { clip, words } from './text.js';
 
@@ -70,7 +70,7 @@ export function discrepancies(headline: string, texts: string[], hits: SearchHit
   for (const e of unsupportedEvents(headline, texts)) out.push(`event:${e}`);
   for (const s of unsupportedSpecifics(headline, hits, extras, [], { allowTitleCase: false })) out.push(`specific:${s}`);
   // An allegation stated as fact: the headline asserts it plainly, the reports only as an allegation or a denial.
-  const qualified = words(headline).some((w) => ALLEGATION.has(w));
+  const qualified = words(headline).some(isAllegation);
   if (!qualified) for (const e of eventsIn(headline).asserted) if (onlyAlleged(e, texts)) out.push(`alleged:${e}`);
   // Something the headline states that the sources mention only to negate ("asbestos found" against "no asbestos
   // was found"); or that some negate and others state: contested, so not accurate, but not shown to mislead either.

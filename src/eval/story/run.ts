@@ -114,6 +114,7 @@ export interface CaseMetrics {
   unverifiedDropped?: number;
   /** Sentences kept but marked weak. */
   weakClaims?: number;
+  /** Sentences a cited source's own passage contradicts: dropped, or kept as weak (D69). */
   contradictedClaims?: number;
   /** Results left out as withdrawn, and sentences removed for addressing an AI (D73). */
   withdrawn?: number;

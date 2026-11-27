@@ -38,7 +38,7 @@
  */
 import type { AiClaim, AiReport } from './analyse.js';
 import type { Claim, Evidence, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
-import { ALLEGATION, checkClaim, datesWritten, unsupportedSpecifics, type ClaimCheck, type ClaimContext } from './evidence.js';
+import { checkClaim, datesWritten, isAllegation, unsupportedSpecifics, type ClaimCheck, type ClaimContext } from './evidence.js';
 import { assessHeadline } from './headline.js';
 import { capMatch, type LinkProfile, type Scored } from './match.js';
 import { ATTRIBUTED, canonicalKey, corroborates, corroboratingGroups, wellSupported, type Grouping } from './sources.js';
@@ -120,11 +120,18 @@ export function finalise(input: FinaliseInput): StoryReport {
   const kept = candidates.map((_, i) => i).filter((i) => status[i] !== 'none');
   const number = new Map(kept.map((i, k) => [i + 1, k + 1]));
   const strongIdx = new Set(kept.filter((i) => status[i] === 'strong'));
-  const rejectedOlder = candidates.some((c, i) => status[i] === 'none' && c.dateMismatch) || input.olderSetAside;
+  // Matches whose dates don't fit this story can't be evidence for it (see ctx below). When they're all there is,
+  // nothing was found about this story: an older (or much later) one was left out.
+  const fitting = kept.filter((i) => !candidates[i]!.dateMismatch);
+  const rejectedOlder = candidates.some((c, i) => (status[i] === 'none' || !fitting.includes(i)) && c.dateMismatch) || input.olderSetAside;
   const setAside = input.setAsideEarly + (candidates.length - kept.length);
   const stats = input.stats ?? { ungrounded: 0, unverified: 0, weak: 0, contradicted: 0 };
   const extras = candidates.map((_, i) => [publishers[i] ?? '', grouping.via[i] ?? ''].filter(Boolean));
-  const ctx: ClaimContext = { hits, kept: new Set(kept), extras, linkNames: profile.names };
+  // A result whose date doesn't fit this story (an older story about the same person) may be listed as a possible
+  // match, but nothing it says is evidence for this one: its details must not be mixed in.
+  const ctx: ClaimContext = { hits, kept: new Set(fitting), extras, linkNames: profile.names };
+  /** An allegation needs a passage that makes it ("is accused of", "suspected"), not one that only names the person. */
+  const allegationShown = (text: string, r: ClaimCheck) => !words(text).some(isAllegation) || r.quotes.some((q) => words(q.quote).some(isAllegation));
 
   const base = {
     setAside,
@@ -132,7 +139,7 @@ export function finalise(input: FinaliseInput): StoryReport {
     checkedAt: now.toISOString(),
   };
   const withdrawnNote: ReportNote[] = input.withdrawn ? ['withdrawn'] : [];
-  if (!kept.length) {
+  if (!fitting.length) {
     return {
       ...base,
       status: 'no-match',
@@ -163,6 +170,10 @@ export function finalise(input: FinaliseInput): StoryReport {
     if (!r.ok) {
       if (r.reason === 'no-evidence') stats.unverified++;
       else if (r.reason !== 'contradicted') stats.ungrounded++;
+      return undefined;
+    }
+    if (!allegationShown(text, r)) {
+      stats.unverified++;
       return undefined;
     }
     if (r.weak) stats.weak++;
@@ -199,7 +210,7 @@ export function finalise(input: FinaliseInput): StoryReport {
     const absence = ABSENCE.test(text);
     // Saying the link's own claim isn't in the sources ("no source reports a resignation in Zarnwick") may use the link's names.
     const specifics = unsupportedSpecifics(text, [], [], absence ? [] : profile.names).filter((w) => !(absence && profile.names.some((n) => n.toLowerCase().split(/\s+/).includes(w))));
-    const alleges = words(text).some((w) => ALLEGATION.has(w));
+    const alleges = words(text).some(isAllegation);
     // A disagreement names who says what: two of the sites, or "one source ... another".
     const named = kept.filter((i) => (publishers[i] ?? '').length > 2 && text.toLowerCase().includes(publishers[i]!.toLowerCase())).length;
     const disagreement = DISAGREE.test(text) && (named >= 2 || SOME_SOURCES.test(text));
@@ -210,7 +221,7 @@ export function finalise(input: FinaliseInput): StoryReport {
     // Both sides of a disagreement are quoted here, so a passage saying the opposite is expected.
     const r = checkClaim(text, c.evidence ?? [], { ...ctx, linkNames: absence ? [] : profile.names }, { opposites: false });
     // An unclear point questions an event rather than stating it, so a missing event word isn't held against it.
-    const ok = r.ok || (r.reason === 'unsupported-event' && r.cited.length > 0);
+    const ok = (r.ok || (r.reason === 'unsupported-event' && r.cited.length > 0)) && (!alleges || (!r.weak && allegationShown(text, r)));
     if (!ok || (disagreement && new Set(r.cited.map((i) => grouping.group[i])).size < 2)) {
       if (r.reason === 'no-evidence' || !r.cited.length) stats.unverified++;
       else stats.ungrounded++;
@@ -334,16 +345,21 @@ export function finalise(input: FinaliseInput): StoryReport {
     delete rest.cited;
     return rest;
   };
+  // With no news agency, news organisation or official source among the matches (only social posts, opinion or
+  // unknown sites), nothing is stated as what happened: every sentence is only reported (D70). Two posts saying
+  // someone has died must not read as a death that happened.
+  const established = !notes.includes('no-established-sources');
+  const onlyReported = established ? reported : [...whatHappened.filter((w) => !reported.some((r) => r.text === w.text)), ...reported].slice(0, 6);
   return {
     ...base,
     status: 'report',
     ...(subject ? { subject: clip(subject, 140) } : {}),
     match,
     confidence,
-    whatHappened: whatHappened.map(strip),
-    details: details.map(strip),
+    whatHappened: established ? whatHappened.map(strip) : [],
+    details: established ? details.map(strip) : [],
     confirmed: confirmed.map(strip),
-    reported: reported.map(strip),
+    reported: onlyReported.map(strip),
     unclear: unclear.map(strip),
     sources,
     notes,

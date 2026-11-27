@@ -98,23 +98,33 @@ function caseSection(r: CaseResult, live: boolean): string[] {
   out.push('');
 
   if (rep && (rep.whatHappened.length || rep.confirmed.length || rep.reported.length || rep.unclear.length)) {
-    out.push('Report as shown:', '');
-    const claims = (h: string, list: { text: string; sources: number[] }[]) => {
+    out.push('Report as shown (each claim with the passage it quotes from each source it cites):', '');
+    type Shown = { text: string; sources: number[]; evidence?: { source: number; quote: string }[]; weak?: boolean };
+    const claims = (h: string, list: Shown[]) => {
       if (!list.length) return;
       out.push(`- ${h}:`);
-      for (const c of list) out.push(`  - ${c.text}${c.sources.length ? ` [${c.sources.join(', ')}]` : ''}`);
+      for (const c of list) {
+        out.push(`  - ${c.text}${c.sources.length ? ` [${c.sources.join(', ')}]` : ''}${c.weak ? ' *(weak: its passages carry little of it; never counted as confirmed)*' : ''}`);
+        for (const q of c.evidence ?? []) out.push(`    - [${q.source}] “${esc(q.quote)}”`);
+      }
     };
     claims('What happened', rep.whatHappened);
-    claims('Key details', rep.details.map((d) => ({ text: `${d.label}: ${d.text}`, sources: d.sources })));
+    claims('Key details', rep.details.map((d) => ({ ...d, text: `${d.label}: ${d.text}` })));
     claims('Confirmed', rep.confirmed);
-    claims('Reported by one source', rep.reported);
+    claims('Reported, not confirmed', rep.reported);
     claims('Unclear', rep.unclear);
+    out.push('');
+  }
+  if (rep?.headline) {
+    const h = rep.headline;
+    out.push(`Headline accuracy: **${h.verdict}** for “${esc(h.headline)}”${h.reason ? `: ${esc(h.reason)}` : ''}`);
+    for (const q of h.evidence) out.push(`- [${q.source}] “${esc(q.quote)}”`);
     out.push('');
   }
   if (rep?.sources.length) {
     out.push('Sources:', '');
     for (const s of rep.sources) {
-      out.push(`${s.n}. [${esc(s.title)}](${s.url}) · ${s.publisher} · ${s.published ?? 'no date'} · ${s.kind} · ${s.match} match${s.copyOf ? ` · repeats ${s.copyOf}` : ''}${s.via ? ` · credits ${s.via}` : ''}${s.original ? ' · the linked article' : ''}`);
+      out.push(`${s.n}. [${esc(s.title)}](${s.url}) · ${s.publisher} · ${s.published ?? 'no date'}${s.updated ? ` (updated ${s.updated})` : ''} · ${s.kind} · ${s.match} match${s.copyOf ? ` · repeats ${s.copyOf}` : ''}${s.via ? ` · credits ${s.via}` : ''}${s.corrected ? ' · corrected' : ''}${s.original ? ' · the linked article' : ''}`);
     }
     out.push('');
   }
@@ -142,11 +152,15 @@ function caseSection(r: CaseResult, live: boolean): string[] {
 }
 
 function metricsTable(cases: CaseResult[]): string[] {
-  const out = ['| Case | Answered by | Searches | HTTP requests | Results | Analysed | Fallback | Model | Tokens in / out | Dropped as unsupported | Exa (reported) | Tavily credits | Claude | Backend ms |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  const out = [
+    '| Case | Answered by | Searches | HTTP requests | Results | Analysed | Fallback | Model | Tokens in / out | Claims dropped: unsupported / no real passage | Weak / contradicted | Cleaned: withdrawn / injected | Exa (reported) | Tavily credits | Claude | Backend ms |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+  ];
+  const n = (x: number | undefined) => (x === undefined ? '–' : String(x));
   for (const r of cases) {
     const m = r.metrics;
     out.push(
-      `| ${r.id} | ${m.providersUsed.join(', ') || '–'} | ${m.searches} | ${m.searchRequests} | ${m.resultsRetrieved} | ${m.articlesAnalysed} | ${m.fallbackUsed ? 'yes' : 'no'} | ${m.model ?? '–'} | ${m.inputTokens !== undefined ? `${m.inputTokens} / ${m.outputTokens}${m.cacheReadTokens ? ` (${m.cacheReadTokens} cached)` : ''}` : '–'} | ${m.ungroundedDropped ?? '–'} | ${usd(m.exaReportedUsd)} | ${m.tavilyCredits} | ${m.aiUsd === undefined ? '–' : `${usd(m.aiUsd, 5)}${r.how.aiSource === 'claude-recorded' ? ' (when recorded)' : ''}`} | ${m.handlerMs ?? '–'} |`,
+      `| ${r.id} | ${m.providersUsed.join(', ') || '–'} | ${m.searches} | ${m.searchRequests} | ${m.resultsRetrieved} | ${m.articlesAnalysed} | ${m.fallbackUsed ? 'yes' : 'no'} | ${m.model ?? '–'} | ${m.inputTokens !== undefined ? `${m.inputTokens} / ${m.outputTokens}${m.cacheReadTokens ? ` (${m.cacheReadTokens} cached)` : ''}` : '–'} | ${n(m.ungroundedDropped)} / ${n(m.unverifiedDropped)} | ${n(m.weakClaims)} / ${n(m.contradictedClaims)} | ${n(m.withdrawn)} / ${n(m.injectionRemoved)} | ${usd(m.exaReportedUsd)} | ${m.tavilyCredits} | ${m.aiUsd === undefined ? '–' : `${usd(m.aiUsd, 5)}${r.how.aiSource === 'claude-recorded' ? ' (when recorded)' : ''}`} | ${m.handlerMs ?? '–'} |`,
     );
   }
   return out;
@@ -237,7 +251,7 @@ export function writeReport(root: string): { md: string; json: string } {
   md.push(
     '## How to read the checks',
     '',
-    'Each report gets ten checks: the right story; names; event dates; places; relevant facts; no unsupported statements; no contradictions; source references; confidence; readable writing. Structure is checked strictly (every claim cites a listed source; every source was really retrieved; publisher and kind match the address; “confirmed” rests on two independent reports or an official one; syndicated copies count once). Facts are checked as far as a program can: expected names, dates and places must appear; forbidden ones (another story, another year) must not; every number must appear in a retrieved source; a date that appears in no cited source is a failure; a date that matches only a publication date is flagged for a person. “Review” means a person should look. Well-formed output alone never passes the factual checks, and Claude’s claims are always listed for a person to check against their sources.',
+    'Each report gets eleven checks: the right story; names; event dates; places; relevant facts; no unsupported statements; no contradictions; source references; confidence; readable writing; headline accuracy. Structure is checked strictly (every claim cites a listed source, with a passage of its own from each source it cites, and each passage is checked, independently of the backend, to be in that source’s retrieved text; every source was really retrieved; publisher and kind match the address; “confirmed” rests on two independent news or agency reports, or an official source, and never on a weak claim; syndicated copies count once). A passage being in a source doesn’t show it supports the claim: that is for a person, and Claude’s claims are always listed for one to check. Facts are checked as far as a program can: expected names, dates and places must appear; forbidden ones (another story, another year, a rumour under “unclear”) must not; every number must appear in a retrieved source; a date that appears in no cited source is a failure; a date that matches only a publication date is flagged for a person. “Review” means a person should look. Well-formed output alone never passes the factual checks.',
     '',
   );
 

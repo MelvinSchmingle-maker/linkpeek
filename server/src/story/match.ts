@@ -96,7 +96,12 @@ export function scoreHits(profile: LinkProfile, hits: SearchHit[], today?: strin
     const text = hitText(hit);
     const lower = text.toLowerCase();
     const wordShare = coverage(profile.coreTerms, termSet(text));
-    const has = (n: string) => lower.includes(n.toLowerCase());
+    // A headline's first word is always capitalised, so "Singer Mara Vey dies" gives the name "Singer Mara Vey":
+    // a report of "Mara Vey" is about her too. Only for names of three words or more, so two remain.
+    const has = (n: string) => {
+      const ws = n.toLowerCase().split(' ');
+      return lower.includes(ws.join(' ')) || (ws.length >= 3 && lower.includes(ws.slice(1).join(' ')));
+    };
     const namesFound = profile.names.filter(has).length;
     const keyFound = profile.keyNames.filter(has);
     const specificFound = keyFound.filter((n) => n.includes(' ')).length;
