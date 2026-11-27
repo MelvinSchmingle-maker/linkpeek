@@ -1,0 +1,1344 @@
+{
+  "mode": "record",
+  "startedAt": "2026-11-27T18:50:11.420Z",
+  "finishedAt": "2026-11-27T18:50:29.497Z",
+  "cases": [
+    {
+      "id": "pope",
+      "title": "Full headline naming a person: Pope Francis",
+      "data": "real",
+      "covers": [
+        "accurate results",
+        "event date versus publication date"
+      ],
+      "expected": "Pope Francis died on 21 April 2025, Easter Monday, at the Vatican, aged 88. The report must give that event date (not a later publication date), and its sources must be real reports of his death (the Vatican, news agencies, major outlets), not later coverage.",
+      "how": {
+        "search": "real Exa (then Tavily if needed) searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://news.example.com/2025/04/21/pope-francis-dies-aged-88",
+        "headline": {
+          "text": "Pope Francis dies aged 88",
+          "from": "link-text",
+          "confidence": "high"
+        },
+        "slug": "pope francis dies aged",
+        "date": "2025-04-21",
+        "dateFrom": "url-date"
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "possible",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [
+          {
+            "n": 1,
+            "title": "Pope Francis has died on Easter Monday aged 88 - Vatican News",
+            "publisher": "vaticannews.va",
+            "url": "https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-dies-on-easter-monday-aged-88.html",
+            "published": "2025-04-21",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 2,
+            "title": "Pope Francis, first Latin American pontiff, dies after stroke and cardiac arrest | Reuters",
+            "publisher": "Reuters",
+            "url": "https://www.reuters.com/world/pope-francis-has-died-vatican-says-video-statement-2025-04-21/",
+            "published": "2025-04-21",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Reuters"
+          },
+          {
+            "n": 3,
+            "title": "Pope Francis, first Latin American pontiff, dies at 88 | AP News",
+            "publisher": "Associated Press",
+            "url": "https://apnews.com/article/vatican-pope-francis-dead-01ca7d73c3c48d25fd1504ba076e2e2a",
+            "published": "2025-04-21",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Associated Press"
+          }
+        ],
+        "setAside": 5,
+        "notes": [],
+        "searchedFor": "Pope Francis dies aged 88",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "fail",
+            "detail": "outcome report-failed (expected report); match possible (expected strong); subject lacks /Francis/"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "fail",
+            "detail": "missing /Francis/"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "fail",
+            "detail": "missing /21 April 2025/"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "fail",
+            "detail": "missing /Vatican/"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "fail",
+            "detail": "missing /\\b88\\b/"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "fail",
+            "detail": "confidence insufficient (expected strong or partial); notes: none"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchPossible matchCouldn't write a report. These sources may be about the same story:Possibly related sourcesPope Francis has died on Easter Monday aged 88 - Vatican Newsvaticannews.va · 21 April 2025 · NewsPope Francis, first Latin American pontiff, dies after stroke and cardiac arrest | ReutersReuters · 21 April 2025 · News agencyPope Francis, first Latin American pontiff, dies at 88 | AP NewsAssociated Press · 21 April 2025 · News agencySearched for: “Pope Francis dies aged 88”5 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "3 source link(s) for 3 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "Couldn't write a report. These sources may be about the same story:"
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.007
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "exa"
+        ],
+        "fallbackUsed": false,
+        "searches": 1,
+        "searchRequests": 1,
+        "searchPath": [
+          "best"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 8,
+        "resultsKept": 8,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0.007,
+        "tavilyCredits": 0,
+        "handlerMs": 3726,
+        "totalMs": 3789
+      },
+      "problems": []
+    },
+    {
+      "id": "louvre-card",
+      "title": "\"Read more\" link in an article card: the Louvre jewel theft",
+      "data": "real",
+      "covers": [
+        "accurate results",
+        "card clues",
+        "no mixing with other news about the same place"
+      ],
+      "expected": "Thieves stole crown jewels from the Louvre’s Apollo Gallery in Paris on 19 October 2025, in a raid of a few minutes. Only the heist: not other Louvre news (strikes, renovation plans, the Mona Lisa).",
+      "how": {
+        "search": "real Exa (then Tavily if needed) searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://paper.example.org/p/88231",
+        "headline": {
+          "text": "Louvre jewel heist: thieves steal crown jewels in daylight raid",
+          "from": "card-heading",
+          "confidence": "high"
+        },
+        "description": {
+          "text": "Thieves used a vehicle-mounted lift to reach the Apollo Gallery and escaped within minutes.",
+          "from": "card-teaser",
+          "confidence": "medium"
+        },
+        "context": {
+          "text": "Culture 19 October 2025",
+          "from": "surrounding-text",
+          "confidence": "low"
+        },
+        "date": "2025-10-19",
+        "dateFrom": "card-label",
+        "section": "Culture"
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "possible",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [
+          {
+            "n": 1,
+            "title": "Thieves steal French crown jewels from Louvre in daytime raid",
+            "publisher": "France 24",
+            "url": "https://www.france24.com/en/live-news/20251019-thieves-steal-french-crown-jewels-from-louvre-in-daytime-raid",
+            "published": "2025-10-19",
+            "kind": "news",
+            "match": "possible",
+            "via": "AFP"
+          },
+          {
+            "n": 2,
+            "title": "A timeline of the jewel heist at the Louvre in Paris | AP News",
+            "publisher": "Associated Press",
+            "url": "https://apnews.com/article/louvre-heist-jewels-paris-timeline-a072c2a5aba6ab5eeb429a280266a799",
+            "published": "2025-10-22",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Associated Press"
+          },
+          {
+            "n": 3,
+            "title": "Thieves rob priceless jewels from Paris' Louvre in brazen heist | Reuters",
+            "publisher": "Reuters",
+            "url": "https://www.reuters.com/world/europe/thieves-steal-jewels-louvre-paris-media-reports-2025-10-19/",
+            "published": "2025-10-19",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Reuters"
+          }
+        ],
+        "setAside": 5,
+        "notes": [],
+        "searchedFor": "Louvre jewel heist: thieves steal crown jewels in daylight raid Apollo Gallery October",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "fail",
+            "detail": "outcome report-failed (expected report); match possible (expected strong); subject lacks /Louvre/i"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "fail",
+            "detail": "missing /Louvre/"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "fail",
+            "detail": "missing /19 October 2025/"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "fail",
+            "detail": "missing /Paris|Apollo Gallery/"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "fail",
+            "detail": "missing /jewel/i"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "fail",
+            "detail": "confidence insufficient (expected strong or partial); notes: none"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchPossible matchCouldn't write a report. These sources may be about the same story:Possibly related sourcesThieves steal French crown jewels from Louvre in daytime raidFrance 24 · 19 October 2025 · NewsCredits AFPA timeline of the jewel heist at the Louvre in Paris | AP NewsAssociated Press · 22 October 2025 · News agencyThieves rob priceless jewels from Paris' Louvre in brazen heist | ReutersReuters · 19 October 2025 · News agencySearched for: “Louvre jewel heist: thieves steal crown jewels in daylight raid Apollo Gallery October”5 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "3 source link(s) for 3 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "Couldn't write a report. These sources may be about the same story:"
+          },
+          {
+            "id": "excludes",
+            "label": "Doesn't show \"Read more\"",
+            "status": "pass",
+            "detail": "Read more"
+          },
+          {
+            "id": "excludes",
+            "label": "Doesn't show \"new entrance\"",
+            "status": "pass",
+            "detail": "new entrance"
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.007
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "exa"
+        ],
+        "fallbackUsed": false,
+        "searches": 1,
+        "searchRequests": 1,
+        "searchPath": [
+          "best"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 8,
+        "resultsKept": 8,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0.007,
+        "tavilyCredits": 0,
+        "handlerMs": 6170,
+        "totalMs": 6179
+      },
+      "problems": []
+    },
+    {
+      "id": "louvre-url",
+      "title": "Only the address: the same Louvre story from the URL’s words and date",
+      "data": "real",
+      "covers": [
+        "accurate results",
+        "address clues"
+      ],
+      "expected": "The same Louvre heist (19 October 2025), found from the address words and the date in the address alone.",
+      "how": {
+        "search": "real Exa (then Tavily if needed) searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://paper.example.org/2025/10/19/louvre-crown-jewels-stolen-apollo-gallery",
+        "slug": "louvre crown jewels stolen apollo gallery",
+        "date": "2025-10-19",
+        "dateFrom": "url-date"
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "possible",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [
+          {
+            "n": 1,
+            "title": "French crown jewels: What we know about the stolen Louvre treasures | CNN",
+            "publisher": "CNN",
+            "url": "https://www.cnn.com/2025/10/20/style/louvre-heist-which-jewels-stolen-intl-hnk",
+            "published": "2025-10-20",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 2,
+            "title": "Stolen treasures, a crown dropped as thieves fled - and serious questions for Louvre security",
+            "publisher": "BBC News",
+            "url": "https://www.bbc.com/news/articles/cj0e24rrjz1o",
+            "published": "2025-10-19",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 3,
+            "title": "Louvre museum robbery: Jewels of French royalty stolen in daring heist | AP News",
+            "publisher": "Associated Press",
+            "url": "https://apnews.com/article/louvre-museum-theft-jewels-france-66eb823d9ac9b084fda4f4e9d4c72243",
+            "published": "2025-10-20",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Associated Press"
+          }
+        ],
+        "setAside": 5,
+        "notes": [],
+        "searchedFor": "louvre crown jewels stolen apollo gallery",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "fail",
+            "detail": "outcome report-failed (expected report); match possible (expected strong); subject lacks /Louvre/i"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "fail",
+            "detail": "missing /Louvre/"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "fail",
+            "detail": "missing /19 October 2025/"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "fail",
+            "detail": "missing /Paris|Apollo Gallery/"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "fail",
+            "detail": "missing /jewel/i"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "fail",
+            "detail": "confidence insufficient (expected strong or partial); notes: none"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchPossible matchCouldn't write a report. These sources may be about the same story:Possibly related sourcesFrench crown jewels: What we know about the stolen Louvre treasures | CNNCNN · 20 October 2025 · NewsStolen treasures, a crown dropped as thieves fled - and serious questions for Louvre securityBBC News · 19 October 2025 · NewsLouvre museum robbery: Jewels of French royalty stolen in daring heist | AP NewsAssociated Press · 20 October 2025 · News agencySearched for: “louvre crown jewels stolen apollo gallery”5 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "3 source link(s) for 3 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "Couldn't write a report. These sources may be about the same story:"
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.007
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "exa"
+        ],
+        "fallbackUsed": false,
+        "searches": 1,
+        "searchRequests": 1,
+        "searchPath": [
+          "best"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 8,
+        "resultsKept": 8,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0.007,
+        "tavilyCredits": 0,
+        "handlerMs": 1709,
+        "totalMs": 1716
+      },
+      "problems": []
+    },
+    {
+      "id": "vague",
+      "title": "Vague headline, no name and no date: \"Pop star found dead in hotel room\"",
+      "data": "real",
+      "covers": [
+        "vague headlines",
+        "old incident not shown as current"
+      ],
+      "expected": "Many deaths fit this headline. LinkPeek must not say who it is about, must not present an old case (the search finds Whitney Houston’s death in 2012) as this story, and must say why: the link gives no name or date. At most a possible match.",
+      "how": {
+        "search": "real Exa (then Tavily if needed) searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://celeb.example.com/p/1",
+        "headline": {
+          "text": "Pop star found dead in hotel room",
+          "from": "link-text",
+          "confidence": "high"
+        }
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "possible",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [
+          {
+            "n": 1,
+            "title": "Whitney Houston, A 'Perfect Instrument,' Dies : NPR",
+            "publisher": "NPR",
+            "url": "https://www-s1.npr.org/2012/02/12/146761831/whitney-houston-a-perfect-instrument-has-died",
+            "published": "2012-02-12",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 2,
+            "title": "Whitney Houston died in Beverly Hills hotel room - CBS News",
+            "publisher": "CBS News",
+            "url": "https://www.cbsnews.com/news/whitney-houston-died-in-beverly-hills-hotel-room/",
+            "published": "2012-02-12",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 3,
+            "title": "Whitney Houston Drowned, Coroner Says",
+            "publisher": "The New York Times",
+            "url": "https://www.nytimes.com/2012/03/23/arts/music/whitney-houston-drowned-coroner-says.html",
+            "published": "2012-03-22",
+            "kind": "news",
+            "match": "possible"
+          }
+        ],
+        "setAside": 5,
+        "notes": [],
+        "searchedFor": "Pop star found dead in hotel room",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "pass",
+            "detail": "outcome report-failed (expected report or no-match or report-failed); match possible (expected possible or none)"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "n/a",
+            "detail": "no date expected"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "fail",
+            "detail": "confidence insufficient (expected partial or insufficient); notes: none; note \"vague-link\" missing"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchPossible matchCouldn't write a report. These sources may be about the same story:Possibly related sourcesWhitney Houston, A 'Perfect Instrument,' Dies : NPRNPR · 12 February 2012 · NewsWhitney Houston died in Beverly Hills hotel room - CBS NewsCBS News · 12 February 2012 · NewsWhitney Houston Drowned, Coroner SaysThe New York Times · 22 March 2012 · NewsSearched for: “Pop star found dead in hotel room”5 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "3 source link(s) for 3 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "Couldn't write a report. These sources may be about the same story:"
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.007
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "exa"
+        ],
+        "fallbackUsed": false,
+        "searches": 1,
+        "searchRequests": 1,
+        "searchPath": [
+          "best"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 8,
+        "resultsKept": 8,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0.007,
+        "tavilyCredits": 0,
+        "handlerMs": 1543,
+        "totalMs": 1548
+      },
+      "problems": []
+    },
+    {
+      "id": "fabricated",
+      "title": "Made-up story: \"Mayor of Zarnwick resigns after canal bridge collapse injures 14\"",
+      "data": "real",
+      "covers": [
+        "fabricated stories",
+        "unrelated results"
+      ],
+      "expected": "There is no such town or story. LinkPeek must find no reliable match, name nobody, and write no report.",
+      "how": {
+        "search": "real Exa (then Tavily if needed) searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://news.example.com/2026/11/20/zarnwick-mayor-resigns-canal-bridge-collapse",
+        "headline": {
+          "text": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+          "from": "link-text",
+          "confidence": "high"
+        },
+        "slug": "zarnwick mayor resigns canal bridge collapse",
+        "date": "2026-11-20",
+        "dateFrom": "url-date"
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "none",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [],
+        "setAside": 12,
+        "notes": [],
+        "searchedFor": "Mayor of Zarnwick resigns after canal bridge collapse injures 14",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "fail",
+            "detail": "outcome report-failed (expected no-match or no-results); match none (expected none)"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "n/a",
+            "detail": "no date expected"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "n/a",
+            "detail": "nothing expected"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "pass",
+            "detail": "confidence insufficient (expected insufficient); notes: none"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchNo reliable matchThe search found results, but none clearly about this story. LinkPeek won't guess.Searched for: “Mayor of Zarnwick resigns after canal bridge collapse injures 14”12 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "0 source link(s) for 0 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "The search found results, but none clearly about this story. LinkPeek won't guess."
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.007
+        },
+        {
+          "label": "nothing-relevant>names-and-event",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 5,
+          "costUsd": 0.007
+        },
+        {
+          "label": "nothing-relevant>broader",
+          "provider": "exa",
+          "outcome": "ok",
+          "hits": 5,
+          "costUsd": 0.007
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "exa"
+        ],
+        "fallbackUsed": false,
+        "searches": 3,
+        "searchRequests": 3,
+        "searchPath": [
+          "best",
+          "nothing-relevant>names-and-event",
+          "nothing-relevant>broader"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 18,
+        "resultsKept": 12,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0.021,
+        "tavilyCredits": 0,
+        "handlerMs": 3182,
+        "totalMs": 3187
+      },
+      "problems": []
+    },
+    {
+      "id": "pope-tavily",
+      "title": "Exa’s free credit used up (simulated): Tavily finds Pope Francis instead",
+      "data": "real",
+      "covers": [
+        "credit exhaustion",
+        "fallback"
+      ],
+      "expected": "Exa says its credit is used up; Tavily takes over and the same correct story is found from Tavily’s real results.",
+      "how": {
+        "search": "Exa simulated (HTTP 402 NO_MORE_CREDITS); real Tavily searches, run now",
+        "ai": "not called (recording searches only)"
+      },
+      "sent": {
+        "url": "https://news.example.com/2025/04/21/pope-francis-dies-aged-88",
+        "headline": {
+          "text": "Pope Francis dies aged 88",
+          "from": "link-text",
+          "confidence": "high"
+        },
+        "slug": "pope francis dies aged",
+        "date": "2025-04-21",
+        "dateFrom": "url-date"
+      },
+      "outcome": "report-failed",
+      "stages": [
+        "extracting",
+        "searching",
+        "analysing"
+      ],
+      "report": {
+        "status": "report-failed",
+        "match": "possible",
+        "confidence": "insufficient",
+        "whatHappened": [],
+        "details": [],
+        "confirmed": [],
+        "reported": [],
+        "unclear": [],
+        "sources": [
+          {
+            "n": 1,
+            "title": "Vatican announces death of Pope Francis aged 88",
+            "publisher": "BBC News",
+            "url": "https://www.bbc.com/news/articles/cqj42vd1rxlo",
+            "published": "2025-04-21",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 2,
+            "title": "Pope Francis has died on Easter Monday aged 88 - Vatican News",
+            "publisher": "vaticannews.va",
+            "url": "https://www.vaticannews.va/en/pope/news/2025-04/pope-francis-dies-on-easter-monday-aged-88.html",
+            "published": "2025-04-21",
+            "kind": "news",
+            "match": "possible"
+          },
+          {
+            "n": 3,
+            "title": "Pope Francis, first Latin American pontiff, dies at 88 | AP News",
+            "publisher": "Associated Press",
+            "url": "https://apnews.com/article/vatican-pope-francis-dead-01ca7d73c3c48d25fd1504ba076e2e2a",
+            "published": "2025-04-21",
+            "kind": "agency",
+            "match": "possible",
+            "via": "Associated Press"
+          }
+        ],
+        "setAside": 5,
+        "notes": [],
+        "searchedFor": "Pope Francis dies aged 88",
+        "checkedAt": "2026-11-27T12:00:00.000Z"
+      },
+      "validation": {
+        "checks": [
+          {
+            "id": "story",
+            "label": "Correct identification of the story",
+            "status": "fail",
+            "detail": "outcome report-failed (expected report); match possible (expected strong); subject lacks /Francis/"
+          },
+          {
+            "id": "names",
+            "label": "Correct names",
+            "status": "fail",
+            "detail": "missing /Francis/"
+          },
+          {
+            "id": "dates",
+            "label": "Correct event dates",
+            "status": "fail",
+            "detail": "missing /21 April 2025/"
+          },
+          {
+            "id": "locations",
+            "label": "Correct locations",
+            "status": "fail",
+            "detail": "missing /Vatican/"
+          },
+          {
+            "id": "facts",
+            "label": "Relevant facts",
+            "status": "fail",
+            "detail": "missing /\\b88\\b/"
+          },
+          {
+            "id": "assumptions",
+            "label": "No unsupported assumptions",
+            "status": "pass",
+            "detail": "no forbidden statements; every number appears in a retrieved source"
+          },
+          {
+            "id": "contradictions",
+            "label": "No contradictory claims",
+            "status": "pass",
+            "detail": "none found"
+          },
+          {
+            "id": "citations",
+            "label": "Proper source references",
+            "status": "pass",
+            "detail": "0 factual claim(s), every one cites a listed source; every source was retrieved; publishers and kinds match their sites; \"confirmed\" rests on independent sources"
+          },
+          {
+            "id": "confidence",
+            "label": "Appropriate confidence",
+            "status": "fail",
+            "detail": "confidence insufficient (expected strong or partial); notes: none"
+          },
+          {
+            "id": "writing",
+            "label": "Clear, readable writing",
+            "status": "pass",
+            "detail": "0 sentence(s): no markup, links or relative dates, none over 45 words"
+          }
+        ],
+        "review": [],
+        "passed": false
+      },
+      "card": {
+        "text": "Story SearchPossible matchCouldn't write a report. These sources may be about the same story:Possibly related sourcesVatican announces death of Pope Francis aged 88BBC News · 21 April 2025 · NewsPope Francis has died on Easter Monday aged 88 - Vatican Newsvaticannews.va · 21 April 2025 · NewsPope Francis, first Latin American pontiff, dies at 88 | AP NewsAssociated Press · 21 April 2025 · News agencySearched for: “Pope Francis dies aged 88”5 search results set aside as not about this story.Try againOpen link",
+        "checks": [
+          {
+            "id": "no-junk",
+            "label": "No broken values on the card",
+            "status": "pass",
+            "detail": "no \"undefined\", \"NaN\", \"Invalid Date\" or \"[object Object]\""
+          },
+          {
+            "id": "not-opened",
+            "label": "The original link is not opened",
+            "status": "pass",
+            "detail": "the page stayed where it was; the card only links to the address"
+          },
+          {
+            "id": "open-link",
+            "label": "Original link offered, not followed",
+            "status": "pass",
+            "detail": "one \"Open link\" link to the address, opened only if the reader clicks it"
+          },
+          {
+            "id": "source-links",
+            "label": "Every source is a working link",
+            "status": "pass",
+            "detail": "3 source link(s) for 3 source(s), each opening in a new tab without a referrer"
+          },
+          {
+            "id": "message",
+            "label": "Explains the outcome",
+            "status": "pass",
+            "detail": "Couldn't write a report. These sources may be about the same story:"
+          }
+        ]
+      },
+      "searches": [
+        {
+          "label": "best",
+          "provider": "tavily",
+          "outcome": "ok",
+          "hits": 8,
+          "costUsd": 0.008
+        }
+      ],
+      "metrics": {
+        "provider": "exa+tavily",
+        "providersUsed": [
+          "tavily"
+        ],
+        "fallbackUsed": true,
+        "searches": 1,
+        "searchRequests": 2,
+        "searchPath": [
+          "best"
+        ],
+        "searchErrors": [],
+        "resultsRetrieved": 8,
+        "resultsKept": 8,
+        "articlesAnalysed": 5,
+        "model": "none",
+        "aiCalls": 0,
+        "aiFailure": "misconfigured",
+        "exaReportedUsd": 0,
+        "tavilyCredits": 1,
+        "handlerMs": 1589,
+        "totalMs": 1594
+      },
+      "problems": []
+    }
+  ],
+  "extra": [],
+  "skipped": [
+    {
+      "id": "insufficient",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "conflicting",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "duplicates",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "dates-missing",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "content-missing",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "unrelated",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-exa-ok",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-exa-timeout",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-both-timeout",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-busy-and-exhausted",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-tavily-exhausted",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-both-exhausted",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-exhausted-midway",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "fallback-no-keys",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "malformed-search",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "malformed-results",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "ai-invalid",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "ai-truncated",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    },
+    {
+      "id": "ai-timeout",
+      "reason": "uses synthetic or simulated search answers: nothing to record"
+    }
+  ]
+}
