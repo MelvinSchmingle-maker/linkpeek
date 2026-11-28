@@ -111,6 +111,21 @@ export interface Replay {
   remaining: () => number;
 }
 
+/**
+ * A request as recordings are matched against it: without the options that ask for page text (Exa's
+ * `contents.text`, Tavily's `include_raw_content`, D75). Recordings never keep page text (trimResponse cuts
+ * every result to short excerpts: this repository is public), so a recording answers the same search
+ * whether or not page text was asked for, served as what it is: excerpts. Everything else (the query, its
+ * dates, the number of results, the filters) must match exactly.
+ */
+export function comparableRequest(provider: 'exa' | 'tavily', body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const b = JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+  if (provider === 'exa' && b.contents && typeof b.contents === 'object') delete (b.contents as Record<string, unknown>).text;
+  if (provider === 'tavily') delete b.include_raw_content;
+  return b;
+}
+
 /** Serves recorded exchanges in order, checking each request is the one recorded. */
 export function replayFetch(exchanges: Exchange[], caseId: string): Replay {
   const queue = [...exchanges];
@@ -123,7 +138,7 @@ export function replayFetch(exchanges: Exchange[], caseId: string): Replay {
       const provider = providerOf(url);
       const next = queue.shift();
       const body = bodyOf(init);
-      if (!next || next.provider !== provider || JSON.stringify(next.request.body) !== JSON.stringify(body)) {
+      if (!next || next.provider !== provider || JSON.stringify(comparableRequest(provider, next.request.body)) !== JSON.stringify(comparableRequest(provider, body))) {
         replay.errors.push(
           `${caseId}: request ${replay.served.exa + replay.served.tavily + 1} to ${provider} doesn't match the recording. ` +
             `Story Search now searches differently, so the recording is out of date: re-record with \`npm run test:story-e2e:record\`.\n` +

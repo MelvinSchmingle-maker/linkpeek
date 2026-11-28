@@ -84,12 +84,13 @@ export function cleanHits(hits: SearchHit[]): Cleaned {
       stats.injection++;
       continue;
     }
-    const all = [h.description ?? '', ...h.passages].join(' ');
-    if (WITHDRAWN.test(all) || WITHDRAWN.test(h.title)) {
+    // A withdrawal notice is at the top of an article; a correction can be anywhere in it.
+    const opening = [h.description ?? '', ...h.passages, ...(h.text ?? []).slice(0, 3)].join(' ');
+    if (WITHDRAWN.test(opening) || WITHDRAWN.test(h.title)) {
       withdrawn++;
       continue;
     }
-    const corrected = CORRECTION.test(all);
+    const corrected = CORRECTION.test([opening, ...(h.text ?? [])].join(' '));
     let updated: string | undefined;
     const clean = (s: string) => {
       const c = cleanText(s, stats, corrected);
@@ -97,11 +98,13 @@ export function cleanHits(hits: SearchHit[]): Cleaned {
       return c.text;
     };
     const passages = h.passages.map(clean).filter(Boolean);
+    const text = h.text?.map(clean).filter(Boolean);
     const description = h.description !== undefined ? clean(h.description) : undefined;
     const after = updated && (!h.published || updated > h.published) ? updated : undefined;
     out.push({
       ...h,
       passages,
+      ...(text ? { text } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(after ? { updated: after } : {}),
       ...(corrected ? { corrected: true } : {}),

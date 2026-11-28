@@ -147,4 +147,20 @@ describe('parseReport', () => {
     expect(parseReport({ ...REPORT, headline: { verdict: 'accurate', reason: '', evidence: [] } })!.headline).toBeUndefined();
     expect(parseReport({ ...REPORT, sources: [{ ...REPORT.sources[0], updated: 'yesterday' }] })!.sources[0]).not.toHaveProperty('updated');
   });
+
+  it('keeps each source’s depth, the independent count and the verdict’s basis; drops values that aren’t valid', () => {
+    const n = REPORT.sources[0]!.n;
+    const r = parseReport({
+      ...REPORT,
+      independent: 1,
+      sources: [{ ...REPORT.sources[0], depth: 'full' }, ...REPORT.sources.slice(1).map((s) => ({ ...s, depth: 'all of it' }))],
+      headline: { headline: 'The headline', verdict: 'partly-accurate', reason: 'One number is wrong.', evidence: [{ source: n, quote: 'What the reports say.' }], basis: { kind: 'contradicted', terms: ['7', 42] } },
+    })!;
+    expect(r.sources[0]!.depth).toBe('full');
+    expect(r.sources.slice(1).every((s) => s.depth === undefined)).toBe(true);
+    expect(r.independent).toBe(1);
+    expect(r.headline!.basis).toEqual({ kind: 'contradicted', terms: ['7'] });
+    expect(parseReport({ ...REPORT, independent: 99 })!.independent).toBeUndefined();
+    expect(parseReport({ ...REPORT, headline: { ...r.headline, basis: { kind: 'vibes' } } })!.headline).not.toHaveProperty('basis');
+  });
 });

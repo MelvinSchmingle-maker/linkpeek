@@ -104,7 +104,9 @@ export type InvestigationConfidence = 'strong' | 'partial' | 'conflicting' | 'in
 export type SourceKind = 'primary' | 'agency' | 'news' | 'opinion' | 'social' | 'other';
 export type DetailLabel = 'who' | 'what' | 'where' | 'when' | 'why';
 export type ReportStatus = 'report' | 'no-results' | 'no-match' | 'report-failed';
-export type ReportNote = 'single-source' | 'developing' | 'snippets-only' | 'older-story' | 'syndicated' | 'vague-link' | 'no-established-sources' | 'withdrawn';
+export type ReportNote = 'single-source' | 'developing' | 'headlines-only' | 'excerpts-only' | 'older-story' | 'syndicated' | 'vague-link' | 'no-established-sources' | 'withdrawn';
+/** How much of an article LinkPeek had: its headline, a short search excerpt, a long part of its text, or all of it. */
+export type EvidenceDepth = 'headline' | 'excerpt' | 'extended' | 'full';
 
 /** A passage copied word for word from a source: why LinkPeek says what it says. */
 export interface Evidence {
@@ -124,12 +126,19 @@ export interface Claim {
 
 export type HeadlineVerdict = 'accurate' | 'partly-accurate' | 'misleading' | 'unverified';
 
+/** What a headline verdict rests on, as the backend's rules found it. */
+export interface HeadlineBasis {
+  kind: 'supported' | 'contradicted' | 'alleged' | 'unsupported' | 'disputed' | 'insufficient';
+  terms?: string[];
+}
+
 /** Does the link's headline say what the reporting establishes? */
 export interface HeadlineCheck {
   headline: string;
   verdict: HeadlineVerdict;
   reason: string;
   evidence: Evidence[];
+  basis?: HeadlineBasis;
 }
 
 export interface ReportSource {
@@ -150,6 +159,8 @@ export interface ReportSource {
   updated?: string;
   /** Its publisher corrected it; what it now says was used. */
   corrected?: boolean;
+  /** How much of the article LinkPeek had. */
+  depth?: EvidenceDepth;
 }
 
 export interface StoryReport {
@@ -165,6 +176,8 @@ export interface StoryReport {
   reported: Claim[];
   unclear: Claim[];
   sources: ReportSource[];
+  /** Independent reports among the sources (copies of one report count once). */
+  independent?: number;
   /** How many search results were set aside as not about this story. */
   setAside: number;
   notes: ReportNote[];

@@ -17,6 +17,7 @@ import type { StoryRequest } from './contract.js';
 import type { Grouping } from './sources.js';
 import type { Scored } from './match.js';
 import { clip } from './text.js';
+import { depthOf, PAGE_TEXT_CHARS } from './providers/types.js';
 
 export const STORY_SYSTEM_PROMPT = `You investigate news stories for LinkPeek, a browser extension. A reader has right-clicked a link and asked what the story is, without opening it. You get what the page said about the link, and results from a web search. You decide which results are about the same story, and write a short report from them.
 
@@ -33,6 +34,7 @@ Step 2. The report. Use only sources you marked "strong" or "possible", and only
 - Keep reported claims as claims: "police say", "according to", "is accused of". An allegation is never a fact. A rumour or a social media post is reported as such.
 - Dates: give the date of the event only when a source states it, or when the source says a weekday, "yesterday" or "today" and its publication date fixes the day exactly. A publication date or an update date is not the date of the event. If the sources don't establish when it happened, say so in "unclear". Write dates out ("on 24 November 2026"), never "yesterday", "today", "tonight", "last night", "this morning" or "tomorrow".
 - A source marked corrected="true" was corrected by its publisher: use what it says now.
+- Each source's content attribute says how much of the article you have: "headline" (its title only), "excerpt" (a short extract the search service chose), "extended" (a long part of the article, not all of it) or "full" (all of its text). A detail missing from an excerpt or an extended extract may still be in the article: its absence there is not evidence either way.
 - When sources disagree on a detail, say so in "unclear", naming which sources say what by their site (not their number), with a quoted passage from each, and set "conflicting" to true.
 - "unclear" is only for what is missing, disputed or unconfirmed in these sources. Never use it to bring in a person, a suspect, a cause, a motive or an allegation the sources don't mention. Anything specific in it (a name, a number, a date, an allegation) needs quoted evidence like a fact; a plain statement of what's missing ("The cause of the fire has not been established") needs none.
 - Set "developing" to true when the sources describe an unfolding or breaking situation, or say details may change.
@@ -40,10 +42,10 @@ Step 2. The report. Use only sources you marked "strong" or "possible", and only
 
 Step 3. The headline. Compare the link's headline with what the sources you matched establish, and choose:
 - "accurate": the sources support what the headline says.
-- "partly-accurate": its main claim is supported, but a detail is missing, overstated or not supported.
-- "misleading": it gives a materially different impression from the sources. For example: it says someone died when they report a hospital stay; says "arrested" when they report questioning; states an allegation as fact; says a company "collapsed" when they report financial difficulty; or leaves out a qualification that changes the meaning (an early trial reported as a cure).
-- "unverified": the sources don't let you judge, or the link has no headline.
-Dramatic or sensational wording is not misleading by itself: judge what the headline claims, not its tone. Give a one-sentence reason saying what the sources establish, and quoted evidence as above. With no headline, use "unverified" and an empty reason.
+- "partly-accurate": its main event is supported, but a specific secondary detail is shown to be wrong or overstated (the sources give a different number, or say otherwise), or isn't in articles you have in full. Say which detail.
+- "misleading": the sources positively show a material difference from what the headline says. For example: it says someone died when they report a hospital stay; says "arrested" when they report questioning; states an allegation as fact; says a company "collapsed" when they report financial difficulty; or leaves out a qualification that changes the meaning (an early trial reported as a cure).
+- "unverified": the sources don't let you judge: a detail you can't find in an excerpt might be further down the article, so its absence is not a reason for "partly-accurate" or "misleading". Also when the link has no headline.
+Dramatic or sensational wording is not misleading by itself: judge what the headline claims, not its tone. Give a one-sentence reason naming what the sources establish and, for "partly-accurate" or "misleading", which part of the headline they don't support; and quoted evidence as above. With no headline, use "unverified" and an empty reason.
 
 Fields:
 - matches: one entry per source id.
@@ -171,19 +173,23 @@ export function storyUserMessage(req: StoryRequest, candidates: Scored[], groupi
       `site="${attr(publishers[i] ?? '')}"`,
       `kind="${kinds[i]}"`,
       h.published ? `published="${h.published}"` : 'published="unknown"',
+      `content="${depthOf(h)}"`,
       h.updated ? `updated="${h.updated}"` : '',
       h.corrected ? 'corrected="true"' : '',
       grouping.via[i] ? `credited_agency="${attr(grouping.via[i]!)}"` : '',
       grouping.copyOf[i] !== undefined ? `same_report_as="${grouping.copyOf[i]! + 1}"` : '',
     ].filter(Boolean);
-    let budget = PER_SOURCE_CHARS;
+    // With the article's own text, more room: up to PAGE_TEXT_CHARS of it (D75), plus excerpts it doesn't contain.
+    let budget = h.text?.length ? PAGE_TEXT_CHARS + PER_SOURCE_CHARS : PER_SOURCE_CHARS;
     const parts = [`<title>${safe(h.title, 300)}</title>`];
     if (h.description) {
       const d = safe(h.description, 400);
       budget -= d.length;
       parts.push(`<description>${d}</description>`);
     }
-    for (const p of h.passages) {
+    const own = (h.text ?? []).join(' ').toLowerCase();
+    const extra = h.passages.filter((p) => !own.includes(p.toLowerCase().slice(0, 80)));
+    for (const p of [...(h.text ?? []), ...extra]) {
       if (budget <= 100) break;
       const t = safe(p, Math.min(700, budget));
       budget -= t.length;

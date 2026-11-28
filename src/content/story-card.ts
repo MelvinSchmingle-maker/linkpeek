@@ -65,6 +65,8 @@ function itemNode(tag: 'p' | 'li', item: ViewItem): HTMLElement {
   if (item.label) node.append(el('strong', 'detail-label', `${item.label}: `));
   node.append(document.createTextNode(item.text));
   if (item.refs.length) node.append(' ', refs(item.refs));
+  // A weak claim says so where it can be seen, not only inside its evidence.
+  if (item.weak) node.append(' ', el('span', 'tag story-weak-tag', MSG.story.weakTag));
   if (item.evidence?.length) node.append(evidenceNode(item.evidence, item.weak));
   return node;
 }
@@ -210,7 +212,13 @@ export function renderStoryCard(view: StoryView, href: string, handlers: StoryCa
       for (const t of s.tags) li.append(el('span', 'tag story-source-tag', t));
       list.append(li);
     }
-    section.append(heading, list);
+    section.append(heading);
+    if (view.sourcesSummary?.length) {
+      const summary = el('div', 'story-sources-summary');
+      for (const line of view.sourcesSummary) summary.append(el('p', 'story-sources-line', line));
+      section.append(summary);
+    }
+    section.append(list);
     body.append(section);
   }
 

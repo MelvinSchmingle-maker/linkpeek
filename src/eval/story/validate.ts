@@ -14,7 +14,7 @@
  * marked as passed on the strength of well-formed output alone.
  */
 import type { ReportSource, StoryReport } from '../../../server/src/story/contract';
-import type { SearchHit } from '../../../server/src/story/providers/types';
+import { depthOf, readBeyondExcerpt, type EvidenceDepth, type SearchHit } from '../../../server/src/story/providers/types';
 import { publisherName, sourceKind } from '../../../server/src/story/sources';
 import { terms } from '../../../server/src/story/text';
 
@@ -55,6 +55,8 @@ export interface Expectation {
   hostsAnyOf?: string[];
   /** Results at these addresses (a part of the address is enough) may be listed only as possible matches, and never cited. */
   notStrong?: string[];
+  /** How much of each article must be reported as read (D75), by a part of its address. */
+  depths?: Record<string, EvidenceDepth>;
   /** The headline verdict expected (headline accuracy, D74), or that there is none. */
   headline?: ('accurate' | 'partly-accurate' | 'misleading' | 'unverified')[] | 'absent';
   /** Facts that must be under "What is confirmed?" (pattern), and ones that must not be. */
@@ -95,7 +97,7 @@ function hostOf(url: string): string {
 }
 
 function hitText(h: SearchHit | undefined): string {
-  return h ? [h.title, h.description ?? '', ...h.passages].join(' ') : '';
+  return h ? [h.title, h.description ?? '', ...h.passages, ...(h.text ?? [])].join(' ') : '';
 }
 
 /** For checking quotes independently of the backend: case, accents, spacing and quote styles don't matter. */
@@ -105,7 +107,7 @@ function plainText(s: string): string {
 
 function quoteIn(quote: string, hit: SearchHit | undefined): boolean {
   if (!hit) return false;
-  const parts = [hit.title, hit.description ?? '', ...hit.passages].map(plainText);
+  const parts = [hit.title, hit.description ?? '', ...hit.passages, ...(hit.text ?? [])].map(plainText);
   const pieces = quote.split(/\s*(?:\.{3}|…)\s*/).map((p) => plainText(p).replace(/^[\s"'.,;:!?()-]+|[\s"'.,;:!?()-]+$/g, '')).filter(Boolean);
   return parts.some((t) => {
     let from = 0;
@@ -335,6 +337,12 @@ export function validateReport(input: {
   }
   if (e.minSources !== undefined && r.sources.length < e.minSources) citeProblems.push(`${r.sources.length} sources, expected at least ${e.minSources}`);
   if (e.hostsAnyOf?.length && !r.sources.some((s) => e.hostsAnyOf!.some((h) => hostOf(s.url).endsWith(h)))) citeProblems.push(`no source from ${e.hostsAnyOf.join(', ')}`);
+  // How much of each article was read, as the report says, against what was retrieved (D75).
+  for (const s of r.sources) {
+    const got = byUrl.get(s.url);
+    if (got && s.depth !== depthOf(got)) citeProblems.push(`source ${s.n} says ${s.depth ?? 'nothing'} was read; retrieved: ${depthOf(got)}`);
+    for (const [u, d] of Object.entries(e.depths ?? {})) if (s.url.includes(u) && s.depth !== d) citeProblems.push(`source ${s.n} (${hostOf(s.url)}): ${s.depth ?? 'no depth'}, expected ${d}`);
+  }
   for (const s of r.sources) {
     if (!(e.notStrong ?? []).some((u) => s.url.includes(u))) continue;
     if (s.match === 'strong') citeProblems.push(`source ${s.n} (${s.url}) is a strong match; expected possible at most`);
@@ -394,6 +402,10 @@ export function validateReport(input: {
     ...(e.forbiddenNotes ?? []).filter((n) => r.notes.includes(n)).map((n) => `note "${n}" shouldn't be there`),
   ];
   const okConfidence = !e.confidence || e.confidence.includes(r.confidence);
+  // Strong evidence needs an established source read beyond its excerpt; reading only excerpts must be said (D75).
+  const depthsShown = r.sources.filter((s) => s.depth);
+  if (r.confidence === 'strong' && !r.sources.some((s) => s.match === 'strong' && ['news', 'agency', 'primary'].includes(s.kind) && s.depth && readBeyondExcerpt(s.depth))) noteProblems.push('"strong evidence" with no established source read beyond an excerpt');
+  if (r.status === 'report' && depthsShown.length && !depthsShown.some((s) => readBeyondExcerpt(s.depth!)) && !r.notes.includes('excerpts-only') && !r.notes.includes('headlines-only')) noteProblems.push('only excerpts or headlines were read, and the report doesn’t say so');
   const emptyProblems = (e.empty ?? []).filter((k) => r[k].length > 0).map((k) => `${k} should be empty, has ${r[k].length}`);
   checks.push(
     check(

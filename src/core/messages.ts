@@ -15,6 +15,7 @@ import type { PreviewLine } from './story/package';
 import type {
   ClueSource,
   DetailLabel,
+  EvidenceDepth,
   HeadlineVerdict as StoryHeadlineVerdict,
   InvestigationConfidence,
   MatchStatus,
@@ -105,8 +106,27 @@ const STORY = {
     news: 'News',
     opinion: 'Opinion',
     social: 'Social media post',
-    other: 'Website',
+    other: 'Unrecognised website',
   } satisfies Record<SourceKind, string>,
+  /** How much of an article LinkPeek had, on each source's line. */
+  depth: { headline: 'Headline only', excerpt: 'Short excerpt', extended: 'Long extract', full: 'Full text' } satisfies Record<EvidenceDepth, string>,
+  kindCount: {
+    primary: ['official source', 'official sources'],
+    agency: ['news agency', 'news agencies'],
+    news: ['news organisation', 'news organisations'],
+    opinion: ['opinion piece', 'opinion pieces'],
+    social: ['social media post', 'social media posts'],
+    other: ['unrecognised website', 'unrecognised websites'],
+  } satisfies Record<SourceKind, [string, string]>,
+  /** "4 sources, 3 independent reports: 2 news organisations, 1 news agency, 1 unrecognised website." */
+  sourcesSummary: (n: number, independent: number | undefined, kinds: string) =>
+    `${n} source${n === 1 ? '' : 's'}${independent !== undefined && independent < n ? `, ${independent} independent report${independent === 1 ? '' : 's'}` : ''}: ${kinds}.`,
+  /** What was read, when it differs from source to source: "the full text of 1, short excerpts of 2". */
+  readParts: { full: ['the full text of 1', 'the full text of {n}'], extended: ['a long extract of 1', 'long extracts of {n}'], excerpt: ['a short excerpt of 1', 'short excerpts of {n}'], headline: ['only the headline of 1', 'only the headlines of {n}'] } satisfies Record<EvidenceDepth, [string, string]>,
+  read: (parts: string) => `LinkPeek read ${parts}.`,
+  originalFound: 'The linked article itself is one of the sources.',
+  originalMissing: "The linked article itself wasn't among the results: this report rests on other coverage.",
+  weakTag: 'Weak evidence',
   original: 'The linked article',
   possibleTag: 'Possible match',
   repeats: (n: number) => `Repeats source ${n}`,
@@ -114,7 +134,8 @@ const STORY = {
   note: {
     'single-source': 'Only one independent source was found.',
     developing: 'This story may still be developing. Details may change.',
-    'snippets-only': 'Only headlines and short snippets were available, not the articles themselves.',
+    'headlines-only': "Only the headlines of matching reports were available: LinkPeek couldn't read any of the articles.",
+    'excerpts-only': 'LinkPeek read only short excerpts chosen by the search service, not the articles themselves. A detail or qualification further down an article may be missing.',
     'older-story': 'Some results were about an earlier story with similar wording. They were left out.',
     syndicated: 'Some sources repeat the same report. Repeats count once.',
     'vague-link':

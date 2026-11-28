@@ -2,19 +2,23 @@
  * Exa (https://exa.ai), the default provider. Free: $10 of credit a month,
  * no card needed, so it can't be charged; when the credit runs out, Tavily
  * takes over (index.ts). One request returns the
- * results and short highlights from each page, so LinkPeek's server never
- * fetches or scrapes article pages itself: no server-side fetching of
- * arbitrary addresses, and no attempt to get past paywalls.
+ * results, short highlights from each page and, since 28 Nov 2026, the
+ * page's text (up to PAGE_TEXT_CHARS), so LinkPeek's server never fetches or
+ * scrapes article pages itself: no server-side fetching of arbitrary
+ * addresses, and no attempt to get past paywalls (Exa gives what it has).
  *
  * Request and response shapes from Exa's API reference (POST /search, read
- * 26 Nov 2026). Exa reports what each request cost (costDollars.total), and
- * that figure is logged. Measured live on 27 Nov 2026: a search as LinkPeek
- * sends it (8 results with highlights) cost $0.007 in all, highlights
- * included (costDollars: {"total":0.007,"search":{"neural":0.007}}).
+ * 26 and 28 Nov 2026). Exa reports what each request cost (costDollars.total),
+ * and that figure is logged. Measured live: a search as LinkPeek sends it cost
+ * $0.007 with highlights (27 Nov) and still $0.007 with highlights and page
+ * text (28 Nov, costDollars {"total":0.007,"search":{"neural":0.007}}): on
+ * /search, contents up to 10 results are in the search's price. Exa may cut a
+ * page's text itself (a Reuters report came back at exactly 1,000
+ * characters), so how much was received decides the evidence depth (D75).
  */
 import type { SearchQuery } from '../queries.js';
 import { isoDay } from '../text.js';
-import { callJson, MAX_PASSAGE_CHARS, MAX_PASSAGES, plain, webUrl, type SearchHit, type SearchOptions, type SearchOutcome, type SearchProvider } from './types.js';
+import { callJson, MAX_PASSAGE_CHARS, MAX_PASSAGES, PAGE_TEXT_CHARS, pageText, plain, webUrl, type SearchHit, type SearchOptions, type SearchOutcome, type SearchProvider } from './types.js';
 
 export const EXA_URL = 'https://api.exa.ai/search';
 const TIMEOUT_MS = 8000;
@@ -43,7 +47,8 @@ export class ExaProvider implements SearchProvider {
       ...(opts.since ? { startPublishedDate: `${opts.since}T00:00:00.000Z` } : {}),
       ...(opts.until ? { endPublishedDate: `${opts.until}T23:59:59.999Z` } : {}),
       ...(opts.excludeDomains?.length ? { excludeDomains: opts.excludeDomains.slice(0, 20) } : {}),
-      contents: { highlights: { query: query.text, maxCharacters: 1200 } },
+      // Highlights for matching; the page's text (no extra cost on /search) for evidence.
+      contents: { highlights: { query: query.text, maxCharacters: 1200 }, text: { maxCharacters: PAGE_TEXT_CHARS } },
     };
     const res = await callJson(
       this.fetchImpl,
@@ -65,13 +70,18 @@ export class ExaProvider implements SearchProvider {
       const title = plain(r?.title);
       if (!url || !title) continue;
       const highlights = Array.isArray(r.highlights) ? r.highlights.map(plain).filter(Boolean) : [];
-      const text = plain(r.text);
+      const raw = typeof r.text === 'string' ? r.text : '';
+      const text = plain(raw);
+      const passages = (highlights.length ? highlights : text ? [text] : []).slice(0, MAX_PASSAGES).map((p) => p.slice(0, MAX_PASSAGE_CHARS));
+      // As much as Exa returned was asked for: it may have cut the page there.
+      const page = raw ? pageText(raw, title, { cut: raw.length >= PAGE_TEXT_CHARS }) : undefined;
       hits.push({
         url,
         title,
         ...(isoDay(typeof r.publishedDate === 'string' ? r.publishedDate : undefined) ? { published: isoDay(r.publishedDate as string) } : {}),
         ...(plain(r.author) ? { author: plain(r.author).slice(0, 100) } : {}),
-        passages: (highlights.length ? highlights : text ? [text] : []).slice(0, MAX_PASSAGES).map((p) => p.slice(0, MAX_PASSAGE_CHARS)),
+        passages,
+        ...(page ? { text: page.text, depth: page.depth } : { depth: passages.length ? 'excerpt' : 'headline' }),
       });
     }
     const reported = Number(data.costDollars?.total);

@@ -128,6 +128,21 @@ test('the headline verdict: what the reporting says about the headline, with its
   await expect(card.locator('.story-source').nth(1)).toContainText('updated');
 });
 
+test('the sources say how many independent reports there are, what LinkPeek read, and whether the linked article was found', async ({ page, context }) => {
+  await agreeOnce(context);
+  await story(context, HEADLINE_LINK);
+  const card = storyCard(page);
+  await expect(card.getByRole('heading', { name: 'Supporting sources' })).toBeVisible({ timeout: 10_000 });
+  const summary = card.locator('.story-sources-summary');
+  await expect(summary).toContainText('2 sources: 2 news organisations.');
+  await expect(summary).toContainText('LinkPeek read the full text of 1 and a short excerpt of 1.');
+  await expect(summary).toContainText("The linked article itself wasn't among the results");
+  await expect(card.locator('.story-source').nth(0)).toContainText('Full text');
+  await expect(card.locator('.story-source').nth(1)).toContainText('Short excerpt');
+  // A weak claim is tagged where it can be seen.
+  await expect(card.locator('.reported .story-weak-tag')).toHaveText('Weak evidence');
+});
+
 test('asking about the same link again uses the report kept on this computer', async ({ page, context }) => {
   await agreeOnce(context);
   await story(context, HEADLINE_LINK);

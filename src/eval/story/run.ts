@@ -103,6 +103,10 @@ export interface CaseMetrics {
   articlesAnalysed: number;
   model?: string;
   aiCalls: number;
+  /** The prompt's length (system and user message, in characters) when the AI was asked: for the live run's worst-case cost. */
+  promptChars?: number;
+  /** A live run would ask the real Claude for this case (its searches are recorded or synthetic, not simulated). */
+  liveClaude?: boolean;
   aiFailure?: string;
   inputTokens?: number;
   outputTokens?: number;
@@ -370,13 +374,13 @@ interface ModelSetup {
   source: () => AiSource;
   note: () => string | undefined;
   claudeRecordedAt: () => string | undefined;
-  calls: { count: number };
+  calls: { count: number; promptChars?: number };
   problems: string[];
   save?: () => void;
 }
 
 function setUpModel(c: E2ECase, opts: RunOptions): ModelSetup {
-  const calls = { count: 0 };
+  const calls: { count: number; promptChars?: number } = { count: 0 };
   const problems: string[] = [];
   const claudeFile = join(opts.recordingsDir, `${c.id}.claude.json`);
   if (opts.search === 'record') {
@@ -454,6 +458,8 @@ function setUpModel(c: E2ECase, opts: RunOptions): ModelSetup {
   let recordedAt: string | undefined;
   const client = replyClient((params) => {
     calls.count++;
+    // What the live run's spending guard would count for this prompt (harness.ts, BudgetedModel).
+    calls.promptChars = STORY_SYSTEM_PROMPT.length + userMessageOf(params).length;
     // For writing stand-ins: STORY_E2E_DUMP_PROMPTS=<dir> saves each prompt the AI would get.
     const dump = process.env.STORY_E2E_DUMP_PROMPTS;
     if (dump) {
@@ -651,6 +657,8 @@ export async function runCase(c: E2ECase, opts: RunOptions): Promise<CaseResult>
     articlesAnalysed: num('candidates') ?? 0,
     ...(claude && typeof line?.model === 'string' ? { model: line.model } : aiSource === 'stand-in' ? { model: 'stand-in' } : aiSource === 'simulated-failure' ? { model: 'simulated failure' } : {}),
     aiCalls,
+    ...(ai.calls.promptChars ? { promptChars: ai.calls.promptChars } : {}),
+    ...(aiCalls && c.search.kind !== 'simulated' && c.search.kind !== 'none' && !c.aiFailure ? { liveClaude: true } : {}),
     ...(typeof line?.aiFailure === 'string' ? { aiFailure: line.aiFailure } : {}),
     ...(claude && num('inputTokens') !== undefined ? { inputTokens: num('inputTokens'), outputTokens: num('outputTokens'), cacheReadTokens: num('cacheReadTokens'), cacheWriteTokens: num('cacheWriteTokens') } : {}),
     ...(num('ungroundedDropped') !== undefined ? { ungroundedDropped: num('ungroundedDropped') } : {}),

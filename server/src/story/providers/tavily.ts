@@ -2,7 +2,10 @@
  * Tavily (https://tavily.com), the free backup provider. Free: 1,000 credits
  * a month, no card needed. A "basic" search costs 1 credit and returns, for
  * each result, up to three passages of about 500 characters from the page,
- * joined with " [...] ". Like Exa, LinkPeek's server never fetches the pages.
+ * joined with " [...] ", and (asked for since 28 Nov 2026, still 1 credit:
+ * measured) the page's whole text, menus and all, from which the article is
+ * taken where it can be found (articleStart). Like Exa, LinkPeek's server
+ * never fetches the pages.
  *
  * Request and response shapes from Tavily's API reference (POST /search,
  * read 27 Nov 2026): Bearer key, `topic` "news" or "general",
@@ -15,7 +18,7 @@
  */
 import type { SearchQuery } from '../queries.js';
 import { isoDay } from '../text.js';
-import { callJson, MAX_PASSAGE_CHARS, MAX_PASSAGES, plain, webUrl, type SearchHit, type SearchOptions, type SearchOutcome, type SearchProvider } from './types.js';
+import { articleStart, callJson, MAX_PASSAGE_CHARS, MAX_PASSAGES, pageText, plain, webUrl, type SearchHit, type SearchOptions, type SearchOutcome, type SearchProvider } from './types.js';
 
 export const TAVILY_URL = 'https://api.tavily.com/search';
 const TIMEOUT_MS = 8000;
@@ -43,7 +46,8 @@ export class TavilyProvider implements SearchProvider {
       search_depth: 'basic',
       max_results: Math.min(opts.limit, 20),
       include_answer: false,
-      include_raw_content: false,
+      // The page's plain text, for evidence (D75): no extra credit (measured 28 Nov 2026).
+      include_raw_content: 'text',
       include_usage: true,
       include_published_date: true,
       ...(opts.since ? { start_date: opts.since } : {}),
@@ -76,7 +80,9 @@ export class TavilyProvider implements SearchProvider {
         .slice(0, MAX_PASSAGES)
         .map((p) => p.slice(0, MAX_PASSAGE_CHARS));
       const published = isoDay(typeof r.published_date === 'string' ? r.published_date : undefined);
-      hits.push({ url, title, ...(published ? { published } : {}), passages });
+      const body = typeof r.raw_content === 'string' ? articleStart(r.raw_content, title, passages) : undefined;
+      const page = body ? pageText(body, title) : undefined;
+      hits.push({ url, title, ...(published ? { published } : {}), passages, ...(page ? { text: page.text, depth: page.depth } : { depth: passages.length ? 'excerpt' : 'headline' }) });
     }
     const credits = Number(data.usage?.credits);
     return { ok: true, hits, costUsd: (Number.isFinite(credits) && credits >= 0 ? credits : 1) * CREDIT_USD, provider: this.name };

@@ -12,7 +12,33 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { aiCostUsd, DEFAULT_STORY_MODEL, MAX_TOKENS } from '../../../server/src/story/analyse';
+import { worstCaseUsd } from './harness';
 import type { CaseResult } from './run';
+
+/**
+ * What the live AI run would cost, from this run's own prompts: how many cases would ask the real Claude,
+ * the most it could cost (the spending guard's own worst case for each prompt, summed), and a typical figure.
+ */
+function liveCost(cases: CaseResult[], limitUsd: number): string[] {
+  const live = cases.filter((c) => c.metrics.liveClaude && c.metrics.promptChars);
+  if (!live.length) return [];
+  const worstEach = live.map((c) => worstCaseUsd(DEFAULT_STORY_MODEL, c.metrics.promptChars!));
+  const worst = worstEach.reduce((a, b) => a + b, 0);
+  // Typical: about 4 characters a token, no caching assumed, 2,500 output tokens (a report with its passages).
+  const typical = live.reduce((s, c) => s + aiCostUsd(DEFAULT_STORY_MODEL, { inputTokens: Math.ceil(c.metrics.promptChars! / 4), outputTokens: 2500, cacheReadTokens: 0, cacheWriteTokens: 0 }), 0);
+  const longest = Math.max(...live.map((c) => c.metrics.promptChars!));
+  return [
+    '### What the live AI run would cost',
+    '',
+    `${live.length} of these cases would ask the real Claude (${DEFAULT_STORY_MODEL}) in \`npm run test:story-e2e:live\`; the others use simulated services or never reach the AI. From this run's own prompts (the longest ${longest.toLocaleString('en-GB')} characters, system prompt included):`,
+    '',
+    `- **At most ${usd(worst)}**: the spending guard's worst case for each prompt (counted at one token per 2.5 characters, all billed as a cache write, the dearest input, plus the whole ${MAX_TOKENS.toLocaleString('en-GB')}-token output allowance), summed. The most for one call: ${usd(Math.max(...worstEach))}.`,
+    `- **Typically about ${usd(typical)}**: about 4 characters a token, no caching, 2,500 output tokens a report.`,
+    `- The guard refuses any call that could take spending past ${usd(limitUsd, 2)} (\`STORY_E2E_BUDGET_USD\`). ${worst <= limitUsd ? 'At most, all of them fit within it.' : 'At the worst case, not all of them fit: the later ones would be refused, never paid for.'}`,
+    '',
+  ];
+}
 
 export interface RunFile {
   mode: 'offline' | 'record' | 'live';
@@ -232,6 +258,7 @@ export function writeReport(root: string): { md: string; json: string } {
     md.push(`## ${title}`, '', `Ran ${run.startedAt.slice(0, 16).replace('T', ' ')} UTC.${run.budget ? ` Claude budget: ${usd(run.budget.spentUsd)} spent of ${usd(run.budget.limitUsd, 2)} (${run.budget.calls} call(s), ${run.budget.refused} refused by the budget guard).` : ''}`, '');
     if (run.skipped.length) md.push('Skipped:', ...run.skipped.map((s) => `- \`${s.id}\`: ${s.reason}`), '');
     md.push('### Metrics per investigation', '', ...metricsTable(run.cases), '');
+    if (run.mode === 'offline') md.push(...liveCost(run.cases, 0.25));
     if (!isLive) md.push('Offline times have no network in them. Costs offline are what the recorded requests cost when they were recorded (Exa’s own figure, Tavily’s own credit count); synthetic searches cost nothing.', '');
     for (const r of run.cases) md.push(...caseSection(r, isLive));
     if (run.extra.length) {

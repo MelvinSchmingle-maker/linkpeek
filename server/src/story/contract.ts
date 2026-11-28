@@ -78,10 +78,18 @@ export type InvestigationConfidence = 'strong' | 'partial' | 'conflicting' | 'in
 export type SourceKind = 'primary' | 'agency' | 'news' | 'opinion' | 'social' | 'other';
 export type DetailLabel = 'who' | 'what' | 'where' | 'when' | 'why';
 export type ReportStatus = 'report' | 'no-results' | 'no-match' | 'report-failed';
+/**
+ * How much of an article LinkPeek had for a source (D75): only its headline; a short excerpt the search service
+ * chose; a long part of its text; or all of its text, as the search service extracted it.
+ */
+export type EvidenceDepth = 'headline' | 'excerpt' | 'extended' | 'full';
 export type ReportNote =
   | 'single-source'
   | 'developing'
-  | 'snippets-only'
+  /** Every source came with its headline only. */
+  | 'headlines-only'
+  /** No source came with more than a short excerpt chosen by the search service: no article was read further. */
+  | 'excerpts-only'
   | 'older-story'
   | 'syndicated'
   | 'vague-link'
@@ -107,12 +115,26 @@ export interface Claim {
 
 export type HeadlineVerdict = 'accurate' | 'partly-accurate' | 'misleading' | 'unverified';
 
+/**
+ * What a headline verdict rests on, as the rules found it (headline.ts, D76). supported: everything the headline
+ * states is in the reports. contradicted: the reports say otherwise (a different outcome, a denial, a different
+ * number). alleged: stated as fact, only alleged in the reports. unsupported: a detail the articles, read in
+ * full, don't have. disputed: the reports disagree. insufficient: too little to judge (no matching reports from
+ * established sources, no real passage, or only excerpts, where a detail could be further down the article).
+ */
+export interface HeadlineBasis {
+  kind: 'supported' | 'contradicted' | 'alleged' | 'unsupported' | 'disputed' | 'insufficient';
+  /** The headline's words concerned, when there are any. */
+  terms?: string[];
+}
+
 /** Does the link's headline say what the reporting establishes (headline.ts)? */
 export interface HeadlineCheck {
   headline: string;
   verdict: HeadlineVerdict;
   reason: string;
   evidence: Evidence[];
+  basis: HeadlineBasis;
 }
 
 export interface ReportSource {
@@ -131,6 +153,8 @@ export interface ReportSource {
   updated?: string;
   /** The article carries a correction notice; what it now says was used. */
   corrected?: boolean;
+  /** How much of the article LinkPeek had (D75). */
+  depth: EvidenceDepth;
 }
 
 export interface StoryReport {
@@ -144,6 +168,8 @@ export interface StoryReport {
   reported: Claim[];
   unclear: Claim[];
   sources: ReportSource[];
+  /** Independent reports among the sources: copies of one report, or one agency's story, count once. */
+  independent?: number;
   setAside: number;
   notes: ReportNote[];
   /** Headline accuracy, when the link had a headline and a report was written. */

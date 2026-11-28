@@ -33,7 +33,7 @@ import { aiCostUsd, type StoryModel } from './analyse.js';
 import type { SourceKind, StoryErrorCode, StoryReport, StoryRequest } from './contract.js';
 import { GOOD_SCORE, linkProfile, MIN_CANDIDATE_SCORE, scoreHits, type LinkProfile, type Scored } from './match.js';
 import { storyUserMessage } from './prompt.js';
-import type { SearchFailure, SearchHit, SearchOptions, SearchProvider } from './providers/types.js';
+import { DEPTH_RANK, depthOf, type SearchFailure, type SearchHit, type SearchOptions, type SearchProvider } from './providers/types.js';
 import { buildQueries, type QueryPlan, type QueryPurpose, type SearchQuery } from './queries.js';
 import { cleanHits } from './hygiene.js';
 import { finalise, noMatch, noResults, reportFailed, type Stats } from './report.js';
@@ -185,8 +185,9 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
       if (isRedirectWrapper(h.url)) continue;
       const key = canonicalKey(h.url);
       const prev = merged.get(key);
-      // The same page twice: keep the copy with more text.
-      if (!prev || h.passages.length + (h.description ? 1 : 0) > prev.passages.length + (prev.description ? 1 : 0)) merged.set(key, h);
+      // The same page twice: keep the copy with more of the article, then more text.
+      const amount = (x: SearchHit) => DEPTH_RANK[depthOf(x)] * 100 + x.passages.length + (x.description ? 1 : 0);
+      if (!prev || amount(h) > amount(prev)) merged.set(key, h);
     }
     return undefined;
   };
@@ -230,7 +231,8 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   const grouping = groupReports(hits);
   const kinds: SourceKind[] = hits.map((h) => sourceKind(h.url, h.title));
   const publishers = hits.map((h) => publisherName(h.url, h.publisher));
-  const snippetsOnly = hits.every((h) => h.passages.length === 0);
+  // How much of each article LinkPeek has (D75): the report says so, and confidence depends on it.
+  const depths = hits.map(depthOf);
 
   // The AI call is the long part: it decides which results are the story, then writes. The checks after it are quick.
   const ai = await deps.model.analyse(storyUserMessage(req, candidates, grouping, now.toISOString().slice(0, 10), kinds, publishers));
@@ -247,7 +249,7 @@ export async function investigate(req: StoryRequest, deps: InvestigateDeps, onSt
   metrics.cacheReadTokens = ai.usage.cacheReadTokens;
   metrics.cacheWriteTokens = ai.usage.cacheWriteTokens;
   const stats: Stats = { ungrounded: 0, unverified: 0, weak: 0, contradicted: 0 };
-  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, snippetsOnly, withdrawn, searchedFor, now, stats });
+  const report = finalise({ req, profile, candidates, grouping, kinds, publishers, ai: ai.report, setAsideEarly: setAside, olderSetAside, depths, withdrawn, searchedFor, now, stats });
   metrics.ungroundedDropped = stats.ungrounded;
   metrics.unverifiedDropped = stats.unverified;
   metrics.weakClaims = stats.weak;

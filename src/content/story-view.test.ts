@@ -187,6 +187,47 @@ describe('evidence, headline accuracy and source marks', () => {
   });
 });
 
+describe('what LinkPeek read, and how independent the sources are (D75, D77)', () => {
+  const deep = report({
+    independent: 2,
+    sources: [
+      { ...report().sources[0]!, depth: 'full' },
+      { ...report().sources[1]!, depth: 'excerpt', copyOf: 1 },
+      { ...report().sources[2]!, depth: 'extended', original: true },
+    ],
+  });
+
+  it('says how many sources and independent reports, of which kinds, what was read, and whether the linked article was found', () => {
+    const v = toStoryView({ kind: 'report', report: deep });
+    expect(v.sourcesSummary).toEqual([
+      '3 sources, 2 independent reports: 2 news organisations, 1 official source.',
+      'LinkPeek read the full text of 1, a long extract of 1 and a short excerpt of 1.',
+      'The linked article itself is one of the sources.',
+    ]);
+    expect(v.sources[0]!.meta).toContain('Full text');
+    expect(v.sources[1]!.meta).toContain('Short excerpt');
+  });
+
+  it('with only excerpts, the note says so plainly (once), and an unknown site is called unrecognised', () => {
+    const r = report({ notes: ['excerpts-only'], sources: report().sources.map((s, i) => ({ ...s, depth: 'excerpt' as const, ...(i === 2 ? { kind: 'other' as const } : {}) })) });
+    const v = toStoryView({ kind: 'report', report: r });
+    expect(v.notes.join(' ')).toMatch(/only short excerpts chosen by the search service, not the articles themselves/);
+    expect(v.sourcesSummary!.join(' ')).not.toMatch(/LinkPeek read/);
+    expect(v.sourcesSummary![0]).toBe('3 sources: 2 news organisations, 1 unrecognised website.');
+    expect(v.sourcesSummary).toContain("The linked article itself wasn't among the results: this report rests on other coverage.");
+    expect(v.sources[2]!.meta).toContain('Unrecognised website');
+  });
+
+  it('a weak claim is tagged where it can be seen; the evidence stays closed', () => {
+    const r = report({ reported: [{ text: 'He was 34.', sources: [2], evidence: [{ source: 2, quote: 'Rivers dies aged 34 in Paris' }], weak: true }] });
+    const card = renderStoryCard(toStoryView({ kind: 'report', report: r }), 'https://paper.example.org/a', { onClose: () => undefined, onConfirm: () => undefined, onCancel: () => undefined, onRetry: () => undefined });
+    const claim = [...card.querySelectorAll('.reported .claim')].find((c) => c.textContent?.includes('He was 34.'))!;
+    expect(claim.querySelector('.story-weak-tag')?.textContent).toBe('Weak evidence');
+    expect(claim.querySelector('details.story-evidence')?.hasAttribute('open')).toBe(false);
+    expect(card.querySelector('.story-sources-summary')?.textContent).toContain('3 sources');
+  });
+});
+
 describe('story card (DOM)', () => {
   const handlers = { onClose: () => undefined, onConfirm: () => undefined, onCancel: () => undefined, onRetry: () => undefined };
 

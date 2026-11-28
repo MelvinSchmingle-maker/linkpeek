@@ -235,14 +235,15 @@ export function creditedAgency(hit: SearchHit): string | undefined {
   if (own) return own;
   const author = AGENCY_AUTHOR[(hit.author ?? '').trim().toLowerCase()];
   if (author) return author;
-  const text = [hit.description ?? '', ...hit.passages].join(' \n ');
+  // A dateline or byline opens an article: only the first paragraphs of its text count, not a teaser further down.
+  const text = [hit.description ?? '', ...hit.passages, ...(hit.text ?? []).slice(0, 2)].join(' \n ');
   for (const [pattern, name] of AGENCY_CREDIT) if (pattern.test(text)) return name;
   return undefined;
 }
 
 /** The publication a report says it first appeared in, if it says so. */
 export function firstAppearedIn(hit: SearchHit): string | undefined {
-  const m = [hit.description ?? '', ...hit.passages].join(' ').match(FIRST_APPEARED);
+  const m = [hit.description ?? '', ...hit.passages, ...(hit.text ?? [])].join(' ').match(FIRST_APPEARED);
   return (m?.[1] ?? m?.[2])?.trim();
 }
 

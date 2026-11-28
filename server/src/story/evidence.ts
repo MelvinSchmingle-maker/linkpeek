@@ -198,9 +198,12 @@ export function norm(s: string): string {
     .trim();
 }
 
-/** A source's text as the checks read it. Passages are kept apart, so a quote can't run from one into the next. */
+/**
+ * A source's text as the checks read it: its headline, description, the service's excerpts and, when it gave
+ * them, the article's own paragraphs. Passages are kept apart, so a quote can't run from one into the next.
+ */
 export function sourceText(hit: SearchHit): string {
-  return [hit.title, hit.description ?? '', ...hit.passages].filter(Boolean).join(' ¶ ');
+  return [hit.title, hit.description ?? '', ...hit.passages, ...(hit.text ?? [])].filter(Boolean).join(' ¶ ');
 }
 
 const EDGE = /^[\s"'.,;:!?()[\]-]+|[\s"'.,;:!?()[\]-]+$/g;
@@ -215,9 +218,18 @@ export function quoteFound(quote: string, text: string): boolean {
   if (!parts.length || parts.some((p) => p.split(' ').length < 2)) return false;
   if (parts.reduce((n, p) => n + p.split(' ').length, 0) < MIN_QUOTE_WORDS) return false;
   const t = norm(text);
+  // Whole words only: a quote cut off inside a word ("Port Elsw") isn't one copied word for word.
+  const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+  const find = (p: string, from: number): number => {
+    for (let at = t.indexOf(p, from); at >= 0; at = t.indexOf(p, at + 1)) {
+      const edgesOk = !(isWordChar(p[0]) && isWordChar(t[at - 1])) && !(isWordChar(p[p.length - 1]) && isWordChar(t[at + p.length]));
+      if (edgesOk) return at;
+    }
+    return -1;
+  };
   let from = 0;
   for (const p of parts) {
-    const at = t.indexOf(p, from);
+    const at = find(p, from);
     if (at < 0) return false;
     from = at + p.length;
   }

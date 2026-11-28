@@ -37,10 +37,11 @@
  *   its matching isn't trusted either: no reliable match (D65).
  */
 import type { AiClaim, AiReport } from './analyse.js';
-import type { Claim, Evidence, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
+import type { Claim, Evidence, EvidenceDepth, InvestigationConfidence, MatchStatus, ReportNote, ReportSource, SourceKind, StoryReport, StoryRequest } from './contract.js';
 import { checkClaim, datesWritten, isAllegation, unsupportedSpecifics, type ClaimCheck, type ClaimContext } from './evidence.js';
 import { assessHeadline } from './headline.js';
 import { capMatch, type LinkProfile, type Scored } from './match.js';
+import { depthOf, readBeyondExcerpt } from './providers/types.js';
 import { ATTRIBUTED, canonicalKey, corroborates, corroboratingGroups, wellSupported, type Grouping } from './sources.js';
 import { clip, daysBetween, words } from './text.js';
 
@@ -68,8 +69,8 @@ export interface FinaliseInput {
   setAsideEarly: number;
   /** Some set-aside results were from a different time than the link. */
   olderSetAside: boolean;
-  /** No result came with more than its headline and snippet. */
-  snippetsOnly: boolean;
+  /** How much of each candidate's article LinkPeek has (D75), by candidate. */
+  depths: EvidenceDepth[];
   /** Results left out because their publisher withdrew them (hygiene.ts). */
   withdrawn?: number;
   searchedFor: string;
@@ -250,7 +251,10 @@ export function finalise(input: FinaliseInput): StoryReport {
   else if (confidence === 'conflicting') confidence = 'partial';
   if (confidence === 'strong') {
     // A source contradicting part of the report rules out strong evidence.
-    const enough = match === 'strong' && wellSupported([...strongIdx], grouping, kinds) && confirmed.length > 0 && !input.snippetsOnly && !stats.contradicted;
+    // Strong evidence also needs an article read beyond the search service's excerpt: a qualification can be
+    // further down (D75). From an established source, among the strong matches.
+    const read = [...strongIdx].some((i) => (corroborates(kinds[i]!) || kinds[i] === 'primary') && readBeyondExcerpt(input.depths[i]!));
+    const enough = match === 'strong' && wellSupported([...strongIdx], grouping, kinds) && confirmed.length > 0 && read && !stats.contradicted;
     if (!enough) confidence = 'partial';
   }
 
@@ -266,7 +270,10 @@ export function finalise(input: FinaliseInput): StoryReport {
   const newest = kept.map((i) => candidates[i]!.hit.published).filter((d): d is string => Boolean(d)).sort().pop();
   const fresh = newest !== undefined && (daysBetween(newest, today) ?? Infinity) <= FRESH_DAYS;
   if (ai.developing || fresh) notes.push('developing');
-  if (input.snippetsOnly) notes.push('snippets-only');
+  // What LinkPeek actually read, said plainly: headlines only, or excerpts only (D75).
+  const keptDepths = kept.map((i) => input.depths[i]!);
+  if (keptDepths.every((d) => d === 'headline')) notes.push('headlines-only');
+  else if (!keptDepths.some(readBeyondExcerpt)) notes.push('excerpts-only');
   if (rejectedOlder) notes.push('older-story');
   notes.push(...withdrawnNote);
 
@@ -287,8 +294,10 @@ export function finalise(input: FinaliseInput): StoryReport {
       ...(grouping.via[i] ? { via: grouping.via[i] } : {}),
       ...(h.corrected ? { corrected: true } : {}),
       ...(canonicalKey(h.url) === canonicalKey(req.url) ? { original: true } : {}),
+      depth: input.depths[i]!,
     };
   });
+  const independent = keptGroups.size;
 
   if (vague) {
     // A link with no name and no date can't be pinned to one story: live, "Pop star found dead in hotel room"
@@ -305,6 +314,7 @@ export function finalise(input: FinaliseInput): StoryReport {
       reported: [],
       unclear: [],
       sources: sources.map((s) => ({ ...s, match: 'possible' as const })),
+      independent,
       // "Older story left out" and "developing" are judged against a story; here there isn't one.
       notes: notes.filter((n) => n !== 'older-story' && n !== 'developing'),
     };
@@ -328,7 +338,7 @@ export function finalise(input: FinaliseInput): StoryReport {
       return { ...base, setAside: input.setAsideEarly + candidates.length, status: 'no-match', match: 'none', confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources: [], notes: [...(rejectedOlder ? (['older-story'] as const) : []), ...withdrawnNote] };
     }
     // Nothing usable was written: the closest sources are listed as possible matches, with no claims at all.
-    return { ...base, status: 'report-failed', match, confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources, notes };
+    return { ...base, status: 'report-failed', match, confidence: 'insufficient', whatHappened: [], details: [], confirmed: [], reported: [], unclear: [], sources, independent, notes };
   }
 
   // When nothing written gives the event's date, say so rather than leave it to be guessed from publication dates.
@@ -338,7 +348,7 @@ export function finalise(input: FinaliseInput): StoryReport {
   // 7. Headline accuracy, against strong matches from sources that can corroborate or are official.
   const eligible = [...strongIdx].filter((i) => corroborates(kinds[i]!) || kinds[i] === 'primary');
   const headlineText = req.headline && req.headline.confidence !== 'low' ? req.headline.text : undefined;
-  const headline = assessHeadline({ headline: headlineText, ai: ai.headline, vague, hits, eligible, number, extras, clean });
+  const headline = assessHeadline({ headline: headlineText, ai: ai.headline, vague, hits, eligible, number, extras, clean, depths: input.depths });
 
   const strip = <T extends Checked>(c: T): Omit<T, 'cited'> => {
     const rest: Omit<T, 'cited'> & { cited?: number[] } = { ...c };
@@ -362,6 +372,7 @@ export function finalise(input: FinaliseInput): StoryReport {
     reported: onlyReported.map(strip),
     unclear: unclear.map(strip),
     sources,
+    independent,
     notes,
     ...(headline ? { headline } : {}),
   };
@@ -422,6 +433,7 @@ export function reportFailed(
     match: 'possible',
     ...(grouping.via[i] ? { via: grouping.via[i] } : {}),
     ...(canonicalKey(c.hit.url) === canonicalKey(req.url) ? { original: true } : {}),
+    depth: depthOf(c.hit),
   }));
   return {
     ...emptyReport('no-match', setAsideEarly + candidates.length - close.length, [], searchedFor, now),

@@ -17,6 +17,7 @@
 import type { AiReport } from '../../../server/src/story/analyse';
 import type { Quote } from '../../../server/src/story/evidence';
 import type { Expectation } from './validate';
+import { PAGE_TEXT_CHARS } from '../../../server/src/story/providers/types';
 
 export interface PromptSource {
   id: number;
@@ -128,6 +129,8 @@ export interface ExaResult {
   publishedDate?: string;
   author?: string;
   highlights?: string[];
+  /** The page's text, as Exa returns it when asked (D75): made up, for the evidence-depth cases. */
+  text?: string;
 }
 
 /** How one search service behaves in a simulated case. */
@@ -708,7 +711,7 @@ const contentMissing: E2ECase = {
   expect: {
     outcome: ['report'],
     confidence: ['partial', 'insufficient'],
-    notes: ['snippets-only'],
+    notes: ['headlines-only'],
     names: [/Gull Point/],
   },
 };
@@ -1612,6 +1615,133 @@ const syndicationIndependent: E2ECase = {
   expect: { outcome: ['report'], match: ['strong'], names: [/Gullholm/], notes: ['syndicated'], confirmedMust: [/40 turbines/], notConfirmed: [/2028/, /objected/], minSources: 4, headline: ['accurate'] },
 };
 
+// ---------- How much of each article was read (D75, D76, synthetic) ----------
+//
+// Made-up page text, as Exa returns it when asked: real recordings can't show this, because they keep only
+// short excerpts (this repository is public).
+
+/** A made-up article's text: these sentences as paragraphs, repeated until it's at least `min` characters. */
+const madeUpText = (sentences: string[], min: number) => {
+  const out: string[] = [];
+  for (let i = 0; out.join('\n\n').length < min; i++) out.push(`${sentences[i % sentences.length]} (${Math.floor(i / sentences.length) + 1})`);
+  return out.join('\n\n');
+};
+const LIGHTHOUSE = [
+  'The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.',
+  'Workers replaced the lantern room glass and repaired the stone tower, which was damaged in a storm.',
+  'The trust said about 300 people came to the reopening, and the tower will be open every day until March.',
+  'Volunteers from the island helped raise money for the restoration through a public appeal.',
+];
+
+const evidenceDepth: E2ECase = {
+  id: 'evidence-depth',
+  title: 'Four sources read to four depths: full text, a long extract, an excerpt, a headline (synthetic)',
+  covers: ['evidence depth', 'source transparency'],
+  data: 'synthetic',
+  expected:
+    'The Harbour Gazette’s whole article came back, the Elsworth Times’ only up to the length asked for, Coast News as a short excerpt and the Daily Ledger as its headline. Each source must say how much was read, the card must sum it up, and the evidence may be strong: two independent news reports were read beyond their excerpts.',
+  page: { url: 'https://news.example.com/', body: oneLink('https://news.example.com/2026/11/23/gullholm-lighthouse-reopens-after-restoration', 'Gullholm lighthouse reopens after restoration') },
+  search: {
+    kind: 'synthetic',
+    replies: [
+      [
+        { title: 'Gullholm lighthouse reopens after two-year restoration', url: 'https://harbourgazette.example/news/2026/11/23/gullholm-lighthouse-reopens', publishedDate: on('2026-11-23', 9), highlights: [LIGHTHOUSE[0]!], text: madeUpText(LIGHTHOUSE, 1800) },
+        { title: 'Visitors return to restored Gullholm lighthouse', url: 'https://elsworthtimes.example/news/2026/11/23/lighthouse-visitors-return', publishedDate: on('2026-11-23', 11), highlights: [LIGHTHOUSE[2]!], text: madeUpText(LIGHTHOUSE, 6000).slice(0, PAGE_TEXT_CHARS) },
+        { title: 'Gullholm lighthouse open again', url: 'https://coastnews.example/news/2026/11/23/lighthouse-open-again', publishedDate: on('2026-11-23', 12), highlights: ['The Gullholm lighthouse has reopened after a restoration that took two years.'] },
+        { title: 'Gullholm lighthouse reopens', url: 'https://dailyledger.example/news/2026/11/23/gullholm-lighthouse-reopens', publishedDate: on('2026-11-23', 13) },
+      ],
+    ],
+  },
+  standIn: {
+    note: 'Careful stand-in: cites the articles read beyond their excerpts.',
+    reply: (sources) => {
+      const gazette = site(sources, 'Harbour Gazette');
+      const times = site(sources, 'Elsworth Times');
+      return {
+        matches: allStrong(sources, 'The reopening of the Gullholm lighthouse.'),
+        subject: 'Gullholm lighthouse reopens after two-year restoration',
+        what_happened: [{ text: 'The Gullholm lighthouse reopened to visitors after a two-year restoration.', sources: [...gazette, ...times] }],
+        details: [],
+        facts: [
+          { text: 'The Gullholm lighthouse reopened to visitors after a two-year restoration.', sources: [...gazette, ...times] },
+          { text: 'About 300 people came to the reopening.', sources: [...gazette, ...times] },
+        ],
+        unclear: [],
+        conflicting: false,
+        developing: false,
+        confidence: 'strong',
+        headline: { verdict: 'accurate', reason: 'The reports say the lighthouse reopened after a restoration.', sources: [...gazette, ...times] },
+      };
+    },
+  },
+  expect: {
+    outcome: ['report'],
+    match: ['strong'],
+    confidence: ['strong'],
+    names: [/Gullholm/],
+    depths: { 'harbourgazette.example': 'full', 'elsworthtimes.example': 'extended', 'coastnews.example': 'excerpt', 'dailyledger.example': 'headline' },
+    forbiddenNotes: ['excerpts-only', 'headlines-only'],
+    headline: ['accurate'],
+  },
+  card: { includes: ['LinkPeek read the full text of 1, a long extract of 1, a short excerpt of 1 and only the headline of 1.', 'Full text', 'Long extract', "The linked article itself wasn't among the results"] },
+};
+
+const TERMINAL_EXCERPT = 'The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.';
+const TERMINAL_TEXT = madeUpText(
+  [
+    TERMINAL_EXCERPT,
+    'Ferries will use a temporary pontoon on the north quay while the work is carried out.',
+    'The harbour board said the rebuilding work would take several weeks, and that sailings would continue as normal.',
+    'Passengers have been asked to allow extra time to reach the temporary pontoon.',
+  ],
+  1700,
+);
+const terminalCase = (inFull: boolean): E2ECase => ({
+  id: inFull ? 'detail-read-in-full' : 'detail-excerpt-only',
+  title: inFull ? 'A headline detail missing from an article read in full (synthetic)' : 'The same headline detail, with excerpts only (synthetic)',
+  covers: ['headline accuracy', 'evidence depth'],
+  data: 'synthetic',
+  expected: inFull
+    ? 'The headline says the terminal will close “for 12 months”. Both reports support the closure; the Harbour Gazette, read in full, gives no such length. The main event is supported and a detail is unsupported: partly accurate.'
+    : 'The same story with excerpts only: the length could be further down an article, so the headline can’t be judged partly accurate. Unverified.',
+  page: { url: 'https://news.example.com/', body: oneLink('https://news.example.com/2026/11/25/port-elsworth-ferry-terminal-to-close-for-12-months', 'Port Elsworth ferry terminal to close for 12 months for rebuild') },
+  search: {
+    kind: 'synthetic',
+    replies: [
+      [
+        { title: 'Port Elsworth ferry terminal to close for rebuild', url: 'https://harbourgazette.example/news/2026/11/25/ferry-terminal-rebuild', publishedDate: on('2026-11-25', 9), highlights: [TERMINAL_EXCERPT], ...(inFull ? { text: TERMINAL_TEXT } : {}) },
+        { title: 'Ferry terminal to be rebuilt', url: 'https://elsworthtimes.example/news/2026/11/25/ferry-terminal-rebuilt', publishedDate: on('2026-11-25', 11), highlights: ['Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.'] },
+      ],
+    ],
+  },
+  standIn: {
+    note: 'Careful stand-in: calls the headline partly accurate because no report gives the 12 months. The rules decide whether that can be shown.',
+    reply: (sources) => ({
+      matches: allStrong(sources, 'The rebuilding of the Port Elsworth ferry terminal.'),
+      subject: 'Port Elsworth ferry terminal to close for rebuilding',
+      what_happened: [{ text: 'The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.', sources: idsOf(sources) }],
+      details: [],
+      facts: [{ text: 'The ferry terminal in Port Elsworth will close in January to be rebuilt.', sources: idsOf(sources) }],
+      unclear: [{ text: 'How long the terminal will be closed is not established by the sources reviewed.', sources: [] }],
+      conflicting: false,
+      developing: false,
+      confidence: 'partial',
+      headline: { verdict: 'partly-accurate', reason: 'The reports say the terminal will close to be rebuilt, but none says for how long.', sources: idsOf(sources) },
+    }),
+  },
+  expect: {
+    outcome: ['report'],
+    match: ['strong'],
+    names: [/Port Elsworth/],
+    forbidden: [/12 months/],
+    headline: inFull ? ['partly-accurate'] : ['unverified'],
+    depths: inFull ? { 'harbourgazette.example': 'full', 'elsworthtimes.example': 'excerpt' } : { 'harbourgazette.example': 'excerpt' },
+    ...(inFull ? {} : { notes: ['excerpts-only' as const] }),
+  },
+});
+const detailInFull = terminalCase(true);
+const detailExcerptOnly = terminalCase(false);
+
 export const CASES: E2ECase[] = [
   pope,
   louvreCard,
@@ -1654,6 +1784,9 @@ export const CASES: E2ECase[] = [
   sensationalAccurate,
   oldStory,
   syndicationIndependent,
+  evidenceDepth,
+  detailInFull,
+  detailExcerptOnly,
 ];
 
 /** A careful stand-in for the real cases, written once their recorded results were read. Kept apart so a re-recording shows up as a failed lookup, not silent drift. */

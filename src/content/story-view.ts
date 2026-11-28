@@ -77,6 +77,8 @@ export interface StoryView {
   notes: string[];
   headline?: ViewHeadline;
   sourcesHeading?: string;
+  /** Under the sources heading: how many, how independent, what kinds; what LinkPeek read; whether the linked article was found. */
+  sourcesSummary?: string[];
   sources: ViewSource[];
   searchedFor?: string;
   setAside?: string;
@@ -157,6 +159,28 @@ export function toStoryView(state: StoryState): StoryView {
   }
 }
 
+/**
+ * Three short lines under the sources heading: how many sources, how many
+ * independent reports, and of what kinds; what LinkPeek read of them (left
+ * to the notes when it's only headlines or only excerpts, which say so); and
+ * whether the linked article itself was among them.
+ */
+function sourcesSummary(r: StoryReport): string[] | undefined {
+  if (!r.sources.length) return undefined;
+  const count = <K extends string>(keys: K[]) => keys.reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1), new Map<K, number>());
+  const kinds = [...count(r.sources.map((s) => s.kind))].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${S.kindCount[k][n === 1 ? 0 : 1]}`);
+  const lines = [S.sourcesSummary(r.sources.length, r.independent, kinds.join(', '))];
+  const depths = r.sources.map((s) => s.depth).filter((d): d is NonNullable<typeof d> => Boolean(d));
+  if (depths.length && !r.notes.includes('excerpts-only') && !r.notes.includes('headlines-only')) {
+    const order = ['full', 'extended', 'excerpt', 'headline'] as const;
+    const byDepth = count(depths);
+    const parts = order.filter((d) => byDepth.get(d)).map((d) => S.readParts[d][byDepth.get(d) === 1 ? 0 : 1].replace('{n}', String(byDepth.get(d))));
+    lines.push(S.read(parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]!));
+  }
+  lines.push(r.sources.some((s) => s.original) ? S.originalFound : S.originalMissing);
+  return lines;
+}
+
 function reportView(view: StoryView, r: StoryReport): StoryView {
   view.searchedFor = r.searchedFor || undefined;
   if (r.setAside > 0) view.setAside = S.setAside(r.setAside);
@@ -173,7 +197,7 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
     n: s.n,
     title: s.title,
     url: s.url,
-    meta: [s.publisher, formatDay(s.published), s.updated && s.updated !== s.published ? S.updated(formatDay(s.updated) ?? s.updated) : undefined, S.kind[s.kind]].filter(Boolean).join(' · '),
+    meta: [s.publisher, formatDay(s.published), s.updated && s.updated !== s.published ? S.updated(formatDay(s.updated) ?? s.updated) : undefined, S.kind[s.kind], s.depth ? S.depth[s.depth] : undefined].filter(Boolean).join(' · '),
     tags: [
       ...(s.original ? [S.original] : []),
       ...(s.corrected ? [S.corrected] : []),
@@ -181,6 +205,8 @@ function reportView(view: StoryView, r: StoryReport): StoryView {
       ...(s.copyOf !== undefined ? [S.repeats(s.copyOf)] : s.via && s.kind !== 'agency' ? [S.credits(s.via)] : []),
     ],
   }));
+
+  view.sourcesSummary = sourcesSummary(r);
 
   if (r.status === 'report-failed') {
     view.tags.push({ text: S.match[r.sources.length ? 'possible' : 'none'], tone: r.sources.length ? 'possible' : 'none' });

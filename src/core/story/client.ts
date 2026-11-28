@@ -14,6 +14,8 @@ import type {
   Claim,
   DetailLabel,
   Evidence,
+  EvidenceDepth,
+  HeadlineBasis,
   HeadlineCheck,
   HeadlineVerdict,
   InvestigationConfidence,
@@ -157,7 +159,9 @@ const MATCHES: MatchStatus[] = ['strong', 'possible', 'none'];
 const CONFIDENCES: InvestigationConfidence[] = ['strong', 'partial', 'conflicting', 'insufficient'];
 const KINDS: SourceKind[] = ['primary', 'agency', 'news', 'opinion', 'social', 'other'];
 const LABELS: DetailLabel[] = ['who', 'what', 'where', 'when', 'why'];
-const NOTES: ReportNote[] = ['single-source', 'developing', 'snippets-only', 'older-story', 'syndicated', 'vague-link', 'no-established-sources', 'withdrawn'];
+const NOTES: ReportNote[] = ['single-source', 'developing', 'headlines-only', 'excerpts-only', 'older-story', 'syndicated', 'vague-link', 'no-established-sources', 'withdrawn'];
+const DEPTHS: EvidenceDepth[] = ['headline', 'excerpt', 'extended', 'full'];
+const BASES: HeadlineBasis['kind'][] = ['supported', 'contradicted', 'alleged', 'unsupported', 'disputed', 'insufficient'];
 const VERDICTS: HeadlineVerdict[] = ['accurate', 'partly-accurate', 'misleading', 'unverified'];
 const MAX_SOURCES = 8;
 /** One passage per cited source, so never fewer than the sources a claim can cite. */
@@ -203,6 +207,7 @@ export function parseReport(v: unknown): StoryReport | undefined {
     if (!Number.isInteger(n) || !url || !title || !kind || !m) return undefined;
     const published = typeof s.published === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.published) ? s.published : undefined;
     const updated = typeof s.updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.updated) ? s.updated : undefined;
+    const depth = oneOf(s.depth, DEPTHS);
     sources.push({
       n: n as number,
       title,
@@ -216,6 +221,7 @@ export function parseReport(v: unknown): StoryReport | undefined {
       ...(s.original === true ? { original: true } : {}),
       ...(updated ? { updated } : {}),
       ...(s.corrected === true ? { corrected: true } : {}),
+      ...(depth ? { depth } : {}),
     });
   }
   const numbers = new Set(sources.map((s) => s.n));
@@ -255,8 +261,14 @@ export function parseReport(v: unknown): StoryReport | undefined {
   const notes = Array.isArray(o.notes) ? (o.notes as unknown[]).filter((x): x is ReportNote => NOTES.includes(x as ReportNote)) : [];
   const h = o.headline as Record<string, unknown> | undefined;
   const verdict = h && typeof h === 'object' ? oneOf(h.verdict, VERDICTS) : undefined;
+  const b = h && typeof h === 'object' ? (h.basis as Record<string, unknown> | undefined) : undefined;
+  const basisKind = b && typeof b === 'object' ? oneOf(b.kind, BASES) : undefined;
+  const basisTerms = Array.isArray(b?.terms) ? (b!.terms as unknown[]).map((t) => str(t, 40)).filter((t): t is string => Boolean(t)).slice(0, 5) : [];
   const headline: HeadlineCheck | undefined =
-    h && verdict && str(h.headline, 300) ? { headline: str(h.headline, 300)!, verdict, reason: str(h.reason, 320) ?? '', evidence: evidence(h.evidence) } : undefined;
+    h && verdict && str(h.headline, 300)
+      ? { headline: str(h.headline, 300)!, verdict, reason: str(h.reason, 320) ?? '', evidence: evidence(h.evidence), ...(basisKind ? { basis: { kind: basisKind, ...(basisTerms.length ? { terms: basisTerms } : {}) } } : {}) }
+      : undefined;
+  const independent = Number.isInteger(o.independent) && (o.independent as number) >= 0 && (o.independent as number) <= sources.length ? (o.independent as number) : undefined;
   return {
     status,
     ...(str(o.subject, 160) ? { subject: str(o.subject, 160) } : {}),
@@ -268,6 +280,7 @@ export function parseReport(v: unknown): StoryReport | undefined {
     reported,
     unclear,
     sources,
+    ...(independent !== undefined ? { independent } : {}),
     setAside: Number.isInteger(o.setAside) && (o.setAside as number) >= 0 ? (o.setAside as number) : 0,
     notes: [...new Set(notes)],
     ...(headline ? { headline } : {}),
