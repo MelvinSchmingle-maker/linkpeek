@@ -1,7 +1,7 @@
 {
-  "writtenAt": "2026-11-28T12:29:34.021Z",
+  "writtenAt": "2026-11-28T15:46:08.085Z",
   "branch": "claude/eloquent-cerf-xnjbmt",
-  "commit": "9367b87",
+  "commit": "8aa2704",
   "dirty": false,
   "suites": [
     {
@@ -12,7 +12,7 @@
       "failed": 0,
       "skipped": 0,
       "note": "TypeScript, no emit",
-      "ranAt": "2026-11-28T12:25:43.796Z"
+      "ranAt": "2026-11-28T15:42:34.388Z"
     },
     {
       "name": "Backend types",
@@ -22,17 +22,17 @@
       "failed": 0,
       "skipped": 0,
       "note": "TypeScript, no emit",
-      "ranAt": "2026-11-28T12:25:46.354Z"
+      "ranAt": "2026-11-28T15:42:36.373Z"
     },
     {
       "name": "Extension unit tests",
       "category": "Unit",
       "command": "npm test (without the end-to-end suite)",
-      "passed": 471,
+      "passed": 473,
       "failed": 0,
       "skipped": 5,
       "note": "Mocked browser APIs (happy-dom); no network",
-      "ranAt": "2026-11-28T12:25:51.566Z"
+      "ranAt": "2026-11-28T15:42:41.259Z"
     },
     {
       "name": "Backend unit tests",
@@ -42,17 +42,17 @@
       "failed": 0,
       "skipped": 9,
       "note": "Stand-in search services and Claude client; no network",
-      "ranAt": "2026-11-28T12:25:52.438Z"
+      "ranAt": "2026-11-28T15:42:42.013Z"
     },
     {
       "name": "Browser tests (whole extension)",
       "category": "Browser",
       "command": "npm run test:e2e",
-      "passed": 141,
-      "failed": 1,
+      "passed": 140,
+      "failed": 2,
       "skipped": 4,
-      "note": "Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 22 of 22 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it",
-      "ranAt": "2026-11-28T12:29:29.792Z"
+      "note": "Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 22 of 22 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it; on-demand.spec.ts › turning a site on while LinkPeek is already on the page starts Smart mode there (\"refresh\")",
+      "ranAt": "2026-11-28T15:46:04.387Z"
     },
     {
       "name": "Production build",
@@ -62,14 +62,14 @@
       "failed": 0,
       "skipped": 0,
       "note": "The extension as it would ship",
-      "ranAt": "2026-11-28T12:29:31.950Z"
+      "ranAt": "2026-11-28T15:46:06.115Z"
     }
   ],
   "runs": {
     "offline": {
       "mode": "offline",
-      "startedAt": "2026-11-28T12:29:32.776Z",
-      "finishedAt": "2026-11-28T12:29:33.997Z",
+      "startedAt": "2026-11-28T15:46:06.848Z",
+      "finishedAt": "2026-11-28T15:46:08.060Z",
       "cases": [
         {
           "id": "pope",
@@ -811,8 +811,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.007,
             "tavilyCredits": 0,
-            "handlerMs": 57,
-            "totalMs": 97
+            "handlerMs": 80,
+            "totalMs": 135
           },
           "problems": [],
           "recordedAt": "2026-11-27T18:50:15.259Z"
@@ -1333,8 +1333,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.007,
             "tavilyCredits": 0,
-            "handlerMs": 36,
-            "totalMs": 48
+            "handlerMs": 32,
+            "totalMs": 41
           },
           "problems": [],
           "recordedAt": "2026-11-27T23:57:23.122Z"
@@ -1862,8 +1862,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.007,
             "tavilyCredits": 0,
-            "handlerMs": 21,
-            "totalMs": 28
+            "handlerMs": 20,
+            "totalMs": 26
           },
           "problems": [],
           "recordedAt": "2026-11-27T18:50:23.161Z"
@@ -2140,7 +2140,7 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.007,
             "tavilyCredits": 0,
-            "handlerMs": 9,
+            "handlerMs": 8,
             "totalMs": 13
           },
           "problems": [],
@@ -2347,8 +2347,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.021,
             "tavilyCredits": 0,
-            "handlerMs": 7,
-            "totalMs": 13
+            "handlerMs": 9,
+            "totalMs": 11
           },
           "problems": [],
           "recordedAt": "2026-11-27T18:50:27.898Z"
@@ -2571,8 +2571,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.021,
             "tavilyCredits": 0,
-            "handlerMs": 13,
-            "totalMs": 16
+            "handlerMs": 11,
+            "totalMs": 14
           },
           "problems": []
         },
@@ -3235,8 +3235,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 1,
-            "handlerMs": 23,
-            "totalMs": 29
+            "handlerMs": 25,
+            "totalMs": 31
           },
           "problems": [],
           "recordedAt": "2026-11-27T18:50:29.493Z"
@@ -3753,8 +3753,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 11,
-            "totalMs": 18
+            "handlerMs": 13,
+            "totalMs": 20
           },
           "problems": []
         },
@@ -4235,8 +4235,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 10,
-            "totalMs": 15
+            "handlerMs": 11,
+            "totalMs": 17
           },
           "problems": []
         },
@@ -4671,8 +4671,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 6,
-            "totalMs": 50
+            "handlerMs": 11,
+            "totalMs": 16
           },
           "problems": []
         },
@@ -5223,8 +5223,8 @@
             "aiCalls": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 2,
-            "totalMs": 4
+            "handlerMs": 3,
+            "totalMs": 5
           },
           "problems": []
         },
@@ -5966,8 +5966,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0.007,
             "tavilyCredits": 0,
-            "handlerMs": 18,
-            "totalMs": 24
+            "handlerMs": 19,
+            "totalMs": 27
           },
           "problems": []
         },
@@ -6492,8 +6492,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 1,
-            "handlerMs": 167,
-            "totalMs": 172
+            "handlerMs": 170,
+            "totalMs": 177
           },
           "problems": []
         },
@@ -6651,7 +6651,7 @@
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
             "handlerMs": 302,
-            "totalMs": 306
+            "totalMs": 308
           },
           "problems": []
         },
@@ -6808,8 +6808,8 @@
             "aiCalls": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 2,
-            "totalMs": 6
+            "handlerMs": 1,
+            "totalMs": 4
           },
           "problems": []
         },
@@ -6966,8 +6966,8 @@
             "aiCalls": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 2,
-            "totalMs": 4
+            "handlerMs": 1,
+            "totalMs": 3
           },
           "problems": []
         },
@@ -7126,7 +7126,7 @@
             "aiCalls": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 1,
+            "handlerMs": 2,
             "totalMs": 3
           },
           "problems": []
@@ -7421,7 +7421,7 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 4,
+            "handlerMs": 5,
             "totalMs": 8
           },
           "problems": []
@@ -7737,7 +7737,7 @@
             "aiCalls": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 1,
+            "handlerMs": 2,
             "totalMs": 4
           },
           "problems": []
@@ -8493,7 +8493,7 @@
             "aiFailure": "invalid",
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 2,
+            "handlerMs": 3,
             "totalMs": 6
           },
           "problems": []
@@ -9275,7 +9275,7 @@
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
             "handlerMs": 5,
-            "totalMs": 7
+            "totalMs": 8
           },
           "problems": []
         },
@@ -9576,8 +9576,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 4,
-            "totalMs": 7
+            "handlerMs": 5,
+            "totalMs": 8
           },
           "problems": []
         },
@@ -9921,7 +9921,7 @@
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
             "handlerMs": 5,
-            "totalMs": 9
+            "totalMs": 11
           },
           "problems": []
         },
@@ -10263,7 +10263,7 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 5,
+            "handlerMs": 9,
             "totalMs": 13
           },
           "problems": []
@@ -10665,8 +10665,8 @@
             "contradictedClaims": 1,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 7,
-            "totalMs": 12
+            "handlerMs": 6,
+            "totalMs": 10
           },
           "problems": []
         },
@@ -10967,8 +10967,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 11,
-            "totalMs": 15
+            "handlerMs": 10,
+            "totalMs": 13
           },
           "problems": []
         },
@@ -11301,8 +11301,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 8,
-            "totalMs": 13
+            "handlerMs": 4,
+            "totalMs": 7
           },
           "problems": []
         },
@@ -11646,8 +11646,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 12,
-            "totalMs": 16
+            "handlerMs": 5,
+            "totalMs": 10
           },
           "problems": []
         },
@@ -11998,8 +11998,8 @@
             "injectionRemoved": 1,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 6,
-            "totalMs": 10
+            "handlerMs": 17,
+            "totalMs": 23
           },
           "problems": []
         },
@@ -12347,8 +12347,8 @@
             "withdrawn": 1,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 5,
-            "totalMs": 8
+            "handlerMs": 4,
+            "totalMs": 7
           },
           "problems": []
         },
@@ -12731,8 +12731,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 5,
-            "totalMs": 8
+            "handlerMs": 4,
+            "totalMs": 7
           },
           "problems": []
         },
@@ -13067,8 +13067,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 7,
-            "totalMs": 10
+            "handlerMs": 4,
+            "totalMs": 6
           },
           "problems": []
         },
@@ -13478,8 +13478,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 4,
-            "totalMs": 7
+            "handlerMs": 6,
+            "totalMs": 9
           },
           "problems": []
         },
@@ -13815,8 +13815,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 9,
-            "totalMs": 12
+            "handlerMs": 3,
+            "totalMs": 6
           },
           "problems": []
         },
@@ -14297,8 +14297,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 7,
-            "totalMs": 11
+            "handlerMs": 10,
+            "totalMs": 13
           },
           "problems": []
         },
@@ -14710,8 +14710,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 14,
-            "totalMs": 18
+            "handlerMs": 12,
+            "totalMs": 15
           },
           "problems": []
         },
@@ -15050,8 +15050,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 8,
-            "totalMs": 11
+            "handlerMs": 6,
+            "totalMs": 8
           },
           "problems": []
         },
@@ -15391,8 +15391,8 @@
             "contradictedClaims": 0,
             "exaReportedUsd": 0,
             "tavilyCredits": 0,
-            "handlerMs": 5,
-            "totalMs": 9
+            "handlerMs": 6,
+            "totalMs": 8
           },
           "problems": []
         }
