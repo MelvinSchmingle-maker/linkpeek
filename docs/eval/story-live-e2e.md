@@ -1,6 +1,6 @@
 # Story Search: end-to-end evaluation
 
-Written 2026-11-28 00:56 UTC from branch `claude/eloquent-cerf-xnjbmt`, commit `f7020d5`.
+Written 2026-11-28 12:29 UTC from branch `claude/eloquent-cerf-xnjbmt`, commit `9367b87`.
 
 Every case runs the whole of Story Search with the real code: the extension reads the link from a page, decides what to send and shows it for consent; its client sends it to the backend handler; the backend searches, matches, asks the AI, applies its rules and streams the report back; the client checks the report; the card is built from it. The one shortcut is the network hop between extension and backend (a function call).
 
@@ -17,67 +17,71 @@ What “offline”, “live” and “stand-in” mean here:
 |---|---|---|---|
 | Build | Extension types (`npm run typecheck`) | TypeScript, no emit | 1 passed |
 | Build | Backend types (`npm --prefix server run typecheck`) | TypeScript, no emit | 1 passed |
-| Unit | Extension unit tests (`npm test (without the end-to-end suite)`) | Mocked browser APIs (happy-dom); no network | 468 passed, 5 skipped |
+| Unit | Extension unit tests (`npm test (without the end-to-end suite)`) | Mocked browser APIs (happy-dom); no network | 471 passed, 5 skipped |
 | Unit | Backend unit tests (`npm --prefix server test`) | Stand-in search services and Claude client; no network | 170 passed, 9 skipped |
 | Browser | Browser tests (whole extension) (`npm run test:e2e`) | Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 22 of 22 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it | **1 failed**, 141 passed, 4 skipped |
 | Build | Production build (`npm run build`) | The extension as it would ship | 1 passed |
 | Offline integration | Story Search end to end, 44 cases plus 4 other checks (`npm run test:story-e2e`) | Recorded real search results and synthetic data; stand-in AI replies | 48 passed |
 | Live search | Real Exa and Tavily searches for 6 case(s), recorded 2026-11-27 (`npm run test:story-e2e:record`) | Real Exa and Tavily; no AI | 6 of 6 answered |
 | Live AI | **Not run**: no Anthropic key in the environment that produced this report | – | – |
-| Full end-to-end | **Not run**: needs the Anthropic key as well as the search keys | – | – |
+| Full end-to-end | **Not run**: needs the Anthropic key as well as the search keys (`npm run test:story-e2e:fulltext`) | – | – |
 
 ## Offline run
 
-Ran 2026-11-28 00:56 UTC.
+Ran 2026-11-28 12:29 UTC.
+
+Skipped:
+- `pope-wrong-age`: runs only with real searches and page text (npm run test:story-e2e:fulltext): recordings keep excerpts only
+- `louvre-mona-lisa`: runs only with real searches and page text (npm run test:story-e2e:fulltext): recordings keep excerpts only
 
 ### Metrics per investigation
 
 | Case | Answered by | Searches | HTTP requests | Results | Analysed | Fallback | Model | Tokens in / out | Claims dropped: unsupported / no real passage | Weak / contradicted | Cleaned: withdrawn / injected | Exa (reported) | Tavily credits | Claude | Backend ms |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| pope | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 99 |
-| louvre-card | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 2 | 0 / 0 | – / – | $0.0070 | 0 | – | 61 |
-| louvre-url | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 35 |
-| vague | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 15 |
-| fabricated | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0210 | 0 | – | 11 |
-| fabricated-invented | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 3 / 4 | 0 / 0 | – / – | $0.0210 | 0 | – | 20 |
+| pope | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 57 |
+| louvre-card | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 2 | 0 / 0 | – / – | $0.0070 | 0 | – | 36 |
+| louvre-url | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 21 |
+| vague | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 9 |
+| fabricated | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0210 | 0 | – | 7 |
+| fabricated-invented | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 3 / 4 | 0 / 0 | – / – | $0.0210 | 0 | – | 13 |
 | insufficient | – | 0 | 0 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | – |
-| pope-tavily | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 37 |
-| conflicting | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 19 |
-| duplicates | exa | 1 | 1 | 5 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 16 |
-| dates-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 11 |
-| content-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
-| unrelated | exa | 3 | 3 | 9 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 3 |
-| fallback-exa-ok | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 29 |
-| fallback-exa-timeout | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 188 |
+| pope-tavily | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 23 |
+| conflicting | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 11 |
+| duplicates | exa | 1 | 1 | 5 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 10 |
+| dates-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| content-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
+| unrelated | exa | 3 | 3 | 9 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
+| fallback-exa-ok | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 18 |
+| fallback-exa-timeout | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 167 |
 | fallback-both-timeout | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 302 |
-| fallback-busy-and-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
+| fallback-busy-and-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
 | fallback-tavily-exhausted | – | 1 | 1 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
-| fallback-both-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
-| fallback-exhausted-midway | exa | 2 | 3 | 1 | 1 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| fallback-both-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
+| fallback-exhausted-midway | exa | 2 | 3 | 1 | 1 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
 | fallback-no-keys | – | 1 | 0 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
-| malformed-search | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
-| malformed-results | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 19 |
-| ai-invalid | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 4 |
-| ai-truncated | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 5 |
-| ai-timeout | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 9 |
-| social-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
-| opinion-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
-| unknown-sites | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
-| wrong-source | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| malformed-search | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
+| malformed-results | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 13 |
+| ai-invalid | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
+| ai-truncated | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
+| ai-timeout | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 7 |
+| social-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
+| opinion-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
+| unknown-sites | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
+| wrong-source | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
 | contradicted | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 1 / 1 | – / – | $0.0000 | 0 | – | 7 |
-| wrong-date | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 13 |
+| wrong-date | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 11 |
 | unclear-allegation | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 8 |
-| same-headline | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 9 |
-| prompt-injection | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 1 | 0 / 0 | – / 1 | $0.0000 | 0 | – | 7 |
-| correction | exa | 1 | 1 | 3 | 2 | no | stand-in | – | 0 / 0 | 0 / 1 | 1 / – | $0.0000 | 0 | – | 8 |
-| foreign-language | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 2 / 0 | – / – | $0.0000 | 0 | – | 7 |
-| misleading-headline | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
-| sensational-accurate | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
-| old-story | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
-| syndication-independent | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
-| evidence-depth | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 27 |
-| detail-read-in-full | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 14 |
-| detail-excerpt-only | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| same-headline | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 12 |
+| prompt-injection | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 1 | 0 / 0 | – / 1 | $0.0000 | 0 | – | 6 |
+| correction | exa | 1 | 1 | 3 | 2 | no | stand-in | – | 0 / 0 | 0 / 1 | 1 / – | $0.0000 | 0 | – | 5 |
+| foreign-language | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 2 / 0 | – / – | $0.0000 | 0 | – | 5 |
+| misleading-headline | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| sensational-accurate | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
+| old-story | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 9 |
+| syndication-independent | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| evidence-depth | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 14 |
+| detail-read-in-full | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 8 |
+| detail-excerpt-only | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
 
 ### What the live AI run would cost
 
@@ -176,7 +180,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 99 ms in the backend, 172 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 57 ms in the backend, 97 ms in all.
 
 ### "Read more" link in an article card: the Louvre jewel theft
 
@@ -247,7 +251,7 @@ Sources:
 | Card: Doesn't show "Read more" | pass | Read more |
 | Card: Doesn't show "new entrance" | pass | new entrance |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 61 ms in the backend, 81 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 36 ms in the backend, 48 ms in all.
 
 ### Only the address: the same Louvre story from the URL’s words and date
 
@@ -317,7 +321,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Crown jewels stolen from the Louvre’s Apollo Gallery |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 35 ms in the backend, 49 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 21 ms in the backend, 28 ms in all.
 
 ### Vague headline, no name and no date: "Pop star found dead in hotel room"
 
@@ -361,7 +365,7 @@ Sources:
 | Card: Doesn't show "Written by AI" | pass | Written by AI |
 | Card: Doesn't show "Whitney Houston was found dead" | pass | Whitney Houston was found dead |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 15 ms in the backend, 23 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 13 ms in all.
 
 ### Made-up story: "Mayor of Zarnwick resigns after canal bridge collapse injures 14"
 
@@ -391,7 +395,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search found results, but none clearly about this story. LinkPeek won't guess. |
 
-Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 20 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 13 ms in all.
 
 ### Made-up story, and an AI that invents a report to match it
 
@@ -424,7 +428,7 @@ Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-rel
 | Card: Doesn't show "Fourteen people" | pass | Fourteen people |
 | Card: Doesn't show "Possibly related" | pass | Possibly related |
 
-Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 20 ms in the backend, 24 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 13 ms in the backend, 16 ms in all.
 
 ### Bare "Read more" to an address with only an ID
 
@@ -454,7 +458,7 @@ Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-rel
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | There isn't enough information about this link to search for it. Its text, its address and the page around it don't say what the story is. |
 
-Metrics: 0 search(es) (none), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; – ms in the backend, 2 ms in all.
+Metrics: 0 search(es) (none), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; – ms in the backend, 1 ms in all.
 
 ### Exa’s free credit used up (simulated): Tavily finds Pope Francis instead
 
@@ -525,7 +529,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 37 ms in the backend, 47 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 23 ms in the backend, 29 ms in all.
 
 ### Sources disagree: a warehouse fire (synthetic)
 
@@ -599,7 +603,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Conflicting information |
 | Card: Subject shown | pass | Fire destroys warehouse on Dock Road in Port Elsworth |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 19 ms in the backend, 30 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 18 ms in all.
 
 ### One wire story printed twice, an AMP copy and an unrelated result (synthetic)
 
@@ -667,7 +671,7 @@ Sources:
 | Card: Subject shown | pass | Port Elsworth to Gullholm ferry suspended after engine failure |
 | Card: Doesn't show "Gullholm Rovers" | pass | Gullholm Rovers |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 5 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 16 ms in the backend, 26 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 5 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 10 ms in the backend, 15 ms in all.
 
 ### No dates anywhere: the link and every result are undated (synthetic)
 
@@ -734,7 +738,7 @@ Sources:
 | Card: Doesn't show "undefined" | pass | undefined |
 | Card: Doesn't show "NaN" | pass | NaN |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 22 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 50 ms in all.
 
 ### Results with headlines only, no page text (synthetic)
 
@@ -791,7 +795,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Lifeboat crew rescue two fishermen off Gull Point |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 12 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 8 ms in all.
 
 ### Every result is about something else (synthetic)
 
@@ -821,7 +825,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search found results, but none clearly about this story. LinkPeek won't guess. |
 
-Metrics: 3 search(es) (best → nothing-relevant>address-words → nothing-relevant>names-and-event), 3 HTTP request(s), answered by exa; 9 result(s) retrieved, 3 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 3 ms in the backend, 6 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>address-words → nothing-relevant>names-and-event), 3 HTTP request(s), answered by exa; 9 result(s) retrieved, 3 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 4 ms in all.
 
 ### Exa answers: Tavily is never asked
 
@@ -910,7 +914,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 29 ms in the backend, 38 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 18 ms in the backend, 24 ms in all.
 
 ### Exa times out: Tavily takes over
 
@@ -981,7 +985,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 188 ms in the backend, 196 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 167 ms in the backend, 172 ms in all.
 
 ### Both services time out
 
@@ -1041,7 +1045,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search service didn't answer. Try again in a minute. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 6 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 6 ms in all.
 
 ### Only Tavily set up, and its allowance used up
 
@@ -1071,7 +1075,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | Story Search has used this month's free searches. It works again when they renew at the start of next month. |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 4 ms in all.
 
 ### Both free allowances used up
 
@@ -1101,7 +1105,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | Story Search has used this month's free searches. It works again when they renew at the start of next month. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody, provider errors exa:NO_MORE_CREDITS; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody, provider errors exa:NO_MORE_CREDITS; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 3 ms in all.
 
 ### Allowance runs out between the first search and the follow-up (synthetic)
 
@@ -1149,7 +1153,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth pier reopens after storm repairs |
 
-Metrics: 2 search(es) (best → single-source>other-outlets), 3 HTTP request(s), answered by exa, provider errors exa:NO_MORE_CREDITS; 1 result(s) retrieved, 1 kept, 1 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 11 ms in all.
+Metrics: 2 search(es) (best → single-source>other-outlets), 3 HTTP request(s), answered by exa, provider errors exa:NO_MORE_CREDITS; 1 result(s) retrieved, 1 kept, 1 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 8 ms in all.
 
 ### No search keys configured
 
@@ -1179,7 +1183,7 @@ Metrics: 2 search(es) (best → single-source>other-outlets), 3 HTTP request(s),
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | Story Search isn't set up in this version of LinkPeek. |
 
-Metrics: 1 search(es) (best), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 4 ms in all.
+Metrics: 1 search(es) (best), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 3 ms in all.
 
 ### Both services send malformed answers
 
@@ -1209,7 +1213,7 @@ Metrics: 1 search(es) (best), 0 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search service didn't answer. Try again in a minute. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 4 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 4 ms in all.
 
 ### Search results with junk entries mixed in (synthetic)
 
@@ -1286,7 +1290,7 @@ Sources:
 | Card: Doesn't show "<b>" | pass | <b> |
 | Card: Doesn't show "&amp;" | pass | &amp; |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 19 ms in the backend, 26 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 13 ms in the backend, 18 ms in all.
 
 ### Claude’s reply isn’t valid JSON (simulated)
 
@@ -1323,7 +1327,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: invalid; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 8 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: invalid; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 6 ms in all.
 
 ### Claude’s reply is cut off at the token limit (simulated)
 
@@ -1360,7 +1364,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: truncated; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: truncated; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
 
 ### Claude times out (simulated)
 
@@ -1397,7 +1401,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: timeout; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 13 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: timeout; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
 
 ### Only social media posts report a death (synthetic)
 
@@ -1449,7 +1453,7 @@ Sources:
 | Card: Subject shown | pass | Singer Jory Calder dies aged 41 |
 | Card: Doesn't show "What happened?" | pass | What happened? |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 12 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 7 ms in all.
 
 ### Only opinion pieces, on news sites (synthetic)
 
@@ -1498,7 +1502,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth council to sell harbour to developers |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 7 ms in all.
 
 ### Only two websites LinkPeek doesn’t know (synthetic)
 
@@ -1551,7 +1555,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Gullholm inventor’s engine runs on seawater |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 15 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
 
 ### Claims citing the wrong source (synthetic)
 
@@ -1607,7 +1611,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Isle Link penalised over Gullholm ferry safety breaches |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 16 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 13 ms in all.
 
 ### A claim its own sources contradict: “asbestos found” (synthetic)
 
@@ -1669,7 +1673,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Elsworth Primary School closed after asbestos scare |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 13 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 12 ms in all.
 
 ### Wrong dates within a week of publication (synthetic)
 
@@ -1719,7 +1723,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Gull Point lighthouse keeper rescued after fall |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 13 ms in the backend, 17 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 15 ms in all.
 
 ### “What remains unclear?” used to slip in a rumour (synthetic)
 
@@ -1774,7 +1778,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth harbour master Nia Holt suspended |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 14 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 13 ms in all.
 
 ### The same headline for a different event, a year earlier (synthetic)
 
@@ -1830,7 +1834,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Lifeboat rescues two sailors from sinking yacht off Gull Point |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 21 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 12 ms in the backend, 16 ms in all.
 
 ### A search result with instructions for the AI hidden in it (synthetic)
 
@@ -1888,7 +1892,7 @@ Sources:
 | Card: Doesn't show "BBC" | pass | BBC |
 | Card: Doesn't show "Reuters" | pass | Reuters |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 12 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 10 ms in all.
 
 ### A corrected report and a retracted one (synthetic)
 
@@ -1944,7 +1948,7 @@ Sources:
 | Card: Doesn't show "This article has been withdrawn" | pass | This article has been withdrawn |
 | Card: Doesn't show "charged over" | pass | charged over |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 13 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
 
 ### An English headline, reported only in French (synthetic)
 
@@ -2003,7 +2007,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Fire closes historic bridge in Bellerive-sur-Ondine |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
 
 ### A misleading headline: “dies” when the reports say hospital (synthetic)
 
@@ -2058,7 +2062,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Singer Mara Vey taken to hospital after hotel incident |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 7 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 10 ms in all.
 
 ### A sensational headline that is accurate (synthetic)
 
@@ -2120,7 +2124,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Fire destroys boatyard in Port Elsworth |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 9 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 7 ms in all.
 
 ### An undated link, and an older story about the same person (synthetic)
 
@@ -2174,7 +2178,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Elsa Brannock wins Elsworth marathon for the second time |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 12 ms in all.
 
 ### One agency report printed three times, and one independent report (synthetic)
 
@@ -2243,7 +2247,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Ministers approve Gullholm wind farm |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 14 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
 
 ### Four sources read to four depths: full text, a long extract, an excerpt, a headline (synthetic)
 
@@ -2307,7 +2311,7 @@ Sources:
 | Card: Shows "Long extract" | pass | Long extract |
 | Card: Shows "The linked article itself wasn't among the results" | pass | The linked article itself wasn't among the results |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 27 ms in the backend, 31 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 14 ms in the backend, 18 ms in all.
 
 ### A headline detail missing from an article read in full (synthetic)
 
@@ -2363,7 +2367,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth ferry terminal to close for rebuilding |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 14 ms in the backend, 19 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 11 ms in all.
 
 ### The same headline detail, with excerpts only (synthetic)
 
@@ -2419,7 +2423,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth ferry terminal to close for rebuilding |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 11 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
 
 ### Other checks
 
