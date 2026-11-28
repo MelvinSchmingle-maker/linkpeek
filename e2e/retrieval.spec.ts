@@ -105,6 +105,29 @@ test('Settings: the on-device AI option says plainly when this computer cannot r
   await expect(page.locator('#ondevice-status')).toHaveText(/can't run|doesn't offer|needs to download/);
 });
 
+test("Settings: if Chrome doesn't say whether its AI can run, the page says LinkPeek couldn't tell, then shows a late answer", async ({ context, extensionId }) => {
+  await setSettings(context, { summaryEngine: 'chrome-on-device' });
+  const page = await context.newPage();
+  // A stand-in for Chrome's Summarizer: availability() answers only when the test says so.
+  await page.addInitScript(() => {
+    const waiting: ((answer: string) => void)[] = [];
+    Object.defineProperty(globalThis, 'Summarizer', {
+      configurable: true,
+      value: { availability: () => new Promise((resolve) => waiting.push(resolve)), create: () => new Promise(() => {}) },
+    });
+    Object.assign(globalThis, { answerAvailability: (answer: string) => waiting.splice(0).forEach((resolve) => resolve(answer)) });
+  });
+  await page.goto(`chrome-extension://${extensionId}/options/index.html`);
+  await expect(page.locator('input[name="engine"][value="chrome-on-device"]')).toBeChecked();
+  // No answer: after a few seconds the line says so, and there's no download button.
+  await expect(page.locator('#ondevice-status')).toHaveText(/couldn't tell whether this computer can run/, { timeout: 10_000 });
+  await expect(page.locator('#ondevice-download')).toBeHidden();
+  // Chrome answers after all: its answer replaces "couldn't tell".
+  await page.evaluate(() => (globalThis as unknown as { answerAvailability(answer: string): void }).answerAvailability('downloadable'));
+  await expect(page.locator('#ondevice-status')).toHaveText(/needs to download/);
+  await expect(page.locator('#ondevice-download')).toBeVisible();
+});
+
 test('a slow site times out with a clear message (after one retry)', async ({ page }) => {
   const c = await openCase(page, 'slow');
   await expect(c).toContainText("The site took too long to respond.");

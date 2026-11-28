@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { assessHtml } from '../extract/assess';
 import { extractHtml } from '../extract/html';
-import { ChromeBuiltInProvider, type Availability, type SummarizerApi } from './chrome-builtin';
+import { askAvailability, ChromeBuiltInProvider, summarizerOptions, type Availability, type SummarizerApi } from './chrome-builtin';
 import { enforceLimit, MAX_SUMMARY_WORDS, trimAtClause } from './enforce';
 import { providersFor, summarise } from './engine';
 import { ExtractiveProvider } from './extractive';
@@ -309,6 +309,31 @@ describe("Chrome's on-device summaries", () => {
   it('only summarises whole articles', async () => {
     const api = fakeSummarizer('available', ['x']);
     expect(await new ChromeBuiltInProvider(api).summarise({ ...input, evidence: 'partial', previewText: 'A preview.' })).toMatchObject({ ok: false });
+  });
+});
+
+describe("Settings' question to Chrome: can its AI run here?", () => {
+  const options = summarizerOptions('en', 'medium');
+  const answering = (availability: SummarizerApi['availability']): SummarizerApi => ({ availability, create: vi.fn() });
+
+  it("passes Chrome's answer on", async () => {
+    for (const state of ['unavailable', 'downloadable', 'downloading', 'available'] as const) {
+      expect(await askAvailability(fakeSummarizer(state, []), options)).toBe(state);
+    }
+  });
+
+  it('counts an error as unavailable, whether Chrome rejects or throws', async () => {
+    expect(await askAvailability(answering(() => Promise.reject(new Error('NotSupportedError'))), options)).toBe('unavailable');
+    const throws = answering(() => {
+      throw new TypeError('availability is not a function');
+    });
+    expect(await askAvailability(throws, options)).toBe('unavailable');
+  });
+
+  it("calls an answer it doesn't know 'unknown', so Settings never shows a blank line", async () => {
+    // 'readily' is the word Chrome's earlier trial API used.
+    expect(await askAvailability(answering(async () => 'readily' as Availability), options)).toBe('unknown');
+    expect(await askAvailability(answering(async () => undefined as unknown as Availability), options)).toBe('unknown');
   });
 });
 

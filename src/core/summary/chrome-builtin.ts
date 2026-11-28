@@ -20,7 +20,10 @@ import { enforceLimit } from './enforce';
 import type { SummaryInput, SummaryOutcome, SummaryProvider } from './provider';
 import { qualityProblem } from './quality';
 
-export type Availability = 'unavailable' | 'downloadable' | 'downloading' | 'available';
+const AVAILABILITIES = ['unavailable', 'downloadable', 'downloading', 'available'] as const;
+export type Availability = (typeof AVAILABILITIES)[number];
+/** Chrome's answer as Settings shows it: 'unknown' when there's none yet, or one this code doesn't know. */
+export type AvailabilityAnswer = Availability | 'unknown';
 
 export interface SummarizerOptions {
   type: 'tldr' | 'key-points' | 'teaser' | 'headline';
@@ -54,6 +57,21 @@ export function chromeSummarizer(): SummarizerApi | undefined {
 export function summarizerOptions(language: string | undefined, length: SummarizerOptions['length']): SummarizerOptions {
   const lang = baseLanguage(language) ?? 'en';
   return { type: 'headline', format: 'plain-text', length, expectedInputLanguages: [lang], outputLanguage: lang };
+}
+
+/**
+ * Chrome's answer to "can the on-device AI run here?", for Settings. Never
+ * throws: an error counts as 'unavailable', and an answer this code doesn't
+ * know as 'unknown'. It can still be slow or never come, so a caller that
+ * must show something races it against a timer.
+ */
+export async function askAvailability(api: SummarizerApi, options: SummarizerOptions): Promise<AvailabilityAnswer> {
+  try {
+    const answer = await api.availability(options);
+    return AVAILABILITIES.includes(answer) ? answer : 'unknown';
+  } catch {
+    return 'unavailable';
+  }
 }
 
 export class ChromeBuiltInProvider implements SummaryProvider {

@@ -1,6 +1,6 @@
 import { ALL_SITES, grantedSiteOrigins, hasSiteAccess, hostFromPattern, sitePatterns } from '../core/sites';
 import { getSettings, onSettingsChanged, updateSettings } from '../core/storage/settings';
-import { chromeSummarizer, summarizerOptions, type Availability } from '../core/summary/chrome-builtin';
+import { askAvailability, chromeSummarizer, summarizerOptions, type AvailabilityAnswer } from '../core/summary/chrome-builtin';
 import type { SummaryEngine } from '../core/summary/provider';
 import { renderModePicker } from '../ui/mode-picker';
 import { MSG } from '../core/messages';
@@ -23,6 +23,20 @@ demo.addEventListener('change', () => void updateSettings({ showDemoResults: dem
 const engineInputs = [...document.querySelectorAll<HTMLInputElement>('input[name="engine"]')];
 const onDeviceStatus = $<HTMLElement>('#ondevice-status');
 const onDeviceDownload = $<HTMLButtonElement>('#ondevice-download');
+// Declared above the first showOnDeviceStatus() call on purpose: that call can
+// finish while this module is still awaiting further down, and a const declared
+// below the await isn't readable yet (it threw, and the status line stayed blank).
+const ON_DEVICE_STATUS: Record<AvailabilityAnswer, string> = {
+  unavailable: "This computer can't run Chrome's on-device AI. LinkPeek will pick a sentence from the article instead.",
+  downloadable: "Chrome needs to download its AI model first. Until then, LinkPeek picks a sentence from the article.",
+  downloading: "Chrome is downloading its AI model. Until it's done, LinkPeek picks a sentence from the article.",
+  available: 'Ready. Summaries are written on this computer.',
+  unknown: "LinkPeek couldn't tell whether this computer can run Chrome's on-device AI. For now, LinkPeek picks a sentence from the article.",
+};
+/** How long to wait for Chrome's answer before saying LinkPeek couldn't tell. */
+const AVAILABILITY_WAIT_MS = 3000;
+/** Only the latest check writes the status line: an earlier one can answer late. */
+let latestCheck = 0;
 const remoteInput = engineInputs.find((i) => i.value === 'remote')!;
 let engine = (await getSettings()).summaryEngine;
 if (!__API_URL__) {
@@ -47,20 +61,24 @@ function onDeviceChosen(): boolean {
 }
 
 async function showOnDeviceStatus(): Promise<void> {
+  const check = ++latestCheck;
   const api = chromeSummarizer();
   onDeviceDownload.hidden = true;
   if (!api) {
     onDeviceStatus.textContent = "This version of Chrome doesn't offer on-device summaries.";
     return;
   }
-  let state: Availability = 'unavailable';
-  try {
-    state = await api.availability(summarizerOptions('en', 'medium'));
-  } catch {
-    // Treated as unavailable.
-  }
-  onDeviceStatus.textContent = ON_DEVICE_STATUS[state];
-  onDeviceDownload.hidden = state !== 'downloadable' || !onDeviceChosen();
+  const show = (state: AvailabilityAnswer) => {
+    if (check !== latestCheck) return;
+    onDeviceStatus.textContent = ON_DEVICE_STATUS[state];
+    onDeviceDownload.hidden = state !== 'downloadable' || !onDeviceChosen();
+  };
+  const answer = askAvailability(api, summarizerOptions('en', 'medium'));
+  const wait = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), AVAILABILITY_WAIT_MS));
+  const first = await Promise.race([answer, wait]);
+  show(first ?? 'unknown');
+  // No answer within the wait: if Chrome answers later after all, show that instead.
+  if (!first) show(await answer);
 }
 
 async function downloadModel(): Promise<void> {
@@ -177,13 +195,6 @@ chrome.permissions.onAdded.addListener(() => void render());
 chrome.permissions.onRemoved.addListener(() => void render());
 onSettingsChanged(() => void render());
 await render();
-
-const ON_DEVICE_STATUS: Record<Availability, string> = {
-  unavailable: "This computer can't run Chrome's on-device AI. LinkPeek will pick a sentence from the article instead.",
-  downloadable: "Chrome needs to download its AI model first. Until then, LinkPeek picks a sentence from the article.",
-  downloading: "Chrome is downloading its AI model. Until it's done, LinkPeek picks a sentence from the article.",
-  available: 'Ready. Summaries are written on this computer.',
-};
 
 // Headline checks: the same three outcomes the card explains (src/core/messages.ts).
 $('#headline-intro').textContent = MSG.definitionsIntro;
