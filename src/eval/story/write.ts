@@ -35,7 +35,7 @@ function liveCost(cases: CaseResult[], limitUsd: number): string[] {
     '',
     `- **At most ${usd(worst)}**: the spending guard's worst case for each prompt (counted at one token per 2.5 characters, all billed as a cache write, the dearest input, plus the whole ${MAX_TOKENS.toLocaleString('en-GB')}-token output allowance), summed. The most for one call: ${usd(Math.max(...worstEach))}.`,
     `- **Typically about ${usd(typical)}**: about 4 characters a token, no caching, 2,500 output tokens a report.`,
-    `- The guard refuses any call that could take spending past ${usd(limitUsd, 2)} (\`STORY_E2E_BUDGET_USD\`). ${worst <= limitUsd ? 'At most, all of them fit within it.' : 'At the worst case, not all of them fit: the later ones would be refused, never paid for.'}`,
+    `- Run it with \`STORY_E2E_BUDGET_USD=${limitUsd.toFixed(2)}\`: the guard then refuses any call that could take spending past ${usd(limitUsd, 2)}, and with stage 2's ${usd(0.12, 2)} (\`npm run test:story-e2e:fulltext\`) the two stages' separate guards add up to ${usd(limitUsd + 0.12, 2)}. ${worst <= limitUsd ? 'At most, all of them fit within it.' : 'At the worst case, not all of them fit: the later ones would be refused, never paid for.'}`,
     '',
   ];
 }
@@ -266,7 +266,7 @@ export function writeReport(root: string): { md: string; json: string } {
     md.push(`## ${title}`, '', `Ran ${run.startedAt.slice(0, 16).replace('T', ' ')} UTC.${run.budget ? ` Claude budget: ${usd(run.budget.spentUsd)} spent of ${usd(run.budget.limitUsd, 2)} (${run.budget.calls} call(s), ${run.budget.refused} refused by the budget guard).` : ''}`, '');
     if (run.skipped.length) md.push('Skipped:', ...run.skipped.map((s) => `- \`${s.id}\`: ${s.reason}`), '');
     md.push('### Metrics per investigation', '', ...metricsTable(run.cases), '');
-    if (run.mode === 'offline') md.push(...liveCost(run.cases, 0.25));
+    if (run.mode === 'offline') md.push(...liveCost(run.cases, 0.13));
     if (!isLive) md.push('Offline times have no network in them. Costs offline are what the recorded requests cost when they were recorded (Exa’s own figure, Tavily’s own credit count); synthetic searches cost nothing.', '');
     for (const r of run.cases) md.push(...caseSection(r, isLive));
     if (run.extra.length) {
@@ -297,7 +297,8 @@ export function writeReport(root: string): { md: string; json: string } {
   );
 
   const mdText = md.join('\n');
-  const json = JSON.stringify({ writtenAt: now, branch, commit, dirty, suites, runs: { offline, record, live } }, null, 2);
+  // Every run the Markdown report shows: stage 1 (live) and stage 2 (liveSearch) included.
+  const json = JSON.stringify({ writtenAt: now, branch, commit, dirty, suites, runs: { offline, record, live, liveSearch } }, null, 2);
   mkdirSync(join(root, EVAL), { recursive: true });
   writeFileSync(join(root, EVAL, 'story-live-e2e.md'), `${mdText}\n`);
   writeFileSync(join(root, EVAL, 'story-live-e2e.json'), `${json}\n`);

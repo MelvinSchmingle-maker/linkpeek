@@ -262,14 +262,14 @@ It runs in two stages, in the private `linkpeek` cloud environment (its network 
 
 | | Stage 1: real Claude, recorded searches | Stage 2: real stories, real searches with page text |
 |---|---|---|
-| Command | `npm run test:story-e2e:live` | `npm run test:story-e2e:fulltext` |
+| Command | `STORY_E2E_BUDGET_USD=0.13 npm run test:story-e2e:live` | `npm run test:story-e2e:fulltext` |
 | Needs in the environment | `LINKPEEK_ANTHROPIC_API_KEY` (environment variable) | That, plus the Exa key (network secret for `api.exa.ai`, header `x-api-key`) and the Tavily key (network secret for `api.tavily.com`, Authorization: Bearer) |
 | Cases | 28 that reach the AI, on the saved recordings (excerpts only) | 8: Pope Francis's death, as headlined ("aged 88") and with a wrong age ("aged 98"); the Louvre theft from a card, from its address and with the wrong object ("the Mona Lisa"); a vague headline; a made-up story; Tavily taking over from Exa |
-| Claude: at most | $0.126 by the spending guard's own sums for this run's prompts; stopped before $0.25 | $0.050 (8 calls, each at most $0.0062 with the largest possible full-text prompt); stopped before $0.12 |
+| Claude: at most | $0.126 by the spending guard's own sums for this run's prompts; stopped before $0.13 | $0.050 (8 calls, each at most $0.0062 with the largest possible full-text prompt); stopped before $0.12 |
 | Search credit | None | At most 21 Exa searches ($0.147 of the $10 free monthly credit), typically about 10 ($0.07); up to 3 Tavily credits |
 | Saved | Claude's replies, for offline replay of exactly the same prompts | Nothing beyond the results: its prompts hold page text no recording can |
 
-Together, at most $0.18 for Claude, inside the $0.25 testing budget. Each writes its own results (`docs/eval/story-e2e-live.json`, `story-e2e-live-search.json`); `npm run test:story-e2e:report` then rewrites `docs/eval/story-live-e2e.md` with both. Page text reaches the pipeline only in Stage 2, and none of it is written to a file: the results keep the reports (with their short quoted passages) and trimmed search answers.
+Run the three commands in this order: stage 1, stage 2, then `npm run test:story-e2e:report`. The two stages have separate spending guards, not one shared counter: stage 1 run with `STORY_E2E_BUDGET_USD=0.13` (its default is $0.25) and stage 2's default $0.12 add up to the $0.25 testing budget. By the calculation from the current prompts they'd spend at most $0.176 together. Exa and Tavily use their own free credits, not this budget. Each stage writes its own results (`docs/eval/story-e2e-live.json`, `story-e2e-live-search.json`), so neither overwrites the other; the report then rewrites `docs/eval/story-live-e2e.md` and `.json` with both. Page text reaches the pipeline only in Stage 2, and none of it is written to a file: the results keep the reports (with their short quoted passages) and trimmed search answers.
 
 ### The older quick live check
 
