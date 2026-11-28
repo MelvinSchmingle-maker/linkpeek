@@ -27,6 +27,8 @@ export interface RunFile {
   extra: { name: string; status: 'pass' | 'fail'; detail: string }[];
   /** Cases skipped, and why. */
   skipped: { id: string; reason: string }[];
+  /** Record runs: cases searched again later, when, why and what it cost (the case's row stays its first recording). */
+  rerecorded?: { id: string; at: string; reason: string; requests: number; results: number; exaReportedUsd: number; tavilyCredits: number }[];
 }
 
 export interface SuiteCount {
@@ -242,9 +244,13 @@ export function writeReport(root: string): { md: string; json: string } {
   if (record) {
     md.push('## Recording the real searches', '', `Recorded ${record.startedAt.slice(0, 16).replace('T', ' ')} UTC with \`npm run test:story-e2e:record\`. Each real case was searched once; later runs replay the recording instead of searching again. Cases that already had a recording were not searched again.`, '');
     md.push(...metricsTable(record.cases), '');
+    for (const x of record.rerecorded ?? []) {
+      md.push(`Searched again: \`${x.id}\`, ${x.at.slice(0, 16).replace('T', ' ')} UTC. ${x.reason} ${x.requests} request(s), ${x.results} results, ${usd(x.exaReportedUsd)} (Exa’s own figure)${x.tavilyCredits ? `, ${x.tavilyCredits} Tavily credit(s)` : ''}. Its row above is its first recording; replays now use the new one.`, '');
+    }
     const exa = record.cases.reduce((s, c) => s + c.metrics.exaReportedUsd, 0);
-    const tav = record.cases.reduce((s, c) => s + c.metrics.tavilyCredits, 0);
-    md.push(`Spent on recording: ${usd(exa)} of Exa’s free monthly credit (Exa’s own figures) and ${tav} of Tavily’s 1,000 free monthly credits. Neither account has a card, so neither can be charged.`, '');
+    const again = (record.rerecorded ?? []).reduce((s, x) => s + x.exaReportedUsd, 0);
+    const tav = record.cases.reduce((s, c) => s + c.metrics.tavilyCredits, 0) + (record.rerecorded ?? []).reduce((s, x) => s + x.tavilyCredits, 0);
+    md.push(`Spent on recording: ${usd(exa + again)} of Exa’s free monthly credit (Exa’s own figures${again ? `, ${usd(again)} of it for searching again` : ''}) and ${tav} of Tavily’s 1,000 free monthly credits. Neither account has a card, so neither can be charged.`, '');
     if (record.skipped.length) md.push('Not searched again:', ...record.skipped.map((s) => `- \`${s.id}\`: ${s.reason}`), '');
   }
 

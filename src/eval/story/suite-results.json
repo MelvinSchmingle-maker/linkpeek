@@ -9,7 +9,7 @@
       "failed": 0,
       "skipped": 0,
       "note": "TypeScript, no emit",
-      "ranAt": "2026-11-27T19:15:37.980Z"
+      "ranAt": "2026-11-27T23:58:12.478Z"
     },
     {
       "name": "Backend types",
@@ -19,37 +19,37 @@
       "failed": 0,
       "skipped": 0,
       "note": "TypeScript, no emit",
-      "ranAt": "2026-11-27T19:15:40.191Z"
+      "ranAt": "2026-11-27T23:58:14.955Z"
     },
     {
       "name": "Extension unit tests",
       "category": "Unit",
       "command": "npm test (without the end-to-end suite)",
-      "passed": 459,
+      "passed": 464,
       "failed": 0,
       "skipped": 5,
       "note": "Mocked browser APIs (happy-dom); no network",
-      "ranAt": "2026-11-27T19:15:46.153Z"
+      "ranAt": "2026-11-27T23:58:20.900Z"
     },
     {
       "name": "Backend unit tests",
       "category": "Unit",
       "command": "npm --prefix server test",
-      "passed": 127,
+      "passed": 158,
       "failed": 0,
       "skipped": 9,
       "note": "Stand-in search services and Claude client; no network",
-      "ranAt": "2026-11-27T19:15:46.966Z"
+      "ranAt": "2026-11-27T23:58:21.948Z"
     },
     {
       "name": "Browser tests (whole extension)",
       "category": "Browser",
       "command": "npm run test:e2e",
-      "passed": 137,
-      "failed": 2,
+      "passed": 140,
+      "failed": 1,
       "skipped": 4,
-      "note": "Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 19 of 19 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it; on-demand.spec.ts › injecting twice is harmless: no duplicate icons Both failed the same way before any Story Search change (docs/progress.md, 26 Nov 2026): this Chromium never reports an on-device AI status, and the second is a timing race (\"chrome is not defined\") that passes when its spec runs alone (11/11, rerun 27 Nov 2026).",
-      "ranAt": "2026-11-27T19:19:24.790Z"
+      "note": "Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 21 of 21 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it",
+      "ranAt": "2026-11-28T00:01:57.779Z"
     },
     {
       "name": "Production build",
@@ -59,7 +59,7 @@
       "failed": 0,
       "skipped": 0,
       "note": "The extension as it would ship",
-      "ranAt": "2026-11-27T19:19:27.026Z"
+      "ranAt": "2026-11-28T00:02:00.023Z"
     }
   ]
 }

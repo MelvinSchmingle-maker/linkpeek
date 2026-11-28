@@ -1340,5 +1340,16 @@
       "id": "ai-timeout",
       "reason": "uses synthetic or simulated search answers: nothing to record"
     }
+  ],
+  "rerecorded": [
+    {
+      "id": "louvre-card",
+      "at": "2026-11-27T23:57:23.122Z",
+      "reason": "Month names are no longer taken for names (D73), so its first search no longer ends in “October” and the old recording no longer matched what Story Search sends.",
+      "requests": 1,
+      "results": 8,
+      "exaReportedUsd": 0.007,
+      "tavilyCredits": 0
+    }
   ]
 }

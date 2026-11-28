@@ -67,7 +67,7 @@ test('the report: stages, then every section with sources, and the link is never
   await expect(card.locator('.stage.active')).toContainText(/Searching for matching stories|Analysing relevant sources/);
   await expect(card.getByRole('heading', { name: 'What happened?' })).toBeVisible({ timeout: 10_000 });
   await expect(card.locator('.story-tag')).toHaveText(['Strong match', 'Strong evidence']);
-  for (const h of ['Key details', 'What is confirmed?', 'Reported by one source', 'What remains unclear?', 'Supporting sources']) {
+  for (const h of ['Key details', 'What is confirmed?', 'Reported, not confirmed', 'What remains unclear?', 'Supporting sources']) {
     await expect(card.getByRole('heading', { name: h })).toBeVisible();
   }
   await expect(card.locator('.what-happened .ref')).toHaveText(['[1]', '[2]']);
@@ -90,6 +90,42 @@ test('the report: stages, then every section with sources, and the link is never
   expect(body!.installId).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
   const raw = JSON.stringify(body);
   for (const secret of ['story.html', 'session=abc123', 'utm_source', 'my-private-typed-text']) expect(raw).not.toContain(secret);
+});
+
+test('each claim’s evidence is behind a closed “Show evidence”; opening it shows the quoted passages', async ({ page, context }) => {
+  await agreeOnce(context);
+  await story(context, HEADLINE_LINK);
+  const card = storyCard(page);
+  await expect(card.getByRole('heading', { name: 'What happened?' })).toBeVisible({ timeout: 10_000 });
+  const first = card.locator('.what-happened .story-evidence').first();
+  // Closed by default: the passages are there but not shown, so the card stays short.
+  await expect(first).not.toHaveAttribute('open', /.*/);
+  await expect(first.getByText('Harbour Ferries workers will not strike on 1 December, the union said.')).toBeHidden();
+  await first.getByText('Show evidence').click();
+  await expect(first).toHaveAttribute('open', /.*/);
+  await expect(first.getByText('Harbour Ferries workers will not strike on 1 December, the union said.')).toBeVisible();
+  await expect(first).toContainText('[1]');
+  await expect(first).toContainText('[2]');
+  // A weak claim says so inside its evidence; nothing shows until it's opened.
+  const weak = card.locator('.story-evidence').filter({ hasText: 'a pay offer the union described as fair' });
+  await weak.getByText('Show evidence').click();
+  await expect(weak).toContainText("The quoted passages don't show all of this. Check the source.");
+  // Opening evidence never opens the link.
+  expect(page.url()).toBe(PAGE);
+});
+
+test('the headline verdict: what the reporting says about the headline, with its evidence', async ({ page, context }) => {
+  await agreeOnce(context);
+  await story(context, HEADLINE_LINK);
+  const card = storyCard(page);
+  await expect(card.getByRole('heading', { name: 'Is the headline accurate?' })).toBeVisible({ timeout: 10_000 });
+  const section = card.locator('.story-headline-check');
+  await expect(section).toContainText('Accurate');
+  await expect(section).toContainText('Both reports say the strike was called off after talks.');
+  await expect(section.locator('.story-evidence')).not.toHaveAttribute('open', /.*/);
+  // Sources say when they were updated or corrected.
+  await expect(card.locator('.story-source').nth(1)).toContainText('Corrected by its publisher');
+  await expect(card.locator('.story-source').nth(1)).toContainText('updated');
 });
 
 test('asking about the same link again uses the report kept on this computer', async ({ page, context }) => {
@@ -209,7 +245,7 @@ test('a vague link: possible matches only, nobody named as the subject, and the 
   await expect(card.locator('.story-subject')).toHaveCount(0);
   await expect(card.locator('.story-tag')).toHaveText(['Possible match', 'Insufficient information']);
   // Nothing written about any one story, so no old case reads as this one (D68).
-  for (const h of ['What happened?', 'Key details', 'What is confirmed?', 'Reported by one source']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
+  for (const h of ['What happened?', 'Key details', 'What is confirmed?', 'Reported, not confirmed']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
   await expect(card).not.toContainText('Written by AI');
   // The explanation isn't repeated at the end.
   await expect(card.locator('.story-notes')).toHaveCount(0);
@@ -251,7 +287,7 @@ test('the AI failing: the closest sources as possible matches only, no claims, a
   await expect(card.locator('.story-tag')).toHaveText(['Possible match']);
   await expect(card.getByRole('heading', { name: 'Possibly related sources' })).toBeVisible();
   await expect(card.locator('.story-source-link')).toHaveCount(2);
-  for (const h of ['What happened?', 'What is confirmed?', 'Reported by one source']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
+  for (const h of ['What happened?', 'What is confirmed?', 'Reported, not confirmed']) await expect(card.getByRole('heading', { name: h })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible();
 });
 

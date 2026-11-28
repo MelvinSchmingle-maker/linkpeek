@@ -810,12 +810,18 @@ describe('POST /api/story', () => {
     expect(ev.at(-1)).toEqual({ error: 'search-failed' });
   });
 
-  it('the same link twice costs one search', async () => {
-    const d = deps();
+  it('the same link twice costs one search and one AI call; the repeat is logged as a cache hit', async () => {
+    const logs: Record<string, unknown>[] = [];
+    const d = deps({ log: (l) => logs.push(l) });
     await (await handleStory(post(req()), d)).text();
     const second = await handleStory(post(req()), d);
     expect(await second.json()).toMatchObject({ report: { status: 'report' } });
     expect((d.provider as FakeProvider).calls.length).toBe(1);
+    expect((d.model as FakeModel).messages).toHaveLength(1);
+    // What the logs show for a repeat: a hit, and nothing about the link.
+    const repeat = logs.filter((l) => l.at === 'story').at(-1)!;
+    expect(repeat).toMatchObject({ status: 200, cached: true });
+    expect(JSON.stringify(repeat)).not.toMatch(/jamie|rivers|news\.example/i);
   });
 
   it('counts a Story Search as three summary-sized requests, in its own bucket', async () => {

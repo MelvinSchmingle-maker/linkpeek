@@ -25,7 +25,8 @@ import { STORY_SCHEMA, STORY_SYSTEM_PROMPT } from './prompt.js';
 
 export const DEFAULT_STORY_MODEL = 'claude-haiku-5-5';
 /** Room for thinking plus the JSON with its quoted evidence (D69: quotes made replies longer). */
-const MAX_TOKENS = 8000;
+/** The most output one call can bill. Exported for the evaluation's spending guard, which must use the real figure. */
+export const MAX_TOKENS = 8000;
 const TIMEOUT_MS = 20_000;
 
 /** A sentence and the passages, copied from the sources, that support it. */

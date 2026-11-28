@@ -192,15 +192,39 @@ async function standInStory(res, _url, req) {
   send({
     report: storyReport({
       subject: 'Ferry strike called off after late-night talks',
-      whatHappened: [{ text: 'Harbour Ferries workers called off a strike planned for 1 December 2026 after talks ended on 25 November.', sources: [1, 2] }],
-      details: [{ label: 'who', text: 'Harbour Ferries and the crew union.', sources: [1] }],
-      confirmed: [{ text: 'The strike planned for 1 December 2026 will not go ahead.', sources: [1, 2] }],
-      reported: [{ text: 'The deal includes a 4% pay rise.', sources: [2] }],
+      whatHappened: [
+        {
+          text: 'Harbour Ferries workers called off a strike planned for 1 December 2026 after talks ended on 25 November.',
+          sources: [1, 2],
+          evidence: [
+            { source: 1, quote: 'The crew union called off the strike planned for 1 December after talks ended late on 25 November.' },
+            { source: 2, quote: 'Harbour Ferries workers will not strike on 1 December, the union said.' },
+          ],
+        },
+      ],
+      details: [{ label: 'who', text: 'Harbour Ferries and the crew union.', sources: [1], evidence: [{ source: 1, quote: 'Harbour Ferries and the crew union reached a deal' }] }],
+      confirmed: [
+        {
+          text: 'The strike planned for 1 December 2026 will not go ahead.',
+          sources: [1, 2],
+          evidence: [
+            { source: 1, quote: 'called off the strike planned for 1 December' },
+            { source: 2, quote: 'Harbour Ferries workers will not strike on 1 December' },
+          ],
+        },
+      ],
+      reported: [{ text: 'The deal includes a 4% pay rise.', sources: [2], evidence: [{ source: 2, quote: 'a pay offer the union described as fair' }], weak: true }],
       unclear: [{ text: 'The full terms of the deal have not been published.', sources: [] }],
       sources: [
         storySource(1, 'Ferry strike off after talks', 'Example News', 'http://127.0.0.1:4173/articles/ordinary.html'),
-        storySource(2, 'Union and ferry firm agree deal', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html'),
+        storySource(2, 'Union and ferry firm agree deal', 'Demo Times', 'http://127.0.0.1:4173/articles/cycle-lanes.html', 'news', { updated: '2026-11-26', corrected: true }),
       ],
+      headline: {
+        headline: 'Ferry strike called off after late-night talks',
+        verdict: 'accurate',
+        reason: 'Both reports say the strike was called off after talks.',
+        evidence: [{ source: 1, quote: 'The crew union called off the strike planned for 1 December after talks ended late on 25 November.' }],
+      },
       setAside: 2,
       searchedFor,
     }),

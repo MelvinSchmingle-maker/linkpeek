@@ -70,7 +70,7 @@ The app is small enough to change by hand. Each of these is one place:
 | Which pages count as primary sources, or what counts as sponsored or opinion | `src/core/source/primary.ts` and `article-type.ts` |
 | The addresses the corrections check tries | `src/core/source/corrections.ts` (`CORRECTIONS_PATHS`) |
 | What Story Search reads from a page, and what it sends | `src/core/story/extract.ts` and `package.ts` |
-| Story Search's searches, matching rules and report rules | `server/src/story/queries.ts`, `match.ts`, `report.ts` |
+| Story Search's searches, matching rules and report rules | `server/src/story/queries.ts`, `match.ts`, `report.ts`; claim evidence and dates in `evidence.ts`, which sources may confirm in `sources.ts`, headline accuracy in `headline.ts` |
 | Which search provider Story Search uses | `STORY_SEARCH_PROVIDER` on the backend (`server/src/story/providers/`) |
 
 After any change, `npm run build` again, then reload LinkPeek at `chrome://extensions` and try the test pages.
@@ -89,7 +89,7 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md`. Also checks the headline check on `eval/headlines.json` and `eval/headlines-holdout.json`, writing `docs/eval/part-07.md` |
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
-| `npm run test:story-e2e` | Story Search end to end, from a link on a page to the card, on recorded real search results and synthetic cases. Offline and free; also part of `npm test` |
+| `npm run test:story-e2e` | Story Search end to end, from a link on a page to the card, on recorded real search results and synthetic cases (41 cases: evidence, sources, dates, headline accuracy, fallbacks). Offline and free; also part of `npm test` |
 | `npm run test:story-e2e:record` | Records real Exa/Tavily results for real cases that have none yet. **Uses free search credit, once per case** |
 | `npm run test:story-e2e:live` | The same cases with the real Claude. **Costs a little** (stops before $0.25). Needs `LINKPEEK_ANTHROPIC_API_KEY` |
 | `npm run test:story-e2e:report` | Runs every suite and writes `docs/eval/story-live-e2e.md`. See `docs/story-search.md`, "Testing and evaluation" |

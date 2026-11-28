@@ -17,7 +17,7 @@
 import { createHash } from 'node:crypto';
 import type { MessagesClient } from '../../../server/src/anthropic';
 import type { AnalysisResult, StoryModel } from '../../../server/src/story/analyse';
-import { aiCostUsd } from '../../../server/src/story/analyse';
+import { aiCostUsd, MAX_TOKENS } from '../../../server/src/story/analyse';
 import type { SearchHit, SearchOptions, SearchOutcome, SearchProvider } from '../../../server/src/story/providers/types';
 import type { SearchQuery } from '../../../server/src/story/queries';
 
@@ -306,8 +306,8 @@ export function savingClient(inner: MessagesClient, sink: SavedReply[]): Message
   };
 }
 
-/** The Story Search call's max_tokens (analyse.ts): the most output one call can bill. */
-export const MAX_OUTPUT_TOKENS = 6000;
+/** The Story Search call's max_tokens: the most output one call can bill. Taken from analyse.ts, never copied. */
+export const MAX_OUTPUT_TOKENS = MAX_TOKENS;
 
 /**
  * The most one call can cost before it's made, at the model's list price: the
