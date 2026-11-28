@@ -41,7 +41,8 @@ function liveCost(cases: CaseResult[], limitUsd: number): string[] {
 }
 
 export interface RunFile {
-  mode: 'offline' | 'record' | 'live';
+  /** live-search: real Claude and real searches, page text included (`npm run test:story-e2e:fulltext`). */
+  mode: 'offline' | 'record' | 'live' | 'live-search';
   /** For live runs: whether the searches were real too, or replayed. */
   liveSearch?: boolean;
   startedAt: string;
@@ -203,6 +204,7 @@ export function writeReport(root: string): { md: string; json: string } {
   const offline = readJson<RunFile>(runFilePath(root, 'offline'));
   const record = readJson<RunFile>(runFilePath(root, 'record'));
   const live = readJson<RunFile>(runFilePath(root, 'live'));
+  const liveSearch = readJson<RunFile>(runFilePath(root, 'live-search'));
   const suites = readJson<{ suites: SuiteCount[] }>(join(root, 'src/eval/story/suite-results.json'))?.suites ?? [];
   const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
   const commit = git(root, ['rev-parse', '--short', 'HEAD']);
@@ -242,15 +244,21 @@ export function writeReport(root: string): { md: string; json: string } {
   }
   if (live) {
     const l = runSummary(live);
-    md.push(`| ${live.liveSearch ? 'Full end-to-end' : 'Live AI'} | ${live.cases.length} cases with real Claude${live.liveSearch ? ' and real searches' : ' on recorded search results'} (\`npm run test:story-e2e:live\`) | Real Claude (${live.model ?? 'model unknown'}), ${live.liveSearch ? 'real' : 'recorded real'} search results | ${l.failed ? `**${l.failed} failed**, ` : ''}${l.passed} passed; spent ${usd(live.budget?.spentUsd)} of a ${usd(live.budget?.limitUsd, 2)} limit |`);
+    md.push(`| Live AI | ${live.cases.length} cases with real Claude on recorded search results (\`npm run test:story-e2e:live\`) | Real Claude (${live.model ?? 'model unknown'}), recorded real search results (excerpts) | ${l.failed ? `**${l.failed} failed**, ` : ''}${l.passed} passed; spent ${usd(live.budget?.spentUsd)} of a ${usd(live.budget?.limitUsd, 2)} limit |`);
   } else {
     md.push('| Live AI | **Not run**: no Anthropic key in the environment that produced this report | – | – |');
-    md.push('| Full end-to-end | **Not run**: needs the Anthropic key as well as the search keys | – | – |');
+  }
+  if (liveSearch) {
+    const l = runSummary(liveSearch);
+    md.push(`| Full end-to-end | ${liveSearch.cases.length} real stories with real Claude and real searches, page text included (\`npm run test:story-e2e:fulltext\`) | Real Claude (${liveSearch.model ?? 'model unknown'}), real Exa and Tavily | ${l.failed ? `**${l.failed} failed**, ` : ''}${l.passed} passed; spent ${usd(liveSearch.budget?.spentUsd)} of a ${usd(liveSearch.budget?.limitUsd, 2)} limit on Claude |`);
+  } else {
+    md.push('| Full end-to-end | **Not run**: needs the Anthropic key as well as the search keys (`npm run test:story-e2e:fulltext`) | – | – |');
   }
   md.push('');
 
   const sections: [string, RunFile | undefined, boolean][] = [
-    ['Live AI run (real Claude)', live, true],
+    ['Full end-to-end run (real Claude, real searches with page text)', liveSearch, true],
+    ['Live AI run (real Claude, recorded searches)', live, true],
     ['Offline run', offline, false],
   ];
   for (const [title, run, isLive] of sections) {

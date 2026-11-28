@@ -10,6 +10,8 @@
  *                                   recording yet, saved for replay (uses free search credit once)
  *   npm run test:story-e2e:live     real Claude on the recorded searches (LINKPEEK_ANTHROPIC_API_KEY),
  *                                   stopped before spending could pass STORY_E2E_BUDGET_USD ($0.25)
+ *   npm run test:story-e2e:fulltext real stories: real searches, page text included, and real Claude
+ *                                   (Claude stopped before $0.12); cases marked liveSearchOnly run only here
  *
  *   STORY_E2E_LIVE_SEARCH=1   with :live, search for real too (spends search credit; off by default)
  *   STORY_E2E_CASES=pope,vague   only these cases
@@ -93,7 +95,10 @@ beforeAll(async () => {
     ...(claude ? { claude } : {}),
     recordingsDir: RECORDINGS,
     rerecord: RERECORD,
-    saveClaude: MODE === 'live',
+    // Saved replies are replayed offline for exactly the same prompt. A run with real searches has page text in
+    // its prompts, which no recording holds, so its replies could never be replayed; nor may they overwrite
+    // the recorded-search run's.
+    saveClaude: MODE === 'live' && !LIVE_SEARCH,
     window: win as unknown as RunOptions['window'],
   };
 });
@@ -101,6 +106,10 @@ beforeAll(async () => {
 describe(`Story Search end to end (${MODE}${LIVE_SEARCH ? ', live search' : ''})`, () => {
   for (const c of selected) {
     it(`${c.id}: ${c.title}`, { timeout: TIMEOUT }, async () => {
+      if (c.liveSearchOnly && !LIVE_SEARCH) {
+        skipped.push({ id: c.id, reason: 'runs only with real searches and page text (npm run test:story-e2e:fulltext): recordings keep excerpts only' });
+        return;
+      }
       if (MODE === 'record') {
         if (!recordable(c)) {
           skipped.push({ id: c.id, reason: 'uses synthetic or simulated search answers: nothing to record' });
@@ -188,7 +197,7 @@ describe(`Story Search end to end (${MODE}${LIVE_SEARCH ? ', live search' : ''})
 afterAll(() => {
   if (!WRITE) return;
   const run: RunFile = {
-    mode: MODE,
+    mode: LIVE_SEARCH ? 'live-search' : MODE,
     ...(MODE === 'live' ? { liveSearch: LIVE_SEARCH, model: process.env.STORY_MODEL?.trim() || DEFAULT_STORY_MODEL } : {}),
     startedAt,
     finishedAt: new Date().toISOString(),
@@ -197,6 +206,6 @@ afterAll(() => {
     extra,
     skipped,
   };
-  writeFileSync(runFilePath(ROOT, MODE), `${JSON.stringify(run, null, 2)}\n`);
+  writeFileSync(runFilePath(ROOT, LIVE_SEARCH ? 'live-search' : MODE), `${JSON.stringify(run, null, 2)}\n`);
   writeReport(ROOT);
 });

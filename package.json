@@ -22,6 +22,7 @@
     "test:story-e2e": "node scripts/story-e2e.mjs offline",
     "test:story-e2e:record": "node scripts/story-e2e.mjs record",
     "test:story-e2e:live": "node scripts/story-e2e.mjs live",
+    "test:story-e2e:fulltext": "node scripts/story-e2e.mjs fulltext",
     "test:story-e2e:report": "node scripts/story-e2e.mjs report"
   },
   "devDependencies": {

@@ -256,7 +256,20 @@ The real search results were recorded once, on 27 Nov 2026: 7 Exa searches ($0.0
 
 ### Running the live AI test
 
-The Anthropic key can only be given to a cloud session as an environment variable (`LINKPEEK_ANTHROPIC_API_KEY`), in the environment's settings: network secrets can't be used for Anthropic's own hosts. Everyone who uses that environment, and any command in its sessions, can read it, so use a separate environment for it, and ideally a separate Anthropic key in its own workspace with a small monthly limit. The name matters: with `ANTHROPIC_API_KEY`, Claude Code would use the key for itself. The tests read it from the environment only and never print, log or save it; it never goes in the extension (the build reads only `LINKPEEK_API_URL` and `LINKPEEK_STORY_API_URL`) and never in a committed file. Each Claude reply is saved (without the request or any header) so later offline runs can replay real Claude output.
+The Anthropic key can only be given to a cloud session as an environment variable (`LINKPEEK_ANTHROPIC_API_KEY`), in the environment's settings: network secrets can't be used for Anthropic's own hosts. Everyone who uses that environment, and any command in its sessions, can read it, so use a separate environment for it, and ideally a separate Anthropic key in its own workspace with a small monthly limit. The name matters: with `ANTHROPIC_API_KEY`, Claude Code would use the key for itself. The tests read it from the environment only and never print, log or save it; it never goes in the extension (the build reads only `LINKPEEK_API_URL` and `LINKPEEK_STORY_API_URL`) and never in a committed file.
+
+It runs in two stages, in the private `linkpeek` cloud environment (its network allows only `api.anthropic.com` and package registries until search keys are added):
+
+| | Stage 1: real Claude, recorded searches | Stage 2: real stories, real searches with page text |
+|---|---|---|
+| Command | `npm run test:story-e2e:live` | `npm run test:story-e2e:fulltext` |
+| Needs in the environment | `LINKPEEK_ANTHROPIC_API_KEY` (environment variable) | That, plus the Exa key (network secret for `api.exa.ai`, header `x-api-key`) and the Tavily key (network secret for `api.tavily.com`, Authorization: Bearer) |
+| Cases | 28 that reach the AI, on the saved recordings (excerpts only) | 8: Pope Francis's death, as headlined ("aged 88") and with a wrong age ("aged 98"); the Louvre theft from a card, from its address and with the wrong object ("the Mona Lisa"); a vague headline; a made-up story; Tavily taking over from Exa |
+| Claude: at most | $0.126 by the spending guard's own sums for this run's prompts; stopped before $0.25 | $0.050 (8 calls, each at most $0.0062 with the largest possible full-text prompt); stopped before $0.12 |
+| Search credit | None | At most 21 Exa searches ($0.147 of the $10 free monthly credit), typically about 10 ($0.07); up to 3 Tavily credits |
+| Saved | Claude's replies, for offline replay of exactly the same prompts | Nothing beyond the results: its prompts hold page text no recording can |
+
+Together, at most $0.18 for Claude, inside the $0.25 testing budget. Each writes its own results (`docs/eval/story-e2e-live.json`, `story-e2e-live-search.json`); `npm run test:story-e2e:report` then rewrites `docs/eval/story-live-e2e.md` with both. Page text reaches the pipeline only in Stage 2, and none of it is written to a file: the results keep the reports (with their short quoted passages) and trimmed search answers.
 
 ### The older quick live check
 
@@ -264,12 +277,12 @@ The Anthropic key can only be given to a cloud session as an environment variabl
 
 ## Still open
 
-1. **Claude has never written a Story Search report.** Everything up to the AI step has run on real data; the report text in every evaluation so far came from stand-ins. Next, with your go-ahead: add `LINKPEEK_ANTHROPIC_API_KEY` to the `linkpeek` environment and run `npm run test:story-e2e:live` there. 28 of the 44 cases reach Claude: typically about $0.04; at most $0.13 by the spending guard's own worst case for each of this run's prompts (`docs/eval/story-live-e2e.md`, "What the live AI run would cost"); and stopped before $0.25 whatever happens. Then read the claims it lists for review.
+1. **Claude has never written a Story Search report.** Everything up to the AI step has run on real data; the report text in every evaluation so far came from stand-ins. Next: the two-stage live test ("Running the live AI test" above): stage 1 on the recorded searches (Claude at most $0.13), stage 2 on eight real stories with real searches and page text (Claude at most $0.05, searches at most $0.15 of free Exa credit). Then read the claims each lists for review.
 2. **The evidence rules (D65, D69, D71, D72) need measuring on Claude's real output.** They drop claims whose passages aren't in the cited source, whose specifics or dates the cited sources don't establish, or that their own passages contradict. The live run reports per case how many were dropped (unsupported, no real passage) and how many were weak or contradicted. If they drop good claims (for example, Claude quoting with small differences the check doesn't allow), they need loosening; if Claude rarely gives real passages, the prompt needs work.
 3. **Not merged**: `/api/story` exists only on this branch. The production build of the extension points at `linkpeek-api.vercel.app/api/story`, which only exists after the merge. Waiting for your go-ahead.
 4. **Vercel's list of commercial examples** couldn't be read from its page; the rule itself is clear (above).
 5. **Claude isn't free**: about $0.002 a Story Search, capped by your Anthropic monthly limit.
-6. **Claude on full article text** isn't tested yet (the recordings hold excerpts only): it needs a run with real searches (`STORY_E2E_LIVE_SEARCH=1`), about $0.056 of Exa's free credit, only with your go-ahead.
+6. **Claude on full article text** isn't tested yet (the recordings hold excerpts only): that's stage 2 (`npm run test:story-e2e:fulltext`), which needs the search keys in the `linkpeek` environment as well as the Anthropic key.
 7. Later, not now: searching in the story's own language (a French incident searched in French), a growing reviewed list of news publishers, and telling an article's later updates apart from its original reporting.
 
 ## Known limits
@@ -283,7 +296,7 @@ The Anthropic key can only be given to a cloud session as an environment variabl
 - **Other languages**: event words, negations, months, weekdays and "yesterday" are known in French, Spanish, German and Italian only. An English claim quoting a foreign passage shares fewer words with it, so it's more often marked weak (shown, not confirmed). Searches are made in the headline's language; Story Search doesn't search in the story's own language.
 - **Headline verdicts** rest on the same lexical checks: "misleading" needs a discrepancy the rules can see (a denial, a different outcome from a short list, a different number next to the same word, an allegation stated as fact), so a misleading headline whose problem is subtler (a skewed emphasis) is at best "unverified". A detail missing from excerpts only never counts against a headline (D76).
 - **"Full text" means all the text the search service extracted**: a paywalled page can come back as its teaser (shorter than 1,500 characters, so counted as an excerpt), and a page's text can include captions or footer lines. Tavily's page text is taken from where the article's headline or one of its excerpts starts; a page where neither is found keeps its excerpts only.
-- **The live Claude test runs on excerpts**: the recordings keep short excerpts only, because the repository is public. How Claude does with full article text is tested only by a run with real searches (`STORY_E2E_LIVE_SEARCH=1`, about $0.056 of Exa's free credit), not yet authorised.
+- **Stage 1 of the live test runs on excerpts**: the recordings keep short excerpts only, because the repository is public. How Claude does with page text is stage 2, on eight real stories (D78).
 - The grounding rule checks specifics, not wording: an invented sentence with no name, number or date in it ("The mayor resigned") passes it unless its own passage doesn't support its event. Claude's instructions and the "possible match" caution stand against the rest.
 - The backend's report cache lives in one function instance's memory; repeat searches that land on another instance search again, and how often that happens isn't measured (see Cost). A shared cache (Vercel's Runtime Cache) is the next step if traffic justifies it.
 - The news organisations LinkPeek recognises are a fixed list (about 140); a reputable outlet not on it counts as an unknown site and can't confirm anything on its own.

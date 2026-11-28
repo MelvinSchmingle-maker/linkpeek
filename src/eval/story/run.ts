@@ -340,8 +340,10 @@ function setUpSearch(c: E2ECase, opts: RunOptions): SearchSetupResult {
   // Real searches: record mode saves them, live mode only uses them.
   const sink: Exchange[] = [];
   const today = new Date().toISOString().slice(0, 10);
-  const exa = new ExaProvider(liveKey('EXA_API_KEY'), counted(exaSimulated ?? recordingFetch(real, sink), requests, 'exa'));
-  const tavily = new TavilyProvider(liveKey('TAVILY_API_KEY'), counted(recordingFetch(real, sink), requests, 'tavily'));
+  // Live: the pipeline gets the whole answer, page text included; only a trimmed copy is kept. Recording: trimmed both.
+  const full = opts.search === 'live';
+  const exa = new ExaProvider(liveKey('EXA_API_KEY'), counted(exaSimulated ?? recordingFetch(real, sink, { full }), requests, 'exa'));
+  const tavily = new TavilyProvider(liveKey('TAVILY_API_KEY'), counted(recordingFetch(real, sink, { full }), requests, 'tavily'));
   return {
     chain: new ProviderChain([exa, tavily]),
     served: () => sink,

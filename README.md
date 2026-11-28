@@ -89,6 +89,7 @@ After any change, `npm run build` again, then reload LinkPeek at `chrome://exten
 | `npm run eval` | Summarises the 20 articles in `eval/articles/` and writes `docs/eval/part-05.md`. Also checks the headline check on `eval/headlines.json` and `eval/headlines-holdout.json`, writing `docs/eval/part-07.md` |
 | `npm run eval:ai` | Same articles plus prompt-injection pages, with Claude through the backend code. **Calls Claude and costs money.** Needs `ANTHROPIC_API_KEY`. Writes `docs/eval/part-06.md` |
 | `npm run test:server` | The backend's tests (`server/`); needs `npm install --prefix server` once |
+| `npm run test:story-e2e:live`, `npm run test:story-e2e:fulltext` | Story Search with real Claude: on the recorded searches (stage 1), then on real stories with real searches and page text (stage 2). Need the Anthropic key, and for stage 2 the search keys, in a private cloud environment; costs and steps in `docs/story-search.md`, "Running the live AI test" |
 | `npm run test:story-e2e` | Story Search end to end, from a link on a page to the card, on recorded real search results and synthetic cases (41 cases: evidence, sources, dates, headline accuracy, fallbacks). Offline and free; also part of `npm test` |
 | `npm run test:story-e2e:record` | Records real Exa/Tavily results for real cases that have none yet. **Uses free search credit, once per case** |
 | `npm run test:story-e2e:live` | The same cases with the real Claude. **Costs a little** (stops before $0.25). Needs `LINKPEEK_ANTHROPIC_API_KEY` |

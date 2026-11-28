@@ -5,6 +5,8 @@
  *   npm run test:story-e2e:record    real Exa/Tavily searches, only for real cases not yet recorded
  *   npm run test:story-e2e:live      real Claude on the recorded searches; needs LINKPEEK_ANTHROPIC_API_KEY;
  *                                    stops before spending could pass $0.25 (STORY_E2E_BUDGET_USD)
+ *   npm run test:story-e2e:fulltext  real stories with real searches (page text included) and real Claude;
+ *                                    needs the Anthropic key and the search keys; Claude stopped before $0.12
  *   npm run test:story-e2e:report    runs every suite (types, unit, backend, offline end to end,
  *                                    browser, build) and writes docs/eval/story-live-e2e.md and .json
  *
@@ -22,6 +24,19 @@ const win = process.platform === 'win32';
 const run = (cmd, args, env = {}, opts = {}) => spawnSync(cmd, args, { stdio: opts.capture ? 'pipe' : 'inherit', shell: win, env: { ...process.env, ...env }, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const vitest = (env, extra = []) => run('npx', ['vitest', 'run', 'src/eval/story-e2e.test.ts', '--reporter=verbose', ...extra], env);
 
+// The full end-to-end run: real stories, real searches with page text, real Claude (D75). Searches spend free
+// Exa credit (at most 3 a case, $0.007 each); Claude is stopped before $0.12 unless STORY_E2E_BUDGET_USD says
+// otherwise, so with the recorded-search live run ($0.13 at most) the two stay within $0.25.
+if (mode === 'fulltext') {
+  if (!process.env.LINKPEEK_ANTHROPIC_API_KEY) {
+    console.error('The full run needs LINKPEEK_ANTHROPIC_API_KEY, and the Exa and Tavily keys (network secrets) in the same environment.');
+    process.exit(1);
+  }
+  const cases = process.env.STORY_E2E_CASES ?? 'pope,pope-wrong-age,louvre-card,louvre-url,louvre-mona-lisa,vague,fabricated,pope-tavily';
+  const env = { STORY_E2E_MODE: 'live', STORY_E2E_LIVE_SEARCH: '1', STORY_E2E_CASES: cases, STORY_E2E_BUDGET_USD: process.env.STORY_E2E_BUDGET_USD ?? '0.12', NODE_USE_ENV_PROXY: '1', STORY_E2E_WRITE: process.env.STORY_E2E_WRITE ?? '1' };
+  process.exit(vitest(env).status ?? 1);
+}
+
 if (mode === 'offline' || mode === 'record' || mode === 'live') {
   if (mode === 'live' && !process.env.LINKPEEK_ANTHROPIC_API_KEY) {
     console.error('Live mode needs LINKPEEK_ANTHROPIC_API_KEY (never ANTHROPIC_API_KEY, which Claude Code would use for itself).');
@@ -33,7 +48,7 @@ if (mode === 'offline' || mode === 'record' || mode === 'live') {
 }
 
 if (mode !== 'report') {
-  console.error(`Unknown mode "${mode}": use offline, record, live or report.`);
+  console.error(`Unknown mode "${mode}": use offline, record, live, fulltext or report.`);
   process.exit(1);
 }
 

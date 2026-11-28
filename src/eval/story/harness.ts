@@ -85,7 +85,12 @@ function json(status: number, data: unknown): Response {
 }
 
 /** Real fetch, recording each exchange (without headers) and handing the pipeline the trimmed reply it will later replay. */
-export function recordingFetch(real: typeof fetch, sink: Exchange[]): typeof fetch {
+/**
+ * Real requests, with a trimmed copy of each answer kept in `sink` (never page text: the repository is
+ * public). When recording, the pipeline sees the trimmed answer too, so a replay behaves exactly like the
+ * recording run. With `full`, it sees the whole answer: page text and all (live runs with real searches, D75).
+ */
+export function recordingFetch(real: typeof fetch, sink: Exchange[], { full = false }: { full?: boolean } = {}): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const provider = providerOf(url);
@@ -98,7 +103,7 @@ export function recordingFetch(real: typeof fetch, sink: Exchange[]): typeof fet
     }
     const trimmed = res.ok ? trimResponse(provider, data) : data;
     sink.push({ provider, request: { method: init?.method ?? 'GET', path: new URL(url).pathname, body: bodyOf(init) }, status: res.status, response: trimmed });
-    return json(res.status, trimmed);
+    return json(res.status, full ? data : trimmed);
   }) as typeof fetch;
 }
 

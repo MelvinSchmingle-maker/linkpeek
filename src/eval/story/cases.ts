@@ -187,6 +187,11 @@ export interface E2ECase {
   expect: Expectation;
   /** Extra checks on the card the reader sees. */
   card?: { includes?: string[]; excludes?: string[] };
+  /**
+   * Runs only with real searches (`npm run test:story-e2e:fulltext`): it tests what fresh page text changes,
+   * which recordings can't hold (they keep excerpts only), so it has no recording and is skipped otherwise.
+   */
+  liveSearchOnly?: boolean;
 }
 
 const FEED = (items: string) =>
@@ -1742,6 +1747,41 @@ const terminalCase = (inFull: boolean): E2ECase => ({
 const detailInFull = terminalCase(true);
 const detailExcerptOnly = terminalCase(false);
 
+// ---------- Real stories with page text: the full end-to-end run only (npm run test:story-e2e:fulltext) ----------
+//
+// The accurate headlines of the real cases above, plus a wrong detail and a wrong object on the same real
+// stories: can LinkPeek tell a supported headline from a misleading one with more of the articles to read?
+// These need real searches with page text, which recordings can't hold, so they run only in that run.
+
+const popeWrongAge: E2ECase = {
+  id: 'pope-wrong-age',
+  title: 'A real story with a wrong detail in the headline: “Pope Francis dies aged 98”',
+  covers: ['headline accuracy', 'evidence depth', 'real stories'],
+  data: 'real',
+  liveSearchOnly: true,
+  expected:
+    'Pope Francis died on 21 April 2025, aged 88; the link says 98. The report must not give 98 as his age, and the headline must not be called accurate: the reports give a different number next to the same word (partly accurate or misleading).',
+  page: { url: 'https://news.example.com/', body: FEED('<li><a data-case href="https://news.example.com/2025/04/21/pope-francis-dies-aged-98">Pope Francis dies aged 98</a></li>') },
+  search: { kind: 'recording' },
+  expect: { outcome: ['report'], match: ['strong'], names: [/Francis/], eventDate: [/21 April 2025/], forbidden: [/\b98\b/], minSources: 2, headline: ['partly-accurate', 'misleading'] },
+};
+
+const louvreMonaLisa: E2ECase = {
+  id: 'louvre-mona-lisa',
+  title: 'A real story with the wrong object in the headline: “Thieves steal the Mona Lisa in daylight Louvre raid”',
+  covers: ['headline accuracy', 'evidence depth', 'real stories'],
+  data: 'real',
+  liveSearchOnly: true,
+  expected:
+    'Thieves stole crown jewels from the Louvre on 19 October 2025; the reports don’t say the Mona Lisa was taken. The report must say what was stolen and never that the Mona Lisa was, and the headline must not be called accurate.',
+  page: { url: 'https://news.example.com/', body: FEED('<li><a data-case href="https://news.example.com/2025/10/19/thieves-steal-mona-lisa-daylight-louvre-raid">Thieves steal the Mona Lisa in daylight Louvre raid</a></li>') },
+  search: { kind: 'recording' },
+  expect: { outcome: ['report'], names: [/Louvre/], facts: [/jewel/i], forbidden: [/Mona Lisa (was|had been|has been) (stolen|taken)/i, /stole the Mona Lisa/i], headline: ['partly-accurate', 'misleading', 'unverified'] },
+};
+
+/** The full end-to-end run: real stories, real searches with page text, real Claude. */
+export const FULLTEXT_CASES = ['pope', 'pope-wrong-age', 'louvre-card', 'louvre-url', 'louvre-mona-lisa', 'vague', 'fabricated', 'pope-tavily'];
+
 export const CASES: E2ECase[] = [
   pope,
   louvreCard,
@@ -1787,6 +1827,8 @@ export const CASES: E2ECase[] = [
   evidenceDepth,
   detailInFull,
   detailExcerptOnly,
+  popeWrongAge,
+  louvreMonaLisa,
 ];
 
 /** A careful stand-in for the real cases, written once their recorded results were read. Kept apart so a re-recording shows up as a failed lookup, not silent drift. */
