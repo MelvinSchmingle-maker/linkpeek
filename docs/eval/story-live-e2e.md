@@ -1,6 +1,6 @@
 # Story Search: end-to-end evaluation
 
-Written 2026-11-28 00:09 UTC from branch `claude/eloquent-cerf-xnjbmt`, commit `8878b9a`.
+Written 2026-11-28 00:56 UTC from branch `claude/eloquent-cerf-xnjbmt`, commit `f7020d5`.
 
 Every case runs the whole of Story Search with the real code: the extension reads the link from a page, decides what to send and shows it for consent; its client sends it to the backend handler; the backend searches, matches, asks the AI, applies its rules and streams the report back; the client checks the report; the card is built from it. The one shortcut is the network hop between extension and backend (a function call).
 
@@ -17,64 +17,75 @@ What “offline”, “live” and “stand-in” mean here:
 |---|---|---|---|
 | Build | Extension types (`npm run typecheck`) | TypeScript, no emit | 1 passed |
 | Build | Backend types (`npm --prefix server run typecheck`) | TypeScript, no emit | 1 passed |
-| Unit | Extension unit tests (`npm test (without the end-to-end suite)`) | Mocked browser APIs (happy-dom); no network | 464 passed, 5 skipped |
-| Unit | Backend unit tests (`npm --prefix server test`) | Stand-in search services and Claude client; no network | 158 passed, 9 skipped |
-| Browser | Browser tests (whole extension) (`npm run test:e2e`) | Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 21 of 21 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it | **1 failed**, 140 passed, 4 skipped |
+| Unit | Extension unit tests (`npm test (without the end-to-end suite)`) | Mocked browser APIs (happy-dom); no network | 468 passed, 5 skipped |
+| Unit | Backend unit tests (`npm --prefix server test`) | Stand-in search services and Claude client; no network | 170 passed, 9 skipped |
+| Browser | Browser tests (whole extension) (`npm run test:e2e`) | Real Chromium with the real extension build; the Story Search backend is a local stand-in (scripts/serve-test-pages.mjs). Story Search tests: 22 of 22 passed. Failed: retrieval.spec.ts › Settings: the on-device AI option says plainly when this computer cannot run it | **1 failed**, 141 passed, 4 skipped |
 | Build | Production build (`npm run build`) | The extension as it would ship | 1 passed |
-| Offline integration | Story Search end to end, 41 cases plus 4 other checks (`npm run test:story-e2e`) | Recorded real search results and synthetic data; stand-in AI replies | 45 passed |
+| Offline integration | Story Search end to end, 44 cases plus 4 other checks (`npm run test:story-e2e`) | Recorded real search results and synthetic data; stand-in AI replies | 48 passed |
 | Live search | Real Exa and Tavily searches for 6 case(s), recorded 2026-11-27 (`npm run test:story-e2e:record`) | Real Exa and Tavily; no AI | 6 of 6 answered |
 | Live AI | **Not run**: no Anthropic key in the environment that produced this report | – | – |
 | Full end-to-end | **Not run**: needs the Anthropic key as well as the search keys | – | – |
 
 ## Offline run
 
-Ran 2026-11-28 00:09 UTC.
+Ran 2026-11-28 00:56 UTC.
 
 ### Metrics per investigation
 
 | Case | Answered by | Searches | HTTP requests | Results | Analysed | Fallback | Model | Tokens in / out | Claims dropped: unsupported / no real passage | Weak / contradicted | Cleaned: withdrawn / injected | Exa (reported) | Tavily credits | Claude | Backend ms |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| pope | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 95 |
-| louvre-card | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 2 | 0 / 0 | – / – | $0.0070 | 0 | – | 49 |
-| louvre-url | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 25 |
-| vague | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 10 |
-| fabricated | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0210 | 0 | – | 13 |
-| fabricated-invented | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 3 / 4 | 0 / 0 | – / – | $0.0210 | 0 | – | 14 |
+| pope | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 99 |
+| louvre-card | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 2 | 0 / 0 | – / – | $0.0070 | 0 | – | 61 |
+| louvre-url | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 35 |
+| vague | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 15 |
+| fabricated | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0210 | 0 | – | 11 |
+| fabricated-invented | exa | 3 | 3 | 18 | 5 | no | stand-in | – | 3 / 4 | 0 / 0 | – / – | $0.0210 | 0 | – | 20 |
 | insufficient | – | 0 | 0 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | – |
-| pope-tavily | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 34 |
-| conflicting | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 16 |
-| duplicates | exa | 1 | 1 | 5 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 11 |
-| dates-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 12 |
+| pope-tavily | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 37 |
+| conflicting | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 19 |
+| duplicates | exa | 1 | 1 | 5 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 16 |
+| dates-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 11 |
 | content-missing | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
 | unrelated | exa | 3 | 3 | 9 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 3 |
-| fallback-exa-ok | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 26 |
-| fallback-exa-timeout | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 170 |
-| fallback-both-timeout | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 305 |
-| fallback-busy-and-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
-| fallback-tavily-exhausted | – | 1 | 1 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
-| fallback-both-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
+| fallback-exa-ok | exa | 1 | 1 | 8 | 5 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0070 | 0 | – | 29 |
+| fallback-exa-timeout | tavily | 1 | 2 | 8 | 5 | yes | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 1 | – | 188 |
+| fallback-both-timeout | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 302 |
+| fallback-busy-and-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
+| fallback-tavily-exhausted | – | 1 | 1 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
+| fallback-both-exhausted | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
 | fallback-exhausted-midway | exa | 2 | 3 | 1 | 1 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
 | fallback-no-keys | – | 1 | 0 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 1 |
 | malformed-search | – | 1 | 2 | 0 | 0 | no | – | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
 | malformed-results | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 19 |
-| ai-invalid | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 3 |
-| ai-truncated | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 2 |
-| ai-timeout | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 3 |
-| social-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 9 |
-| opinion-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
-| unknown-sites | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
-| wrong-source | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 9 |
-| contradicted | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 1 / 1 | – / – | $0.0000 | 0 | – | 5 |
-| wrong-date | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
-| unclear-allegation | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
-| same-headline | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
-| prompt-injection | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 1 | 0 / 0 | – / 1 | $0.0000 | 0 | – | 5 |
-| correction | exa | 1 | 1 | 3 | 2 | no | stand-in | – | 0 / 0 | 0 / 1 | 1 / – | $0.0000 | 0 | – | 10 |
-| foreign-language | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 2 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| ai-invalid | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 4 |
+| ai-truncated | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 5 |
+| ai-timeout | exa | 1 | 1 | 3 | 3 | no | simulated failure | – | – / – | – / – | – / – | $0.0000 | 0 | – | 9 |
+| social-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| opinion-only | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| unknown-sites | exa | 3 | 3 | 6 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| wrong-source | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| contradicted | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 0 | 1 / 1 | – / – | $0.0000 | 0 | – | 7 |
+| wrong-date | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 13 |
+| unclear-allegation | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 1 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 8 |
+| same-headline | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 9 |
+| prompt-injection | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 1 | 0 / 0 | – / 1 | $0.0000 | 0 | – | 7 |
+| correction | exa | 1 | 1 | 3 | 2 | no | stand-in | – | 0 / 0 | 0 / 1 | 1 / – | $0.0000 | 0 | – | 8 |
+| foreign-language | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 2 / 0 | – / – | $0.0000 | 0 | – | 7 |
 | misleading-headline | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 4 |
-| sensational-accurate | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
-| old-story | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 7 |
+| sensational-accurate | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| old-story | exa | 1 | 1 | 3 | 3 | no | stand-in | – | 0 / 1 | 0 / 0 | – / – | $0.0000 | 0 | – | 5 |
 | syndication-independent | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+| evidence-depth | exa | 1 | 1 | 4 | 4 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 27 |
+| detail-read-in-full | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 14 |
+| detail-excerpt-only | exa | 1 | 1 | 2 | 2 | no | stand-in | – | 0 / 0 | 0 / 0 | – / – | $0.0000 | 0 | – | 6 |
+
+### What the live AI run would cost
+
+28 of these cases would ask the real Claude (claude-haiku-5-5) in `npm run test:story-e2e:live`; the others use simulated services or never reach the AI. From this run's own prompts (the longest 16,997 characters, system prompt included):
+
+- **At most $0.1258**: the spending guard's worst case for each prompt (counted at one token per 2.5 characters, all billed as a cache write, the dearest input, plus the whole 8,000-token output allowance), summed. The most for one call: $0.0048.
+- **Typically about $0.0419**: about 4 characters a token, no caching, 2,500 output tokens a report.
+- The guard refuses any call that could take spending past $0.25 (`STORY_E2E_BUDGET_USD`). At most, all of them fit within it.
 
 Offline times have no network in them. Costs offline are what the recorded requests cost when they were recorded (Exa’s own figure, Tavily’s own credit count); synthetic searches cost nothing.
 
@@ -85,7 +96,7 @@ Offline times have no network in them. Costs offline are what the recorded reque
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded results: only what they say, each sentence citing the results that say it.
 - What the extension sent: headline “Pope Francis dies aged 88” (link-text); address words “pope francis dies aged”; date 2025-04-21 (url-date); address https://news.example.com/2025/04/21/pope-francis-dies-aged-88.
 - Expected: Pope Francis died on 21 April 2025, Easter Monday, at the Vatican, aged 88. The report must give that event date (not a later publication date), and its sources must be real reports of his death (the Vatican, news agencies, major outlets), not later coverage.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Pope Francis dies aged 88”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Pope Francis dies aged 88”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -154,7 +165,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 11 factual claim(s), every one cites a listed source with a passage of its own (25 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: none |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: excerpts-only |
 | Clear, readable writing | pass | 11 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | accurate: The reports say Pope Francis died aged 88. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -162,10 +173,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 95 ms in the backend, 165 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 99 ms in the backend, 172 ms in all.
 
 ### "Read more" link in an article card: the Louvre jewel theft
 
@@ -174,7 +185,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded results: only what they say, each sentence citing the results that say it.
 - What the extension sent: headline “Louvre jewel heist: thieves steal crown jewels in daylight raid” (card-heading); teaser “Thieves used a vehicle-mounted lift to reach the Apollo Gallery and escaped within minutes.”; date 2025-10-19 (card-label); address https://paper.example.org/p/88231.
 - Expected: Thieves stole crown jewels from the Louvre’s Apollo Gallery in Paris on 19 October 2025, in a raid of a few minutes. Only the heist: not other Louvre news (strikes, renovation plans, the Mona Lisa).
-- Actual: **report**, match **strong**, confidence **strong**, subject “Thieves steal crown jewels from the Louvre in daylight raid”, notes: syndicated.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Thieves steal crown jewels from the Louvre in daylight raid”, notes: syndicated, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -203,7 +214,6 @@ Report as shown (each claim with the passage it quotes from each source it cites
   - The sources reviewed do not say who the thieves were.
 
 Headline accuracy: **accurate** for “Louvre jewel heist: thieves steal crown jewels in daylight raid”: The reports say thieves stole crown jewels from the Louvre in a daylight raid.
-- [1] “Thieves steal French crown jewels from Louvre in daytime raid”
 - [2] “PARIS (AP) — Thieves took less than eight minutes to steal 88 million euros ($102 million) worth of crown jewels in a weekend heist at the world’s most visited museum,”
 
 Sources:
@@ -224,7 +234,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 6 factual claim(s), every one cites a listed source with a passage of its own (10 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: syndicated |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: syndicated, excerpts-only |
 | Clear, readable writing | pass | 7 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | accurate: The reports say thieves stole crown jewels from the Louvre in a daylight raid. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -232,12 +242,12 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Thieves steal crown jewels from the Louvre in daylight raid |
 | Card: Doesn't show "Read more" | pass | Read more |
 | Card: Doesn't show "new entrance" | pass | new entrance |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 49 ms in the backend, 62 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 61 ms in the backend, 81 ms in all.
 
 ### Only the address: the same Louvre story from the URL’s words and date
 
@@ -246,7 +256,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded results: only what they say, each sentence citing the results that say it.
 - What the extension sent: address words “louvre crown jewels stolen apollo gallery”; date 2025-10-19 (url-date); address https://paper.example.org/2025/10/19/louvre-crown-jewels-stolen-apollo-gallery.
 - Expected: The same Louvre heist (19 October 2025), found from the address words and the date in the address alone.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Crown jewels stolen from the Louvre’s Apollo Gallery”, notes: syndicated.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Crown jewels stolen from the Louvre’s Apollo Gallery”, notes: syndicated, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -296,7 +306,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 7 factual claim(s), every one cites a listed source with a passage of its own (13 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: syndicated |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: syndicated, excerpts-only |
 | Clear, readable writing | pass | 8 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | no headline check |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -304,10 +314,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Crown jewels stolen from the Louvre’s Apollo Gallery |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 25 ms in the backend, 33 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 35 ms in the backend, 49 ms in all.
 
 ### Vague headline, no name and no date: "Pop star found dead in hotel room"
 
@@ -316,7 +326,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 - AI: stand-in reply written for the test (not Claude). Over-confident stand-in: calls every source a strong match, names the person as the subject and rates the evidence strong. LinkPeek’s rules must overrule it.
 - What the extension sent: headline “Pop star found dead in hotel room” (link-text); address https://celeb.example.com/p/1.
 - Expected: Many deaths fit this headline. LinkPeek must not say who it is about, must not present an old case (the search finds Whitney Houston’s death in 2012) as this story, and must say why: the link gives no name or date. At most a possible match: the closest results listed with their dates, and no report written about any one of them.
-- Actual: **report**, match **possible**, confidence **insufficient**, no subject, notes: vague-link.
+- Actual: **report**, match **possible**, confidence **insufficient**, no subject, notes: vague-link, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Sources:
@@ -337,7 +347,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 0 factual claim(s), every one cites a listed source with a passage of its own (0 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence insufficient (expected insufficient); notes: vague-link |
+| Appropriate confidence | pass | confidence insufficient (expected insufficient); notes: vague-link, excerpts-only |
 | Clear, readable writing | pass | 0 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | no headline check |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -351,7 +361,7 @@ Sources:
 | Card: Doesn't show "Written by AI" | pass | Written by AI |
 | Card: Doesn't show "Whitney Houston was found dead" | pass | Whitney Houston was found dead |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 10 ms in the backend, 16 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 15 ms in the backend, 23 ms in all.
 
 ### Made-up story: "Mayor of Zarnwick resigns after canal bridge collapse injures 14"
 
@@ -381,7 +391,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search found results, but none clearly about this story. LinkPeek won't guess. |
 
-Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 13 ms in the backend, 16 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 20 ms in all.
 
 ### Made-up story, and an AI that invents a report to match it
 
@@ -414,7 +424,7 @@ Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-rel
 | Card: Doesn't show "Fourteen people" | pass | Fourteen people |
 | Card: Doesn't show "Possibly related" | pass | Possibly related |
 
-Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 14 ms in the backend, 18 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-relevant>broader), 3 HTTP request(s), answered by exa; 18 result(s) retrieved, 12 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0210 as reported by Exa, Tavily 0 credit(s), Claude –; 20 ms in the backend, 24 ms in all.
 
 ### Bare "Read more" to an address with only an ID
 
@@ -444,7 +454,7 @@ Metrics: 3 search(es) (best → nothing-relevant>names-and-event → nothing-rel
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | There isn't enough information about this link to search for it. Its text, its address and the page around it don't say what the story is. |
 
-Metrics: 0 search(es) (none), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; – ms in the backend, 1 ms in all.
+Metrics: 0 search(es) (none), 0 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; – ms in the backend, 2 ms in all.
 
 ### Exa’s free credit used up (simulated): Tavily finds Pope Francis instead
 
@@ -453,7 +463,7 @@ Metrics: 0 search(es) (none), 0 HTTP request(s), answered by nobody; 0 result(s)
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded Tavily results: only what they say, each sentence citing the results that say it.
 - What the extension sent: headline “Pope Francis dies aged 88” (link-text); address words “pope francis dies aged”; date 2025-04-21 (url-date); address https://news.example.com/2025/04/21/pope-francis-dies-aged-88.
 - Expected: Exa says its credit is used up; Tavily takes over and the same correct story is found from Tavily’s real results.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Pope Francis dies aged 88”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Pope Francis dies aged 88”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -484,9 +494,7 @@ Report as shown (each claim with the passage it quotes from each source it cites
     - [5] “The pope’s death came after he spent weeks in the hospital earlier this year to treat a serious bout of pneumonia.”
 
 Headline accuracy: **accurate** for “Pope Francis dies aged 88”: The reports say Pope Francis died aged 88.
-- [1] “Pope Francis has died on Easter Monday aged 88 - Vatican News”
-- [2] “Vatican announces death of Pope Francis aged 88”
-- [3] “Pope Francis, first Latin American pontiff, dies at 88 \| AP News”
+- [5] “VATICAN CITY—Pope Francis, who sought to refocus the Catholic Church on promoting social and economic justice rather than traditional moral teachings but presided over growing divisions in the church and”
 
 Sources:
 
@@ -506,7 +514,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 5 factual claim(s), every one cites a listed source with a passage of its own (15 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: none |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | accurate: The reports say Pope Francis died aged 88. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -514,10 +522,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 34 ms in the backend, 42 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 37 ms in the backend, 47 ms in all.
 
 ### Sources disagree: a warehouse fire (synthetic)
 
@@ -526,7 +534,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback us
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: states what the three reports agree on and puts the disputed injury count and cause under “What remains unclear?”.
 - What the extension sent: headline “Fire destroys warehouse at Port Elsworth docks” (card-heading); teaser “Firefighters spent the night tackling the blaze on Dock Road.”; date 2026-11-12 (card-label); address https://local.example.net/p/40213.
 - Expected: Three independent reports agree a warehouse on Dock Road burned on 12 November 2026, but disagree on how many were hurt (three or seven) and on the cause (an electrical fault, or not yet known). The report must state the agreed facts, say what each source reports on the disputed ones, and leave them open.
-- Actual: **report**, match **strong**, confidence **conflicting**, subject “Fire destroys warehouse on Dock Road in Port Elsworth”.
+- Actual: **report**, match **strong**, confidence **conflicting**, subject “Fire destroys warehouse on Dock Road in Port Elsworth”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -580,7 +588,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | disputed values only under "What remains unclear?" |
 | Proper source references | pass | 5 factual claim(s), every one cites a listed source with a passage of its own (18 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence conflicting (expected conflicting); notes: none |
+| Appropriate confidence | pass | confidence conflicting (expected conflicting); notes: excerpts-only |
 | Clear, readable writing | pass | 7 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -591,7 +599,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Conflicting information |
 | Card: Subject shown | pass | Fire destroys warehouse on Dock Road in Port Elsworth |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 16 ms in the backend, 26 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 19 ms in the backend, 30 ms in all.
 
 ### One wire story printed twice, an AMP copy and an unrelated result (synthetic)
 
@@ -600,7 +608,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: matches the three ferry reports, not the football result, and cites the wire copies and the independent report separately.
 - What the extension sent: headline “Gullholm ferry service suspended after engine failure” (link-text); address words “gullholm ferry suspended engine failure”; date 2026-11-03 (url-date); address https://news.example.com/2026/11/03/gullholm-ferry-suspended-engine-failure.
 - Expected: The ferry between Port Elsworth and Gullholm was suspended after an engine failure. The same wire report appears on two sites (one source, not two), one of them also as an AMP page (listed once), and one independent report adds detail. A sports story that shares a place name is not a match. Only facts from two independent reports may be called confirmed.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Port Elsworth to Gullholm ferry suspended after engine failure”, notes: syndicated.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth to Gullholm ferry suspended after engine failure”, notes: syndicated, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -647,7 +655,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 5 factual claim(s), every one cites a listed source with a passage of its own (12 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: syndicated |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: syndicated, excerpts-only |
 | Clear, readable writing | pass | 6 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -655,11 +663,11 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth to Gullholm ferry suspended after engine failure |
 | Card: Doesn't show "Gullholm Rovers" | pass | Gullholm Rovers |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 5 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 18 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 5 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 16 ms in the backend, 26 ms in all.
 
 ### No dates anywhere: the link and every result are undated (synthetic)
 
@@ -668,7 +676,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 5 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: reports the vote without giving any date the sources don’t give.
 - What the extension sent: headline “Council in Port Elsworth approves new harbour wall after storm damage” (link-text); address https://news.example.com/p/77812.
 - Expected: The story is clear but no source gives a date. The report must not invent one (no "on 17 November 2026"), and the card must show the sources without dates.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Port Elsworth council approves new harbour wall”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth council approves new harbour wall”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -712,7 +720,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 4 factual claim(s), every one cites a listed source with a passage of its own (10 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: none |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -720,13 +728,13 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth council approves new harbour wall |
 | Card: Doesn't show "Invalid Date" | pass | Invalid Date |
 | Card: Doesn't show "undefined" | pass | undefined |
 | Card: Doesn't show "NaN" | pass | NaN |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 12 ms in the backend, 18 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 11 ms in the backend, 22 ms in all.
 
 ### Results with headlines only, no page text (synthetic)
 
@@ -735,7 +743,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Over-confident stand-in: rates headline-only evidence as strong. LinkPeek’s rules must lower it.
 - What the extension sent: headline “Port Elsworth lifeboat crew rescue two fishermen off Gull Point” (link-text); address words “port elsworth lifeboat rescue gull point”; date 2026-11-18 (url-date); address https://news.example.com/2026/11/18/port-elsworth-lifeboat-rescue-gull-point.
 - Expected: Every result has a headline but no text. The report may say what the headlines say, must note that it rests on headlines only, and must not rate the evidence as strong.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Lifeboat crew rescue two fishermen off Gull Point”, notes: snippets-only.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Lifeboat crew rescue two fishermen off Gull Point”, notes: headlines-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -772,7 +780,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (6 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: snippets-only |
+| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: headlines-only |
 | Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -813,7 +821,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search found results, but none clearly about this story. LinkPeek won't guess. |
 
-Metrics: 3 search(es) (best → nothing-relevant>address-words → nothing-relevant>names-and-event), 3 HTTP request(s), answered by exa; 9 result(s) retrieved, 3 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 3 ms in the backend, 5 ms in all.
+Metrics: 3 search(es) (best → nothing-relevant>address-words → nothing-relevant>names-and-event), 3 HTTP request(s), answered by exa; 9 result(s) retrieved, 3 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 3 ms in the backend, 6 ms in all.
 
 ### Exa answers: Tavily is never asked
 
@@ -822,7 +830,7 @@ Metrics: 3 search(es) (best → nothing-relevant>address-words → nothing-relev
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded results: only what they say, each sentence citing the results that say it.
 - What the extension sent: headline “Pope Francis dies aged 88” (link-text); address words “pope francis dies aged”; date 2025-04-21 (url-date); address https://news.example.com/2025/04/21/pope-francis-dies-aged-88.
 - Expected: Exa has credit and answers, so Tavily is not called at all.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Pope Francis dies aged 88”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Pope Francis dies aged 88”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -891,7 +899,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 11 factual claim(s), every one cites a listed source with a passage of its own (25 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: none |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: excerpts-only |
 | Clear, readable writing | pass | 11 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | accurate: The reports say Pope Francis died aged 88. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -899,10 +907,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 26 ms in the backend, 33 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0070 as reported by Exa, Tavily 0 credit(s), Claude –; 29 ms in the backend, 38 ms in all.
 
 ### Exa times out: Tavily takes over
 
@@ -911,7 +919,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 8 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in written from the recorded Tavily results: only what they say, each sentence citing the results that say it.
 - What the extension sent: headline “Pope Francis dies aged 88” (link-text); address words “pope francis dies aged”; date 2025-04-21 (url-date); address https://news.example.com/2025/04/21/pope-francis-dies-aged-88.
 - Expected: Exa never answers; after its timeout Tavily is asked and the story is found from Tavily’s real results.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Pope Francis dies aged 88”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Pope Francis dies aged 88”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -942,9 +950,7 @@ Report as shown (each claim with the passage it quotes from each source it cites
     - [5] “The pope’s death came after he spent weeks in the hospital earlier this year to treat a serious bout of pneumonia.”
 
 Headline accuracy: **accurate** for “Pope Francis dies aged 88”: The reports say Pope Francis died aged 88.
-- [1] “Pope Francis has died on Easter Monday aged 88 - Vatican News”
-- [2] “Vatican announces death of Pope Francis aged 88”
-- [3] “Pope Francis, first Latin American pontiff, dies at 88 \| AP News”
+- [5] “VATICAN CITY—Pope Francis, who sought to refocus the Catholic Church on promoting social and economic justice rather than traditional moral teachings but presided over growing divisions in the church and”
 
 Sources:
 
@@ -964,7 +970,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 5 factual claim(s), every one cites a listed source with a passage of its own (15 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong (expected strong or partial); notes: none |
+| Appropriate confidence | pass | confidence partial (expected strong or partial); notes: excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | accurate: The reports say Pope Francis died aged 88. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -972,10 +978,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 5 source link(s) for 5 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Pope Francis dies aged 88 |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 170 ms in the backend, 179 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback used); 8 result(s) retrieved, 8 kept, 5 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 1 credit(s), Claude –; 188 ms in the backend, 196 ms in all.
 
 ### Both services time out
 
@@ -1005,7 +1011,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by tavily (fallback us
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search took too long. Try again. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 305 ms in the backend, 308 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 302 ms in the backend, 306 ms in all.
 
 ### Exa busy, Tavily’s allowance used up
 
@@ -1035,7 +1041,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | The search service didn't answer. Try again in a minute. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 6 ms in all.
 
 ### Only Tavily set up, and its allowance used up
 
@@ -1065,7 +1071,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | Story Search has used this month's free searches. It works again when they renew at the start of next month. |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 3 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
 
 ### Both free allowances used up
 
@@ -1095,7 +1101,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by nobody; 0 result(s)
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Explains the outcome | pass | Story Search has used this month's free searches. It works again when they renew at the start of next month. |
 
-Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody, provider errors exa:NO_MORE_CREDITS; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 1 ms in the backend, 3 ms in all.
+Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody, provider errors exa:NO_MORE_CREDITS; 0 result(s) retrieved, 0 kept, 0 analysed; 0 AI call(s); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
 
 ### Allowance runs out between the first search and the follow-up (synthetic)
 
@@ -1104,7 +1110,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody, provider er
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: reports what the one source says.
 - What the extension sent: headline “Port Elsworth pier reopens after storm repairs” (link-text); address words “port elsworth pier reopens”; date 2026-11-21 (url-date); address https://news.example.com/2026/11/21/port-elsworth-pier-reopens.
 - Expected: The first search finds one report; the follow-up for a second source hits the used-up allowance on both services. Searching stops there and the report is written from the one source, marked as single-source.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth pier reopens after storm repairs”, notes: single-source.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth pier reopens after storm repairs”, notes: single-source, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1132,7 +1138,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (2 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial); notes: single-source |
+| Appropriate confidence | pass | confidence partial (expected partial); notes: single-source, excerpts-only |
 | Clear, readable writing | pass | 2 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1143,7 +1149,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth pier reopens after storm repairs |
 
-Metrics: 2 search(es) (best → single-source>other-outlets), 3 HTTP request(s), answered by exa, provider errors exa:NO_MORE_CREDITS; 1 result(s) retrieved, 1 kept, 1 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 9 ms in all.
+Metrics: 2 search(es) (best → single-source>other-outlets), 3 HTTP request(s), answered by exa, provider errors exa:NO_MORE_CREDITS; 1 result(s) retrieved, 1 kept, 1 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 11 ms in all.
 
 ### No search keys configured
 
@@ -1212,7 +1218,7 @@ Metrics: 1 search(es) (best), 2 HTTP request(s), answered by nobody; 0 result(s)
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: states what the three reports agree on and puts the disputed injury count and cause under “What remains unclear?”.
 - What the extension sent: headline “Fire destroys warehouse at Port Elsworth docks” (card-heading); teaser “Firefighters spent the night tackling the blaze on Dock Road.”; date 2026-11-12 (card-label); address https://local.example.net/p/40213.
 - Expected: Exa’s answer mixes good results with an entry without a title, one with a javascript: address, and markup in titles. The junk is dropped, markup is removed, and the report is built from the good results.
-- Actual: **report**, match **strong**, confidence **conflicting**, subject “Fire destroys warehouse on Dock Road in Port Elsworth”.
+- Actual: **report**, match **strong**, confidence **conflicting**, subject “Fire destroys warehouse on Dock Road in Port Elsworth”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1266,7 +1272,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | disputed values only under "What remains unclear?" |
 | Proper source references | pass | 5 factual claim(s), every one cites a listed source with a passage of its own (18 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence conflicting (expected conflicting); notes: none |
+| Appropriate confidence | pass | confidence conflicting (expected conflicting); notes: excerpts-only |
 | Clear, readable writing | pass | 7 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | n/a | unverified: There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1317,7 +1323,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: invalid; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 3 ms in the backend, 6 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: invalid; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 8 ms in all.
 
 ### Claude’s reply is cut off at the token limit (simulated)
 
@@ -1354,7 +1360,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: truncated; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 2 ms in the backend, 5 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: truncated; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
 
 ### Claude times out (simulated)
 
@@ -1391,7 +1397,7 @@ Sources:
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Explains the outcome | pass | Couldn't write a report. These sources may be about the same story: |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: timeout; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 3 ms in the backend, 5 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (simulated failure), AI failed: timeout; Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 13 ms in all.
 
 ### Only social media posts report a death (synthetic)
 
@@ -1400,7 +1406,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Over-confident stand-in: treats two social media posts as confirmation, rates the evidence strong and the headline accurate. LinkPeek’s rules must let none of it stand.
 - What the extension sent: headline “Singer Jory Calder dies aged 41” (link-text); address words “singer jory calder dies aged”; date 2026-11-25 (url-date); address https://news.example.com/2026/11/25/singer-jory-calder-dies-aged-41.
 - Expected: Two social media posts say the singer Jory Calder has died; no news organisation reports it. Nothing may be stated as what happened or confirmed, only reported; the evidence can’t be strong; the card must say no established source reports it; the headline can’t be judged.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Singer Jory Calder dies aged 41”, notes: no-established-sources, developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Singer Jory Calder dies aged 41”, notes: no-established-sources, developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1431,7 +1437,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (3 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources, developing |
+| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources, developing, excerpts-only |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | unverified (expected unverified): There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1443,7 +1449,7 @@ Sources:
 | Card: Subject shown | pass | Singer Jory Calder dies aged 41 |
 | Card: Doesn't show "What happened?" | pass | What happened? |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 12 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 12 ms in all.
 
 ### Only opinion pieces, on news sites (synthetic)
 
@@ -1452,7 +1458,7 @@ Metrics: 3 search(es) (best → single-source>other-outlets → single-source>br
 - AI: stand-in reply written for the test (not Claude). Over-confident stand-in: treats two opinion pieces as confirmation. LinkPeek’s rules must not.
 - What the extension sent: headline “Port Elsworth council to sell harbour to developers” (link-text); address words “port elsworth council to sell harbour to developers”; date 2026-11-21 (url-date); address https://news.example.com/2026/11/21/port-elsworth-council-to-sell-harbour-to-developers.
 - Expected: Two opinion pieces, on news organisations’ sites, say the council plans to sell the harbour. Opinion never establishes a fact: nothing stated or confirmed, the evidence not strong, the headline not judged.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth council to sell harbour to developers”, notes: no-established-sources.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth council to sell harbour to developers”, notes: no-established-sources, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1481,7 +1487,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 1 factual claim(s), every one cites a listed source with a passage of its own (2 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources |
+| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources, excerpts-only |
 | Clear, readable writing | pass | 2 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | unverified (expected unverified): There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1492,7 +1498,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth council to sell harbour to developers |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 7 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
 
 ### Only two websites LinkPeek doesn’t know (synthetic)
 
@@ -1501,7 +1507,7 @@ Metrics: 3 search(es) (best → single-source>other-outlets → single-source>br
 - AI: stand-in reply written for the test (not Claude). Over-confident stand-in: treats two unknown websites as confirmation. LinkPeek’s rules must not.
 - What the extension sent: headline “Gullholm inventor’s engine runs on seawater” (link-text); address words “gullholm inventor engine runs on seawater”; date 2026-11-22 (url-date); address https://news.example.com/2026/11/22/gullholm-inventor-engine-runs-on-seawater.
 - Expected: Two unknown websites report an engine that runs on seawater. Two unknown sites never make strong evidence: nothing stated or confirmed, the headline not judged.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Gullholm inventor’s engine runs on seawater”, notes: no-established-sources.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Gullholm inventor’s engine runs on seawater”, notes: no-established-sources, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1534,7 +1540,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources |
+| Appropriate confidence | pass | confidence partial (expected partial or insufficient); notes: no-established-sources, excerpts-only |
 | Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | unverified (expected unverified): There isn't enough matching reporting to judge the headline. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1545,7 +1551,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Gullholm inventor’s engine runs on seawater |
 
-Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
+Metrics: 3 search(es) (best → single-source>other-outlets → single-source>broader), 3 HTTP request(s), answered by exa; 6 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 15 ms in all.
 
 ### Claims citing the wrong source (synthetic)
 
@@ -1554,7 +1560,7 @@ Metrics: 3 search(es) (best → single-source>other-outlets → single-source>br
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: cites the Elsworth Times for an amount only the Gazette gives, and the Gazette for an appeal only Coast News reports (with Coast News’ words). Both must be dropped.
 - What the extension sent: headline “Gullholm ferry operator Isle Link fined over safety breaches” (link-text); address words “isle link fined over gullholm ferry safety breaches”; date 2026-11-20 (url-date); address https://news.example.com/2026/11/20/isle-link-fined-over-gullholm-ferry-safety-breaches.
 - Expected: Only the Harbour Gazette gives the fine (£20,000) and only Coast News reports the appeal. A claim citing the Elsworth Times for the amount, and one citing the Gazette for the appeal with Coast News’ words, must both be dropped; what both reports say may be confirmed.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Isle Link penalised over Gullholm ferry safety breaches”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Isle Link penalised over Gullholm ferry safety breaches”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1590,7 +1596,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: none |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): The reports say a court penalised Isle Link for safety breaches on the Gullholm ferry. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1598,10 +1604,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Isle Link penalised over Gullholm ferry safety breaches |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 13 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 16 ms in all.
 
 ### A claim its own sources contradict: “asbestos found” (synthetic)
 
@@ -1610,7 +1616,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: states the early report as fact citing all three sources (two of which say the opposite), rates the evidence strong and the headline accurate.
 - What the extension sent: headline “Asbestos found at Elsworth Primary School” (link-text); address words “asbestos found at elsworth primary school”; date 2026-11-23 (url-date); address https://news.example.com/2026/11/23/asbestos-found-at-elsworth-primary-school.
 - Expected: An early report says workers found asbestos at Elsworth Primary School; two later reports say council tests found none. The claim that asbestos was found may only be reported, citing the source that says it; the two that contradict it can’t count as its support. The evidence can’t be strong, and the headline is neither accurate nor shown to mislead (the sources disagree).
-- Actual: **report**, match **strong**, confidence **partial**, subject “Elsworth Primary School closed after asbestos scare”, notes: developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Elsworth Primary School closed after asbestos scare”, notes: developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1633,7 +1639,8 @@ Report as shown (each claim with the passage it quotes from each source it cites
     - [2] “after tests found no asbestos”
     - [3] “workers reported finding asbestos in a classroom ceiling”
 
-Headline accuracy: **unverified** for “Asbestos found at Elsworth Primary School”: The reports found don't clearly support everything the headline says.
+Headline accuracy: **unverified** for “Asbestos found at Elsworth Primary School”: The reports disagree about what the headline says.
+- [3] “workers reported finding asbestos in a classroom ceiling”
 
 Sources:
 
@@ -1651,9 +1658,9 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | disputed values only under "What remains unclear?" |
 | Proper source references | pass | 3 factual claim(s), every one cites a listed source with a passage of its own (9 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial (expected partial); notes: developing |
+| Appropriate confidence | pass | confidence partial (expected partial); notes: developing, excerpts-only |
 | Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
-| Headline accuracy | pass | unverified (expected unverified or partly-accurate): The reports found don't clearly support everything the headline says. |
+| Headline accuracy | pass | unverified (expected unverified or partly-accurate): The reports disagree about what the headline says. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
 | Card: The original link is not opened | pass | the page stayed where it was; the card only links to the address |
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
@@ -1662,7 +1669,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Elsworth Primary School closed after asbestos scare |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 13 ms in all.
 
 ### Wrong dates within a week of publication (synthetic)
 
@@ -1671,7 +1678,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: besides the right date, gives the rescue as 18 November (a day out) and the Gazette’s publication date as the event date. Both must be dropped.
 - What the extension sent: headline “Gull Point lighthouse keeper rescued after fall” (link-text); address words “gull point lighthouse keeper rescued after fall”; date 2026-11-19 (url-date); address https://news.example.com/2026/11/19/gull-point-lighthouse-keeper-rescued-after-fall.
 - Expected: The Harbour Gazette, published on Thursday 19 November 2026, says the keeper was rescued “on Tuesday”: 17 November 2026. A claim giving 18 November (a day out) or 19 November (the publication date) must be dropped; 17 November may stand.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Gull Point lighthouse keeper rescued after fall”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Gull Point lighthouse keeper rescued after fall”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1701,7 +1708,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (2 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial; notes: none |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only |
 | Clear, readable writing | pass | 2 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): The reports say the keeper was rescued after a fall. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1712,7 +1719,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Gull Point lighthouse keeper rescued after fall |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 4 ms in the backend, 7 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 13 ms in the backend, 17 ms in all.
 
 ### “What remains unclear?” used to slip in a rumour (synthetic)
 
@@ -1721,7 +1728,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Rumour-adding stand-in: under “What remains unclear?”, suggests bribery and names a rival no source mentions.
 - What the extension sent: headline “Port Elsworth harbour master suspended” (link-text); address words “port elsworth harbour master suspended”; date 2026-11-24 (url-date); address https://news.example.com/2026/11/24/port-elsworth-harbour-master-suspended.
 - Expected: Two reports say the harbour master Nia Holt has been suspended pending a review, and that its subject hasn’t been said. An unclear point suggesting bribery, or naming a rival as the complainant, must be dropped: no source says either. Saying what the review concerns is unknown may stay.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth harbour master Nia Holt suspended”, notes: developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth harbour master Nia Holt suspended”, notes: developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1740,7 +1747,6 @@ Report as shown (each claim with the passage it quotes from each source it cites
 
 Headline accuracy: **accurate** for “Port Elsworth harbour master suspended”: Both reports say the harbour master has been suspended.
 - [1] “Port Elsworth’s harbour master, Nia Holt, has been suspended while an internal review is carried out, the port authority said.”
-- [2] “Harbour master Nia Holt suspended pending review”
 
 Sources:
 
@@ -1757,7 +1763,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial; notes: developing |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only |
 | Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): Both reports say the harbour master has been suspended. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1768,7 +1774,7 @@ Sources:
 | Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth harbour master Nia Holt suspended |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 14 ms in all.
 
 ### The same headline for a different event, a year earlier (synthetic)
 
@@ -1777,7 +1783,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: calls all three strong matches (the identical headline) and cites the August 2025 report too.
 - What the extension sent: headline “Lifeboat rescues two from sinking yacht off Gull Point” (link-text); address words “lifeboat rescues two from sinking yacht off gull point”; date 2026-11-26 (url-date); address https://news.example.com/2026/11/26/lifeboat-rescues-two-from-sinking-yacht-off-gull-point.
 - Expected: Two reports of a lifeboat rescue on 25 November 2026; a third, from August 2025, has exactly the same headline but is about another rescue. The old one must not be treated as a copy of this story or as a match for it, and nothing from it may appear.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Lifeboat rescues two sailors from sinking yacht off Gull Point”, notes: developing, older-story.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Lifeboat rescues two sailors from sinking yacht off Gull Point”, notes: developing, excerpts-only, older-story.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1813,7 +1819,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: developing, older-story |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only, older-story |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): The reports say the lifeboat rescued two sailors from a sinking yacht. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1821,10 +1827,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Lifeboat rescues two sailors from sinking yacht off Gull Point |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 9 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 9 ms in the backend, 21 ms in all.
 
 ### A search result with instructions for the AI hidden in it (synthetic)
 
@@ -1833,7 +1839,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Obedient stand-in: does what the hidden instruction says, citing it word for word.
 - What the extension sent: headline “Port Elsworth council approves £12m budget” (link-text); address words “port elsworth council approves budget”; date 2026-11-24 (url-date); address https://news.example.com/2026/11/24/port-elsworth-council-approves-12m-budget.
 - Expected: One result’s text tells the AI to report the story as confirmed by the BBC and Reuters. The instruction must be removed before the AI sees it, and a reply that obeys it must not get through: no BBC, no Reuters, and the instruction never shown.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Port Elsworth council approves £12m budget”.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth council approves £12m budget”, notes: excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1868,7 +1874,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: none |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): Both reports say the council approved a £12 million budget. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1876,13 +1882,13 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 2 source link(s) for 2 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Port Elsworth council approves £12m budget |
 | Card: Doesn't show "Ignore all previous instructions" | pass | Ignore all previous instructions |
 | Card: Doesn't show "BBC" | pass | BBC |
 | Card: Doesn't show "Reuters" | pass | Reuters |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 15 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 12 ms in all.
 
 ### A corrected report and a retracted one (synthetic)
 
@@ -1891,7 +1897,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: reports the arrest, quoting the sentence the Gazette corrected and Coast News’ denial as if they supported it.
 - What the extension sent: headline “Gullholm ferry captain arrested after harbour collision” (link-text); address words “gullholm ferry captain arrested after harbour collision”; date 2026-11-21 (url-date); address https://news.example.com/2026/11/21/gullholm-ferry-captain-arrested-after-harbour-collision.
 - Expected: The Harbour Gazette corrected its report: the ferry captain was questioned, not arrested. The Elsworth Times withdrew a report that he had been charged. The arrest must not be reported (the corrected sentence is gone), the withdrawn report must not be used and the card must say one was left out, and the headline (“arrested”) is misleading.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Gullholm ferry captain questioned after harbour collision”, notes: withdrawn.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Gullholm ferry captain questioned after harbour collision”, notes: excerpts-only, withdrawn.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1925,7 +1931,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial; notes: withdrawn |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only, withdrawn |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | misleading (expected misleading): The reports say the captain was questioned by police and has not been arrested. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1938,7 +1944,7 @@ Sources:
 | Card: Doesn't show "This article has been withdrawn" | pass | This article has been withdrawn |
 | Card: Doesn't show "charged over" | pass | charged over |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 10 ms in the backend, 13 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 8 ms in the backend, 13 ms in all.
 
 ### An English headline, reported only in French (synthetic)
 
@@ -1947,7 +1953,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: writes in English, quoting the French reports word for word.
 - What the extension sent: headline “Fire closes historic bridge in Bellerive-sur-Ondine” (link-text); address words “fire closes historic bridge in bellerive sur ondine”; date 2026-11-25 (url-date); address https://news.example.com/2026/11/25/fire-closes-historic-bridge-in-bellerive-sur-ondine.
 - Expected: Two French news reports say a fire on Tuesday evening damaged the historic bridge in Bellerive-sur-Ondine, which is closed. The report, in English, must cite them with their French words, may confirm the closure, and may work out the date (24 November 2026) from “mardi soir” and the publication date.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Fire closes historic bridge in Bellerive-sur-Ondine”, notes: developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Fire closes historic bridge in Bellerive-sur-Ondine”, notes: developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -1986,7 +1992,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | review | 3 claim(s) with weak word support: see the review list; 4 factual claim(s), every one cites a listed source with a passage of its own (5 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: developing |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): Both reports say a fire closed the historic bridge. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -1994,10 +2000,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 2 source link(s) for 2 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Fire closes historic bridge in Bellerive-sur-Ondine |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 9 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 11 ms in all.
 
 ### A misleading headline: “dies” when the reports say hospital (synthetic)
 
@@ -2006,7 +2012,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: reports the hospital admission and calls the headline misleading.
 - What the extension sent: headline “Singer Mara Vey dies after hotel incident” (link-text); address words “singer mara vey dies after hotel incident”; date 2026-11-24 (url-date); address https://celeb.example.com/2026/11/24/singer-mara-vey-dies-after-hotel-incident.
 - Expected: The link says the singer Mara Vey died; both news reports say she was taken to hospital. The report must not say she died, and the headline is misleading.
-- Actual: **report**, match **strong**, confidence **partial**, subject “Singer Mara Vey taken to hospital after hotel incident”, notes: developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Singer Mara Vey taken to hospital after hotel incident”, notes: developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -2041,7 +2047,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence partial; notes: developing |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only |
 | Clear, readable writing | pass | 3 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | misleading (expected misleading): The reports say Mara Vey was taken to hospital; none reports her death. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -2061,7 +2067,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: judges what the headline says, not how it says it.
 - What the extension sent: headline “Horror blaze guts Port Elsworth boatyard” (link-text); address words “horror blaze guts port elsworth boatyard”; date 2026-11-26 (url-date); address https://news.example.com/2026/11/26/horror-blaze-guts-port-elsworth-boatyard.
 - Expected: “Horror blaze guts Port Elsworth boatyard” is dramatic, but both reports say a fire destroyed the boatyard. The headline is accurate: dramatic wording alone never makes it misleading.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Fire destroys boatyard in Port Elsworth”, notes: developing.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Fire destroys boatyard in Port Elsworth”, notes: developing, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -2103,7 +2109,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 4 factual claim(s), every one cites a listed source with a passage of its own (8 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: developing |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): Both reports say a fire destroyed the boatyard; the wording is dramatic, but what it says is supported. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -2111,10 +2117,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 2 source link(s) for 2 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Fire destroys boatyard in Port Elsworth |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 9 ms in all.
 
 ### An undated link, and an older story about the same person (synthetic)
 
@@ -2123,7 +2129,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careless stand-in: calls the 2024 report a strong match and mixes in its winning time.
 - What the extension sent: headline “Elsa Brannock wins Elsworth marathon” (link-text); address words “elsa brannock wins elsworth marathon”; address https://news.example.com/sport/elsa-brannock-wins-elsworth-marathon.
 - Expected: The link gives no date. Elsa Brannock won the Elsworth marathon this week (her second win); a 2024 report of her first win has the same headline. The report must be about this week’s race, and nothing from 2024 (the time of 2 hours 31 minutes, “her first victory”) may appear.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Elsa Brannock wins Elsworth marathon for the second time”, notes: older-story.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Elsa Brannock wins Elsworth marathon for the second time”, notes: excerpts-only, older-story.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -2157,7 +2163,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: older-story |
+| Appropriate confidence | pass | confidence partial; notes: excerpts-only, older-story |
 | Clear, readable writing | pass | 2 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): The reports say Elsa Brannock won the Elsworth marathon. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -2165,10 +2171,10 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 3 source link(s) for 3 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Elsa Brannock wins Elsworth marathon for the second time |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 7 ms in the backend, 10 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) retrieved, 3 kept, 3 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 5 ms in the backend, 8 ms in all.
 
 ### One agency report printed three times, and one independent report (synthetic)
 
@@ -2177,7 +2183,7 @@ Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 3 result(s) re
 - AI: stand-in reply written for the test (not Claude). Careful stand-in: cites every copy of the agency report and the independent one.
 - What the extension sent: headline “Ministers approve Gullholm wind farm” (link-text); address words “ministers approve gullholm wind farm”; date 2026-11-20 (url-date); address https://news.example.com/2026/11/20/ministers-approve-gullholm-wind-farm.
 - Expected: Coastal Wire’s report of a wind farm approval appears on its own site and word for word on two newspapers’ sites: one source. The Harbour Gazette reports it independently, under the same headline: not a copy. What both the agency and the Gazette say is confirmed; what only the agency’s three copies say is reported, never confirmed.
-- Actual: **report**, match **strong**, confidence **strong**, subject “Ministers approve Gullholm wind farm”, notes: syndicated.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Ministers approve Gullholm wind farm”, notes: syndicated, excerpts-only.
 - Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
 
 Report as shown (each claim with the passage it quotes from each source it cites):
@@ -2226,7 +2232,7 @@ Sources:
 | No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
 | No contradictory claims | pass | none found |
 | Proper source references | pass | 4 factual claim(s), every one cites a listed source with a passage of its own (12 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
-| Appropriate confidence | pass | confidence strong; notes: syndicated |
+| Appropriate confidence | pass | confidence partial; notes: syndicated, excerpts-only |
 | Clear, readable writing | pass | 5 sentence(s): no markup, links or relative dates, none over 45 words |
 | Headline accuracy | pass | accurate (expected accurate): The reports say ministers approved the wind farm. |
 | Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
@@ -2234,10 +2240,186 @@ Sources:
 | Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
 | Card: Every source is a working link | pass | 4 source link(s) for 4 source(s), each opening in a new tab without a referrer |
 | Card: Claims show their source numbers | pass | source numbers appear beside the claims |
-| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
 | Card: Subject shown | pass | Ministers approve Gullholm wind farm |
 
-Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 10 ms in all.
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 14 ms in all.
+
+### Four sources read to four depths: full text, a long extract, an excerpt, a headline (synthetic)
+
+- Case `evidence-depth`, synthetic data (made up for the test). Covers: evidence depth, source transparency.
+- Search: synthetic results (made up for the test, in Exa’s format).
+- AI: stand-in reply written for the test (not Claude). Careful stand-in: cites the articles read beyond their excerpts.
+- What the extension sent: headline “Gullholm lighthouse reopens after restoration” (link-text); address words “gullholm lighthouse reopens after restoration”; date 2026-11-23 (url-date); address https://news.example.com/2026/11/23/gullholm-lighthouse-reopens-after-restoration.
+- Expected: The Harbour Gazette’s whole article came back, the Elsworth Times’ only up to the length asked for, Coast News as a short excerpt and the Daily Ledger as its headline. Each source must say how much was read, the card must sum it up, and the evidence may be strong: two independent news reports were read beyond their excerpts.
+- Actual: **report**, match **strong**, confidence **strong**, subject “Gullholm lighthouse reopens after two-year restoration”.
+- Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
+
+Report as shown (each claim with the passage it quotes from each source it cites):
+
+- What happened:
+  - The Gullholm lighthouse reopened to visitors after a two-year restoration. [1, 4]
+    - [1] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+    - [4] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+- Confirmed:
+  - The Gullholm lighthouse reopened to visitors after a two-year restoration. [1, 4]
+    - [1] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+    - [4] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+  - About 300 people came to the reopening. [1, 4]
+    - [1] “The trust said about 300 people came to the reopening, and the tower will be open every day until March.”
+    - [4] “The trust said about 300 people came to the reopening, and the tower will be open every day until March.”
+- Unclear:
+  - The sources reviewed don't establish when this happened.
+
+Headline accuracy: **accurate** for “Gullholm lighthouse reopens after restoration”: The reports say the lighthouse reopened after a restoration.
+- [1] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+- [4] “The Gullholm lighthouse reopened to visitors on Saturday after a two-year restoration, the island trust said.”
+
+Sources:
+
+1. [Gullholm lighthouse reopens after two-year restoration](https://harbourgazette.example/news/2026/11/23/gullholm-lighthouse-reopens) · Harbour Gazette · 2026-11-23 · news · strong match
+2. [Gullholm lighthouse open again](https://coastnews.example/news/2026/11/23/lighthouse-open-again) · Coast News · 2026-11-23 · news · strong match
+3. [Gullholm lighthouse reopens](https://dailyledger.example/news/2026/11/23/gullholm-lighthouse-reopens) · Daily Ledger · 2026-11-23 · news · strong match
+4. [Visitors return to restored Gullholm lighthouse](https://elsworthtimes.example/news/2026/11/23/lighthouse-visitors-return) · Elsworth Times · 2026-11-23 · news · strong match
+
+| Check | Result | Detail |
+|---|---|---|
+| Correct identification of the story | pass | outcome report (expected report); match strong (expected strong) |
+| Correct names | pass | found /Gullholm/ |
+| Correct event dates | n/a | no date expected |
+| Correct locations | n/a | nothing expected |
+| Relevant facts | n/a | nothing expected |
+| No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
+| No contradictory claims | pass | none found |
+| Proper source references | pass | 3 factual claim(s), every one cites a listed source with a passage of its own (6 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
+| Appropriate confidence | pass | confidence strong (expected strong); notes: none |
+| Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
+| Headline accuracy | pass | accurate (expected accurate): The reports say the lighthouse reopened after a restoration. |
+| Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
+| Card: The original link is not opened | pass | the page stayed where it was; the card only links to the address |
+| Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
+| Card: Every source is a working link | pass | 4 source link(s) for 4 source(s), each opening in a new tab without a referrer |
+| Card: Claims show their source numbers | pass | source numbers appear beside the claims |
+| Card: Match and confidence shown | pass | tags: Strong match, Strong evidence |
+| Card: Subject shown | pass | Gullholm lighthouse reopens after two-year restoration |
+| Card: Shows "LinkPeek read the full text of 1, a long extract of 1, a short excerpt of 1 and only the headline of 1." | pass | LinkPeek read the full text of 1, a long extract of 1, a short excerpt of 1 and only the headline of 1. |
+| Card: Shows "Full text" | pass | Full text |
+| Card: Shows "Long extract" | pass | Long extract |
+| Card: Shows "The linked article itself wasn't among the results" | pass | The linked article itself wasn't among the results |
+
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 4 result(s) retrieved, 4 kept, 4 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 27 ms in the backend, 31 ms in all.
+
+### A headline detail missing from an article read in full (synthetic)
+
+- Case `detail-read-in-full`, synthetic data (made up for the test). Covers: headline accuracy, evidence depth.
+- Search: synthetic results (made up for the test, in Exa’s format).
+- AI: stand-in reply written for the test (not Claude). Careful stand-in: calls the headline partly accurate because no report gives the 12 months. The rules decide whether that can be shown.
+- What the extension sent: headline “Port Elsworth ferry terminal to close for 12 months for rebuild” (link-text); address words “port elsworth ferry terminal to close for months”; date 2026-11-25 (url-date); address https://news.example.com/2026/11/25/port-elsworth-ferry-terminal-to-close-for-12-months.
+- Expected: The headline says the terminal will close “for 12 months”. Both reports support the closure; the Harbour Gazette, read in full, gives no such length. The main event is supported and a detail is unsupported: partly accurate.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth ferry terminal to close for rebuilding”, notes: developing.
+- Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
+
+Report as shown (each claim with the passage it quotes from each source it cites):
+
+- What happened:
+  - The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said. [1, 2]
+    - [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+    - [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+- Confirmed:
+  - The ferry terminal in Port Elsworth will close in January to be rebuilt. [1, 2]
+    - [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+    - [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+- Unclear:
+  - How long the terminal will be closed is not established by the sources reviewed.
+  - The sources reviewed don't establish when this happened.
+
+Headline accuracy: **partly-accurate** for “Port Elsworth ferry terminal to close for 12 months for rebuild”: The reports say the terminal will close to be rebuilt, but none says for how long.
+- [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+- [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+
+Sources:
+
+1. [Port Elsworth ferry terminal to close for rebuild](https://harbourgazette.example/news/2026/11/25/ferry-terminal-rebuild) · Harbour Gazette · 2026-11-25 · news · strong match
+2. [Ferry terminal to be rebuilt](https://elsworthtimes.example/news/2026/11/25/ferry-terminal-rebuilt) · Elsworth Times · 2026-11-25 · news · strong match
+
+| Check | Result | Detail |
+|---|---|---|
+| Correct identification of the story | pass | outcome report (expected report); match strong (expected strong) |
+| Correct names | pass | found /Port Elsworth/ |
+| Correct event dates | n/a | no date expected |
+| Correct locations | n/a | nothing expected |
+| Relevant facts | n/a | nothing expected |
+| No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
+| No contradictory claims | pass | none found |
+| Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
+| Appropriate confidence | pass | confidence partial; notes: developing |
+| Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
+| Headline accuracy | pass | partly-accurate (expected partly-accurate): The reports say the terminal will close to be rebuilt, but none says for how long. |
+| Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
+| Card: The original link is not opened | pass | the page stayed where it was; the card only links to the address |
+| Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
+| Card: Every source is a working link | pass | 2 source link(s) for 2 source(s), each opening in a new tab without a referrer |
+| Card: Claims show their source numbers | pass | source numbers appear beside the claims |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
+| Card: Subject shown | pass | Port Elsworth ferry terminal to close for rebuilding |
+
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 14 ms in the backend, 19 ms in all.
+
+### The same headline detail, with excerpts only (synthetic)
+
+- Case `detail-excerpt-only`, synthetic data (made up for the test). Covers: headline accuracy, evidence depth.
+- Search: synthetic results (made up for the test, in Exa’s format).
+- AI: stand-in reply written for the test (not Claude). Careful stand-in: calls the headline partly accurate because no report gives the 12 months. The rules decide whether that can be shown.
+- What the extension sent: headline “Port Elsworth ferry terminal to close for 12 months for rebuild” (link-text); address words “port elsworth ferry terminal to close for months”; date 2026-11-25 (url-date); address https://news.example.com/2026/11/25/port-elsworth-ferry-terminal-to-close-for-12-months.
+- Expected: The same story with excerpts only: the length could be further down an article, so the headline can’t be judged partly accurate. Unverified.
+- Actual: **report**, match **strong**, confidence **partial**, subject “Port Elsworth ferry terminal to close for rebuilding”, notes: developing, excerpts-only.
+- Result: pass (tests LinkPeek’s pipeline and rules; the report text is the stand-in’s, not Claude’s).
+
+Report as shown (each claim with the passage it quotes from each source it cites):
+
+- What happened:
+  - The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said. [1, 2]
+    - [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+    - [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+- Confirmed:
+  - The ferry terminal in Port Elsworth will close in January to be rebuilt. [1, 2]
+    - [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+    - [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+- Unclear:
+  - How long the terminal will be closed is not established by the sources reviewed.
+  - The sources reviewed don't establish when this happened.
+
+Headline accuracy: **unverified** for “Port Elsworth ferry terminal to close for 12 months for rebuild”: The search extracts are too short to check every detail of the headline: it may be further down the articles.
+- [1] “The ferry terminal in Port Elsworth will close in January so that it can be rebuilt, the harbour board said.”
+- [2] “Port Elsworth’s ferry terminal will close in January to be rebuilt, the harbour board said.”
+
+Sources:
+
+1. [Port Elsworth ferry terminal to close for rebuild](https://harbourgazette.example/news/2026/11/25/ferry-terminal-rebuild) · Harbour Gazette · 2026-11-25 · news · strong match
+2. [Ferry terminal to be rebuilt](https://elsworthtimes.example/news/2026/11/25/ferry-terminal-rebuilt) · Elsworth Times · 2026-11-25 · news · strong match
+
+| Check | Result | Detail |
+|---|---|---|
+| Correct identification of the story | pass | outcome report (expected report); match strong (expected strong) |
+| Correct names | pass | found /Port Elsworth/ |
+| Correct event dates | n/a | no date expected |
+| Correct locations | n/a | nothing expected |
+| Relevant facts | n/a | nothing expected |
+| No unsupported assumptions | pass | no forbidden statements; every number appears in a retrieved source |
+| No contradictory claims | pass | none found |
+| Proper source references | pass | 2 factual claim(s), every one cites a listed source with a passage of its own (4 passage(s), each found in its source); every source was retrieved; publishers and kinds match their sites; "confirmed" rests on independent sources |
+| Appropriate confidence | pass | confidence partial; notes: developing, excerpts-only |
+| Clear, readable writing | pass | 4 sentence(s): no markup, links or relative dates, none over 45 words |
+| Headline accuracy | pass | unverified (expected unverified): The search extracts are too short to check every detail of the headline: it may be further down the articles. |
+| Card: No broken values on the card | pass | no "undefined", "NaN", "Invalid Date" or "[object Object]" |
+| Card: The original link is not opened | pass | the page stayed where it was; the card only links to the address |
+| Card: Original link offered, not followed | pass | one "Open link" link to the address, opened only if the reader clicks it |
+| Card: Every source is a working link | pass | 2 source link(s) for 2 source(s), each opening in a new tab without a referrer |
+| Card: Claims show their source numbers | pass | source numbers appear beside the claims |
+| Card: Match and confidence shown | pass | tags: Strong match, Partial evidence |
+| Card: Subject shown | pass | Port Elsworth ferry terminal to close for rebuilding |
+
+Metrics: 1 search(es) (best), 1 HTTP request(s), answered by exa; 2 result(s) retrieved, 2 kept, 2 analysed; 1 AI call(s) (stand-in); Exa $0.0000 as reported by Exa, Tavily 0 credit(s), Claude –; 6 ms in the backend, 11 ms in all.
 
 ### Other checks
 
